@@ -18,7 +18,7 @@ type Confirm struct {
 
 // returns the string "yes" or "no" depending on user input, on error undefined
 func (c Confirm) Ask() (string, error) {
-	out, err := c.askConfirm()
+	out, err := c.askInternal()
 	if err != nil {
 		return "", err
 	}
@@ -30,11 +30,11 @@ func (c Confirm) Ask() (string, error) {
 
 // The returned bool is always true for yes and false for no, independent of the set default response
 func (c Confirm) AskBool() (bool, error) {
-	return c.askConfirm()
+	return c.askInternal()
 }
 
 func (c Confirm) AskBoolDefaultOnErr() bool {
-	out, err := c.askConfirm()
+	out, err := c.askInternal()
 	if err != nil {
 		return c.Default
 	}
@@ -42,7 +42,7 @@ func (c Confirm) AskBoolDefaultOnErr() bool {
 }
 
 func (c Confirm) AskBoolFalseOnErr() bool {
-	out, err := c.askConfirm()
+	out, err := c.askInternal()
 	if err != nil {
 		return false
 	}
@@ -50,7 +50,7 @@ func (c Confirm) AskBoolFalseOnErr() bool {
 }
 
 // Internal ask method
-func (c Confirm) askConfirm() (bool, error) {
+func (c Confirm) askInternal() (bool, error) {
 	prompt := c.Prompt
 	if c.Prompt == "" {
 		prompt = "Confirm?"
