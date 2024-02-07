@@ -5,14 +5,37 @@ import (
 	"time"
 )
 
+type Op uint
+
+const (
+	Log Op = iota
+	Update
+)
+
+var (
+	asciiSpinner   = []string{"-", "\\", "|", "/"}
+	unicodeSpinner = []string{"⠽", "⠾", "⠷", "⠯", "⠟", "⠻"}
+)
+
+type Progress struct {
+	// duration between loading char, default 100ms
+	LoadingSpeed time.Duration
+	// if set, show ASCII only loading symbol instead of unicode special char
+	FallbackAscii bool
+}
+
 type TaskOperation struct {
-	Operation string // "log" for log message, "update" for updating task text
+	Operation Op // "log" for log message, "update" for updating task text
 	Text      string
 }
 
 // startLoadingTask starts a non-blocking loading task.
 // It returns a channel to send task operations and a function to stop the loading.
-func StartProgress(initialTaskText string) (chan<- TaskOperation, func()) {
+func (p Progress) Start(initialTaskText string) (chan<- TaskOperation, func()) {
+	speed := p.LoadingSpeed
+	if p.LoadingSpeed == 0 {
+		speed = 100 * time.Millisecond
+	}
 	taskChan := make(chan TaskOperation)
 	doneChan := make(chan bool)
 
@@ -25,29 +48,30 @@ func StartProgress(initialTaskText string) (chan<- TaskOperation, func()) {
 			case <-doneChan:
 				return
 			case op := <-taskChan:
-				if op.Operation == "log" {
-					// Move up one line and clear line for log message
-					// fmt.Print("\033[1A\033[K")
+				if op.Operation == Log {
 					fmt.Print("\r\033[K")
-					// fmt.Printf("%s\n\n", op.Text)
 					fmt.Println(op.Text)
-					// Display the loading icon and current task text again
-					// fmt.Printf("\r- %s", taskText)
-					fmt.Printf("- %s", taskText)
-				} else if op.Operation == "update" {
-					// Update task text
+					if p.FallbackAscii {
+						fmt.Printf("\x1b[32m%s\033[m %s", asciiSpinner[0], taskText)
+					} else {
+						fmt.Printf("\x1b[32m%s\033[m %s", unicodeSpinner[0], taskText)
+					}
+				} else if op.Operation == Update {
 					taskText = op.Text
 				}
 			default:
-				// Display loading icon with current task text
-				fmt.Printf("\r- %s", taskText)
-				time.Sleep(100 * time.Millisecond)
-				fmt.Printf("\r\\ %s", taskText)
-				time.Sleep(100 * time.Millisecond)
-				fmt.Printf("\r| %s", taskText)
-				time.Sleep(100 * time.Millisecond)
-				fmt.Printf("\r/ %s", taskText)
-				time.Sleep(100 * time.Millisecond)
+				length := len(unicodeSpinner)
+				if p.FallbackAscii {
+					length = len(asciiSpinner)
+				}
+				for i := 0; i < length; i++ {
+					if p.FallbackAscii {
+						fmt.Printf("\r\x1b[32m%s\033[m %s", asciiSpinner[i], taskText)
+					} else {
+						fmt.Printf("\ry\x1b[32m%s\033[m %s", unicodeSpinner[i], taskText)
+					}
+					time.Sleep(speed)
+				}
 			}
 		}
 	}()
@@ -56,8 +80,6 @@ func StartProgress(initialTaskText string) (chan<- TaskOperation, func()) {
 	stopFunc := func() {
 		doneChan <- true
 		// Clear the loading line
-		// fmt.Print("\033[1A\033[K")
-		// fmt.Print("\n")
 		fmt.Print("\r\033[K")
 	}
 
