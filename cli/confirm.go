@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -50,7 +49,7 @@ func (c Confirm) AskBoolFalseOnErr() bool {
 	return out
 }
 
-// Internal ask method, panics
+// Internal ask method
 func (c Confirm) askConfirm() (bool, error) {
 	prompt := c.Prompt
 	if c.Prompt == "" {
@@ -63,15 +62,14 @@ func (c Confirm) askConfirm() (bool, error) {
 
 	rl, err := readline.New(prompt + question)
 	if err != nil {
-		return false, err
+		return false, ERR_READLINE
 	}
 	defer rl.Close()
 
 	for {
 		line, err := rl.Readline()
-		if err != nil { // io.EOF
-			// return false, fmt.Errorf("^C received")
-			panic(fmt.Errorf("^C received"))
+		if err != nil { // io.EOF, e.g. SIGINT
+			return false, ERR_SIGINT_RECEIVED
 		}
 		if len(line) == 0 {
 			return c.Default, nil
@@ -85,7 +83,7 @@ func (c Confirm) askConfirm() (bool, error) {
 			return false, nil
 		}
 		if c.OnlyOnce {
-			return false, fmt.Errorf("no valid input specified")
+			return false, ERR_INVALID_INPUT
 		}
 	}
 }
