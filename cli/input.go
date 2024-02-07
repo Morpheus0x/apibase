@@ -17,21 +17,21 @@ type Input struct {
 }
 
 func (i Input) Get() (string, error) {
-	return i.getInternal()
+	return i.getInputInternal()
 }
 
 func (i Input) GetEmptyOnErr() string {
-	out, err := i.getInternal()
+	out, err := i.getInputInternal()
 	if err != nil {
 		return ""
 	}
 	return out
 }
 
-func (i Input) getInternal() (string, error) {
+func (i Input) getInputInternal() (string, error) {
 	defaultValue := ""
 	if i.Default != "" {
-		defaultValue = i.Default
+		defaultValue = " (" + i.Default + ")"
 	}
 	rl, err := readline.New(i.Prompt + defaultValue + ": ")
 	if err != nil {
