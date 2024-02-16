@@ -4,12 +4,14 @@ import (
 	"github.com/chzyer/readline"
 )
 
+type ValidateFunc func(string) error
+
 // Input Dialog
 type Input struct {
 	// default input to use when only pressing enter, shown in parenthesis after the prompt, if set
 	Default string
-	// minimum number of required characters
-	RequiredChars uint
+	// input validation function
+	Validate ValidateFunc
 	// if kept as default false, the prompt is repeated until a valid anser is provided, otherwise if true, only asking once
 	OnlyOnce bool
 	// Prompt Text, colon with single trailing space will be appended as separator to user input
@@ -44,24 +46,18 @@ func (i Input) getInputInternal() (string, error) {
 		if err != nil { // io.EOF, e.g. SIGINT
 			return "", ERR_SIGINT_RECEIVED
 		}
-		if len(line) == 0 {
-			if len(i.Default) >= int(i.RequiredChars) {
-				return i.Default, nil
-			} else {
-				if i.OnlyOnce {
-					return "", ERR_MIN_INPUT_LEN
-				} else {
-					continue
-				}
-			}
+		input := i.Default
+		if len(line) > 0 {
+			input = line
 		}
-		if len(line) < int(i.RequiredChars) {
+		if err := i.Validate(input); err != nil {
 			if i.OnlyOnce {
-				return "", ERR_MIN_INPUT_LEN
+				return "", err
 			} else {
 				continue
 			}
+		} else {
+			return i.Default, nil
 		}
-		return line, nil
 	}
 }
