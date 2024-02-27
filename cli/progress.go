@@ -13,8 +13,22 @@ const (
 )
 
 var (
-	asciiSpinner   = []string{"-", "\\", "|", "/"}
-	unicodeSpinner = []string{"⠽", "⠾", "⠷", "⠯", "⠟", "⠻"}
+	asciiSpinner      = []string{"|", "/", "-", "\\"} // #
+	unicodeSpinner4x1 = []string{"⠂", "⠐", "⠠", "⠄"}  // ⠶
+	unicodeSpinner4x2 = []string{"⠆", "⠒", "⠰", "⠤"}
+	unicodeSpinner4x3 = []string{"⠦", "⠖", "⠲", "⠴"}
+	unicodeSpinner6x1 = []string{"⠁", "⠈", "⠐", "⠠", "⠄", "⠂"} // ⠿
+	unicodeSpinner6x2 = []string{"⠃", "⠉", "⠘", "⠰", "⠤", "⠆"}
+	unicodeSpinner6x3 = []string{"⠇", "⠋", "⠙", "⠸", "⠴", "⠦"}
+	unicodeSpinner6x4 = []string{"⠧", "⠏", "⠛", "⠹", "⠼", "⠶"}
+	unicodeSpinner6x5 = []string{"⠷", "⠯", "⠟", "⠻", "⠽", "⠾"}
+	unicodeSpinner8x1 = []string{"⠁", "⠈", "⠐", "⠠", "⢀", "⡀", "⠄", "⠂"} // ⣿
+	unicodeSpinner8x2 = []string{"⠃", "⠉", "⠘", "⠰", "⢠", "⣀", "⡄", "⠆"}
+	unicodeSpinner8x3 = []string{"⠇", "⠋", "⠙", "⠸", "⢰", "⣠", "⣄", "⡆"}
+	unicodeSpinner8x4 = []string{"⡇", "⠏", "⠛", "⠹", "⢸", "⣰", "⣤", "⣆"}
+	unicodeSpinner8x5 = []string{"⣇", "⡏", "⠟", "⠻", "⢹", "⣸", "⣴", "⣦"}
+	unicodeSpinner8x6 = []string{"⣧", "⣏", "⡟", "⠿", "⢻", "⣹", "⣼", "⣶"}
+	unicodeSpinner8x7 = []string{"⣷", "⣯", "⣟", "⡿", "⢿", "⣻", "⣽", "⣾"}
 )
 
 type Progress struct {
@@ -27,6 +41,15 @@ type Progress struct {
 type TaskOperation struct {
 	Operation Op // "log" for log message, "update" for updating task text
 	Text      string
+}
+
+func (p Progress) Spinners() {
+	fmt.Printf("%v\n%v\n%v\n%v\n%v\n%v\n%v\n%v\n%v\n%v\n%v\n%v\n%v\n%v\n%v\n%v\n",
+		asciiSpinner,
+		unicodeSpinner4x1, unicodeSpinner4x2, unicodeSpinner4x3,
+		unicodeSpinner6x1, unicodeSpinner6x2, unicodeSpinner6x3, unicodeSpinner6x4, unicodeSpinner6x5,
+		unicodeSpinner8x1, unicodeSpinner8x2, unicodeSpinner8x3, unicodeSpinner8x4, unicodeSpinner8x5, unicodeSpinner8x6, unicodeSpinner8x7,
+	)
 }
 
 // startLoadingTask starts a non-blocking loading task.
@@ -54,13 +77,13 @@ func (p Progress) Start(initialTaskText string) (chan<- TaskOperation, func()) {
 					if p.FallbackAscii {
 						fmt.Printf("\x1b[32m%s\033[m %s", asciiSpinner[0], taskText)
 					} else {
-						fmt.Printf("\x1b[32m%s\033[m %s", unicodeSpinner[0], taskText)
+						fmt.Printf("\x1b[32m%s\033[m %s", unicodeSpinner8x3[0], taskText)
 					}
 				} else if op.Operation == Update {
 					taskText = op.Text
 				}
 			default:
-				length := len(unicodeSpinner)
+				length := len(unicodeSpinner8x3)
 				if p.FallbackAscii {
 					length = len(asciiSpinner)
 				}
@@ -68,7 +91,7 @@ func (p Progress) Start(initialTaskText string) (chan<- TaskOperation, func()) {
 					if p.FallbackAscii {
 						fmt.Printf("\r\x1b[32m%s\033[m %s", asciiSpinner[i], taskText)
 					} else {
-						fmt.Printf("\ry\x1b[32m%s\033[m %s", unicodeSpinner[i], taskText)
+						fmt.Printf("\ry\x1b[32m%s\033[m %s", unicodeSpinner8x3[i], taskText)
 					}
 					time.Sleep(speed)
 				}
