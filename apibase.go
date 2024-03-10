@@ -98,6 +98,7 @@ func myHandler(req Request, integr ...Integration) Response {
 func startup() {
 	app := createApp()
 	myapi := app.RegisterApiIntegration("https://localhost:99/", "none")
+	fmt.Printf("myapi id: %v", myapi)
 	app.RegisterEndpoint("/test", myHandler)
 }
 
