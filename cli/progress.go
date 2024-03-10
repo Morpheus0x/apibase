@@ -39,8 +39,10 @@ type Progress struct {
 }
 
 type TaskOperation struct {
-	Operation Op // "log" for log message, "update" for updating task text
-	Text      string
+	Log        bool
+	LogText    string
+	Update     bool
+	UpdateText string
 }
 
 func (p Progress) Spinners() {
@@ -64,38 +66,46 @@ func (p Progress) Start(initialTaskText string) (chan<- TaskOperation, func()) {
 
 	taskText := initialTaskText // Initial task text
 
+	// TODO: initialize length here and use in for loop inside goroutine to improve log responsiveness
+	// on every for loop iteration, check for message received or update progress text
+	// Add newline at end of done to prevent override of last progress line
+	// Also clear progress line before every update to prevent pollution
 	// Non-blocking loading display
+	spinnerCount := 0
+	spinnerLenght := len(unicodeSpinner6x3)
+	if p.FallbackAscii {
+		spinnerLenght = len(asciiSpinner)
+	}
 	go func() {
 		for {
+			if spinnerCount >= spinnerLenght {
+				spinnerCount = 0
+			}
 			select {
+			case op := <-taskChan:
+				if op.Log {
+					fmt.Print("\r\033[K") // chariage return & clear line
+					fmt.Printf("%s\n", op.LogText)
+				}
+				if op.Update {
+					taskText = op.UpdateText
+				}
+				if p.FallbackAscii {
+					fmt.Printf("\x1b[32m%s\033[m %s", asciiSpinner[spinnerCount], taskText)
+				} else {
+					fmt.Printf("\x1b[32m%s\033[m %s", unicodeSpinner6x3[spinnerCount], taskText)
+				}
 			case <-doneChan:
 				return
-			case op := <-taskChan:
-				if op.Operation == Log {
-					fmt.Print("\r\033[K")
-					fmt.Println(op.Text)
-					if p.FallbackAscii {
-						fmt.Printf("\x1b[32m%s\033[m %s", asciiSpinner[0], taskText)
-					} else {
-						fmt.Printf("\x1b[32m%s\033[m %s", unicodeSpinner8x3[0], taskText)
-					}
-				} else if op.Operation == Update {
-					taskText = op.Text
-				}
 			default:
-				length := len(unicodeSpinner8x3)
 				if p.FallbackAscii {
-					length = len(asciiSpinner)
-				}
-				for i := 0; i < length; i++ {
-					if p.FallbackAscii {
-						fmt.Printf("\r\x1b[32m%s\033[m %s", asciiSpinner[i], taskText)
-					} else {
-						fmt.Printf("\ry\x1b[32m%s\033[m %s", unicodeSpinner8x3[i], taskText)
-					}
-					time.Sleep(speed)
+					fmt.Printf("\r\033[K\x1b[32m%s\033[m %s", asciiSpinner[spinnerCount], taskText)
+				} else {
+					fmt.Printf("\r\033[K\x1b[32m%s\033[m %s", unicodeSpinner6x3[spinnerCount], taskText)
 				}
 			}
+			time.Sleep(speed)
+			spinnerCount++
 		}
 	}()
 
