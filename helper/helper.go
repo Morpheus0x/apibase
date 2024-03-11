@@ -1,4 +1,4 @@
-package apibase
+package helper
 
 type ConfirmDefault bool
 

@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"time"
+
+	"github.com/Morpheus0x/apibase/helper"
 )
 
 type Op uint
@@ -62,7 +64,8 @@ func (p Progress) Start(initialTaskText string) chan<- TaskOperation {
 	}
 	taskChan := make(chan TaskOperation)
 
-	taskText := initialTaskText // Initial task text
+	var taskText helper.MtxString // Initial task text
+	taskText.Set(initialTaskText)
 
 	// TODO: initialize length here and use in for loop inside goroutine to improve log responsiveness
 	// on every for loop iteration, check for message received or update progress text
@@ -81,26 +84,29 @@ func (p Progress) Start(initialTaskText string) chan<- TaskOperation {
 			}
 			select {
 			case op := <-taskChan:
+				smooth := ""
 				if op.Log != "" {
 					fmt.Print("\r\033[K") // chariage return & clear line
-					fmt.Printf("%s\n", op.Log)
+					fmt.Printf("%s", op.Log)
+					smooth = fmt.Sprintf("\n")
 				}
 				if op.Final {
+					fmt.Printf("\n")
 					return
 				}
 				if op.Update != "" {
-					taskText = op.Update
+					taskText.Set(op.Update)
 				}
 				if p.FallbackAscii {
-					fmt.Printf("\r\033[K\x1b[32m%s\033[m %s", asciiSpinner[spinnerCount], taskText)
+					fmt.Printf("%s\r\033[K\x1b[32m%s\033[m %s", smooth, asciiSpinner[spinnerCount], taskText.Get())
 				} else {
-					fmt.Printf("\r\033[K\x1b[32m%s\033[m %s", unicodeSpinner6x3[spinnerCount], taskText)
+					fmt.Printf("%s\r\033[K\x1b[32m%s\033[m %s", smooth, unicodeSpinner6x3[spinnerCount], taskText.Get())
 				}
 			default:
 				if p.FallbackAscii {
-					fmt.Printf("\r\033[K\x1b[32m%s\033[m %s", asciiSpinner[spinnerCount], taskText)
+					fmt.Printf("\r\033[K\x1b[32m%s\033[m %s", asciiSpinner[spinnerCount], taskText.Get())
 				} else {
-					fmt.Printf("\r\033[K\x1b[32m%s\033[m %s", unicodeSpinner6x3[spinnerCount], taskText)
+					fmt.Printf("\r\033[K\x1b[32m%s\033[m %s", unicodeSpinner6x3[spinnerCount], taskText.Get())
 				}
 			}
 			time.Sleep(speed)
