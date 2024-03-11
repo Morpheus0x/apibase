@@ -39,10 +39,9 @@ type Progress struct {
 }
 
 type TaskOperation struct {
-	Log        bool
-	LogText    string
-	Update     bool
-	UpdateText string
+	Log    string
+	Update string
+	Final  bool
 }
 
 func (p Progress) Spinners() {
@@ -56,13 +55,12 @@ func (p Progress) Spinners() {
 
 // startLoadingTask starts a non-blocking loading task.
 // It returns a channel to send task operations and a function to stop the loading.
-func (p Progress) Start(initialTaskText string) (chan<- TaskOperation, func()) {
+func (p Progress) Start(initialTaskText string) chan<- TaskOperation {
 	speed := p.LoadingSpeed
 	if p.LoadingSpeed == 0 {
 		speed = 100 * time.Millisecond
 	}
 	taskChan := make(chan TaskOperation)
-	doneChan := make(chan bool)
 
 	taskText := initialTaskText // Initial task text
 
@@ -83,20 +81,21 @@ func (p Progress) Start(initialTaskText string) (chan<- TaskOperation, func()) {
 			}
 			select {
 			case op := <-taskChan:
-				if op.Log {
+				if op.Log != "" {
 					fmt.Print("\r\033[K") // chariage return & clear line
-					fmt.Printf("%s\n", op.LogText)
+					fmt.Printf("%s\n", op.Log)
 				}
-				if op.Update {
-					taskText = op.UpdateText
+				if op.Final {
+					return
+				}
+				if op.Update != "" {
+					taskText = op.Update
 				}
 				if p.FallbackAscii {
-					fmt.Printf("\x1b[32m%s\033[m %s", asciiSpinner[spinnerCount], taskText)
+					fmt.Printf("\r\033[K\x1b[32m%s\033[m %s", asciiSpinner[spinnerCount], taskText)
 				} else {
-					fmt.Printf("\x1b[32m%s\033[m %s", unicodeSpinner6x3[spinnerCount], taskText)
+					fmt.Printf("\r\033[K\x1b[32m%s\033[m %s", unicodeSpinner6x3[spinnerCount], taskText)
 				}
-			case <-doneChan:
-				return
 			default:
 				if p.FallbackAscii {
 					fmt.Printf("\r\033[K\x1b[32m%s\033[m %s", asciiSpinner[spinnerCount], taskText)
@@ -109,12 +108,5 @@ func (p Progress) Start(initialTaskText string) (chan<- TaskOperation, func()) {
 		}
 	}()
 
-	// Function to stop the loading
-	stopFunc := func() {
-		doneChan <- true
-		// Clear the loading line
-		fmt.Print("\r\033[K")
-	}
-
-	return taskChan, stopFunc
+	return taskChan
 }
