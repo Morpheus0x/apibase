@@ -6,18 +6,9 @@ import (
 	"strings"
 )
 
-// return string: where clause, MUST start with a space
-type Builder func(data any) (string, error)
-
-// User can pass a function to make custom queryies (where clause)
-// builder: user defined query function
-// data: custom data used to build where clause
-// out: this determines what table to query and will be used as data return
-func (s *SQLite) QueryWithBuilder(builder Builder, data any, out *[]any) error { // Where
-	where, err := builder(data)
-	if err != nil {
-		return err
-	}
+// Query table derived from out with where clause passed as string
+// return: changes out pointer to data returned from sqlite db
+func (s *SQLite) Where(where string, out *[]any) error {
 	// TODO: check if first char of where is a space, if not, return error
 	table, err := s.getTable(out)
 	if err != nil {
@@ -34,7 +25,7 @@ func (s *SQLite) QueryWithBuilder(builder Builder, data any, out *[]any) error {
 }
 
 // full SQL query without FROM ...
-func (s *SQLite) Query(query string, out *[]any) error { // Raw
+func (s *SQLite) Raw(query string, out *[]any) error {
 	table, err := s.getTable(out)
 	if err != nil {
 		return err
