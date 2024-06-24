@@ -2,6 +2,8 @@
 # TODO
 - [ ] Rebase go.mod and force push to git by using fixed module name
 - [ ] Use GoogleCloudPlatform/govanityurls instead of direct github
+- [ ] Add API version wrapper function for every endpoint, incrementing the version can have multiple effects: add new endpoint, change implementation, mark as deprecated, remove endpoint. When breaking changes are decided, the apibase api will get a new major or minor version (v1 -> v1.1 or v2 ...). The default behavior is to just use implementation of the previous version. Think about a way to mark an endpoint as deprecated, removed or changed.
+- [ ] The apibase api should be either gRPC with created SwaggerUI or OpenAPI definition with example implementation from SwaggerUI, smth like that
 
 # Ideas
 - [ ] Registration workflow will create a registration cookie which is valid for 14 days or until the email address is confirmed. After registration and if the email wasn't confirmed the user will always be presented with the registration welcome page. That page gives the option to resend the confirmation email and to change the user email, if the user made a mistake
