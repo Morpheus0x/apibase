@@ -10,7 +10,7 @@ import (
 // return: changes out pointer to data returned from sqlite db
 func (s *SQLite) Where(where string, out *[]any) error {
 	// TODO: check if first char of where is a space, if not, return error
-	table, err := s.getTable(out)
+	table, err := s.getTable(reflect.TypeOf(outType))
 	if err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func (s *SQLite) Where(where string, out *[]any) error {
 
 // full SQL query without FROM ...
 func (s *SQLite) Raw(query string, out *[]any) error {
-	table, err := s.getTable(out)
+	table, err := s.getTable(reflect.TypeOf(*out).Elem())
 	if err != nil {
 		return err
 	}
@@ -58,9 +58,9 @@ func (s *SQLite) sqliteQuery(table Table, query string) ([]interface{}, error) {
 }
 
 // TODO: shoud this return Table or string with table name?
-func (s *SQLite) getTable(out *[]any) (Table, error) {
+func (s *SQLite) getTable(tableType reflect.Type) (Table, error) {
 	for _, t := range s.tables {
-		if reflect.TypeOf(t.Data) == reflect.TypeOf(*out).Elem() {
+		if reflect.TypeOf(t.Data) == tableType {
 			return t, nil
 		}
 	}
