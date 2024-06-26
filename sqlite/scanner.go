@@ -79,7 +79,7 @@ func (s *SQLite) scanRows(rows *sql.Rows, targetType reflect.Type) ([]interface{
 			outRow.Field(targetFields[i]).Set(val)
 		}
 
-		outArray = append(outArray, outRow.Addr().Interface())
+		outArray = append(outArray, outRow.Interface())
 	}
 
 	if err := rows.Err(); err != nil {
