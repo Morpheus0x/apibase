@@ -6,35 +6,47 @@ import (
 	"strings"
 )
 
+func Cast[T any](input []interface{}, err error) ([]T, error) {
+	out := []T{}
+	if err != nil {
+		return out, err
+	}
+	for _, in := range input {
+		out = append(out, (in).(T))
+	}
+	return out, nil
+}
+
 // Query table derived from out with where clause passed as string
 // return: changes out pointer to data returned from sqlite db
-func (s *SQLite) Where(where string, out *[]any) error {
+func (s *SQLite) Where(where string, outType any) ([]interface{}, error) {
 	// TODO: check if first char of where is a space, if not, return error
 	table, err := s.getTable(reflect.TypeOf(outType))
 	if err != nil {
-		return err
+		return []interface{}{}, err
 	}
 	columns, err := table.ColumnQueryString()
 	if err != nil {
-		return err
+		return []interface{}{}, err
 	}
 	query := fmt.Sprintf("SELECT %s FROM %s%s;", columns, table.Name, where)
 	outData, err := s.sqliteQuery(table, query)
-	out = &outData
-	return err
+	return outData, err
 }
 
 // full SQL query without FROM ...
-func (s *SQLite) Raw(query string, out *[]any) error {
-	table, err := s.getTable(reflect.TypeOf(*out).Elem())
+func (s *SQLite) Raw(query string, outType any) ([]interface{}, error) {
+	table, err := s.getTable(reflect.TypeOf(outType))
 	if err != nil {
-		return err
+		return []interface{}{}, err
 	}
+
+	// Check if query matches outType table
 	nextIsTableName := false
 	for _, s := range strings.Split(query, " ") {
 		if nextIsTableName {
 			if s != table.Name {
-				return fmt.Errorf("table name in query doesn't match table from out datatype")
+				return []interface{}{}, fmt.Errorf("table name in query doesn't match table from out datatype")
 			}
 			break
 		}
@@ -44,8 +56,7 @@ func (s *SQLite) Raw(query string, out *[]any) error {
 	}
 
 	outData, err := s.sqliteQuery(table, query)
-	out = &outData
-	return err
+	return outData, err
 }
 
 func (s *SQLite) sqliteQuery(table Table, query string) ([]interface{}, error) {
