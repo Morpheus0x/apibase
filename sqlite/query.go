@@ -6,47 +6,49 @@ import (
 	"strings"
 )
 
-func Cast[T any](input []interface{}, err error) ([]T, error) {
+func cast[T any](input []interface{}) []T {
 	out := []T{}
-	if err != nil {
-		return out, err
-	}
 	for _, in := range input {
 		out = append(out, (in).(T))
 	}
-	return out, nil
+	return out
 }
 
 // Query table derived from out with where clause passed as string
 // return: changes out pointer to data returned from sqlite db
-func (s *SQLite) Where(where string, outType any) ([]interface{}, error) {
+func Where[T any](s *SQLite, where string) ([]T, error) {
 	// TODO: check if first char of where is a space, if not, return error
-	table, err := s.getTable(reflect.TypeOf(outType))
+	var myType [0]T
+	table, err := s.getTable(reflect.TypeOf(myType).Elem())
 	if err != nil {
-		return []interface{}{}, err
+		return []T{}, err
 	}
 	columns, err := table.ColumnQueryString()
 	if err != nil {
-		return []interface{}{}, err
+		return []T{}, err
 	}
 	query := fmt.Sprintf("SELECT %s FROM %s%s;", columns, table.Name, where)
 	outData, err := s.sqliteQuery(table, query)
-	return outData, err
+	if err != nil {
+		return []T{}, err
+	}
+	return cast[T](outData), nil
 }
 
 // full SQL query without FROM ...
-func (s *SQLite) Raw(query string, outType any) ([]interface{}, error) {
-	table, err := s.getTable(reflect.TypeOf(outType))
+func Raw[T any](s *SQLite, query string) ([]T, error) {
+	var myType [0]T
+	table, err := s.getTable(reflect.TypeOf(myType).Elem())
 	if err != nil {
-		return []interface{}{}, err
+		return []T{}, err
 	}
 
-	// Check if query matches outType table
+	// Check if query matches outType
 	nextIsTableName := false
 	for _, s := range strings.Split(query, " ") {
 		if nextIsTableName {
 			if s != table.Name {
-				return []interface{}{}, fmt.Errorf("table name in query doesn't match table from out datatype")
+				return []T{}, fmt.Errorf("table name in query doesn't match table from out datatype")
 			}
 			break
 		}
@@ -56,7 +58,10 @@ func (s *SQLite) Raw(query string, outType any) ([]interface{}, error) {
 	}
 
 	outData, err := s.sqliteQuery(table, query)
-	return outData, err
+	if err != nil {
+		return []T{}, err
+	}
+	return cast[T](outData), err
 }
 
 func (s *SQLite) sqliteQuery(table Table, query string) ([]interface{}, error) {
