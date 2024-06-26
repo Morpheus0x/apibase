@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func (t Table) CreateOrUpdateRow(data interface{}) error {
+func (s *SQLite) CreateOrUpdateRow(data interface{}) error {
 	insertInsteadOfUpdate := false
 	var idValue uint32 = 0
 	// Ensure that data is a pointer to a struct
@@ -22,6 +23,11 @@ func (t Table) CreateOrUpdateRow(data interface{}) error {
 		return fmt.Errorf("data must be a pointer to a struct")
 	}
 
+	table, err := s.getTable(reflect.TypeOf(data).Elem())
+	if err != nil {
+		return fmt.Errorf("data must be a known table struct")
+	}
+
 	var columns []string
 	var placeholders []string
 	var updateColumns []string
@@ -31,6 +37,7 @@ func (t Table) CreateOrUpdateRow(data interface{}) error {
 		field := structValue.Field(i)
 		value := field.Interface()
 		fieldType := structValue.Type().Field(i)
+		// fmt.Printf("field i: %d, value: %v\n", i, value)
 
 		// Get the db tag
 		dbTag := fieldType.Tag.Get("db")
@@ -47,13 +54,15 @@ func (t Table) CreateOrUpdateRow(data interface{}) error {
 		if dbTag == "id" {
 			if value.(uint32) == 0 {
 				insertInsteadOfUpdate = true
+				// fmt.Print("insert instead of update\n")
 				continue
 			}
 			idValue = value.(uint32)
 		}
 
 		// Skip if field is time, has default tag set, and value is default time "zero"
-		if structValue.Field(i).Type() == reflect.TypeOf(time.Time{}) {
+		if structValue.Field(i).Type() == reflect.TypeOf(&timestamppb.Timestamp{}) {
+			// fmt.Printf("TIME!\n")
 			// if reflect.TypeOf(structValue.Field(i)) == time.Time {
 			// if structValue.Type() == reflect.TypeOf(time.Time{}) {
 			// G.LOG.Noticef("%s default empty value: %v, is zero? %v, default tag: '%s', insertInsteadOfUpdate: %v",
@@ -63,13 +72,16 @@ func (t Table) CreateOrUpdateRow(data interface{}) error {
 			// 	fieldType.Tag.Get("default"),
 			// 	insertInsteadOfUpdate,
 			// )
-			if fieldType.Tag.Get("default") != "" && value.(time.Time).IsZero() {
+			time := value.(*timestamppb.Timestamp).AsTime()
+
+			if fieldType.Tag.Get("default") != "" && time.IsZero() {
 				continue
 			} else {
 				// Default time format contains +0100 timezone offset, this manual formatting disables that
-				value = value.(time.Time).Format(G.FORMAT_SQLITE_DATETIME)
+				value = time.Format(s.config.FORMAT_SQLITE_DATETIME)
 			}
 		}
+		// fmt.Printf("value parsed: %v, type: %v\n", value, structValue.Field(i).Type())
 
 		columns = append(columns, dbTag)
 		placeholders = append(placeholders, "?")
@@ -80,14 +92,14 @@ func (t Table) CreateOrUpdateRow(data interface{}) error {
 	var query string
 	if insertInsteadOfUpdate {
 		query = fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
-			t.Name, strings.Join(columns, ", "), strings.Join(placeholders, ", "))
+			table.Name, strings.Join(columns, ", "), strings.Join(placeholders, ", "))
 	} else {
 		// Docs: https://www.sqlitetutorial.net/sqlite-update/
 		query = fmt.Sprintf("UPDATE %s SET %s WHERE id = %d",
-			t.Name, strings.Join(updateColumns, ", "), idValue)
+			table.Name, strings.Join(updateColumns, ", "), idValue)
 	}
 
-	_, err := db.Exec(query, values...)
+	_, err = s.db.Exec(query, values...)
 	if err != nil {
 		return err
 	}
