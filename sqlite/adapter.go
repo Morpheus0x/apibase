@@ -24,10 +24,10 @@ import (
 // TODO: make all errors global vars
 
 type SQLite struct {
-	path     string
-	tables   []Table // TODO: register table and match on type of out in Query func
-	tableMap map[string]Table
-	db       *sql.DB
+	path   string
+	tables []Table // TODO: register table and match on type of out in Query func
+	// tableMap map[string]Table
+	db *sql.DB
 
 	startTime int64
 	config    SQLiteConfig
@@ -55,18 +55,27 @@ func (s *SQLite) Close() error {
 	return s.db.Close()
 }
 
+func (s *SQLite) tableExists(name string) bool {
+	for _, table := range s.tables {
+		if table.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 // Create table or migrates existing one
 // Requirements:
 // Adding columns is possible, but removing or changing type or attributes is not
 // new unique constrains must be added below the existing ones
 // IMPORTANT: The primary key must always be named id, e.g. `db:"id"...`
 func (s *SQLite) Table(name string, data any) error {
-	_, tableExists := s.tableMap[name]
-	if tableExists {
+	if s.tableExists(name) {
 		return fmt.Errorf("table with same name already exists")
 	}
 
 	table := Table{Name: name, Data: data}
+	// fmt.Printf("table: %v\ndata: %v\n", table, data)
 	// Query existing tables
 	var existingSchema string
 	err := s.db.QueryRow("SELECT sql FROM sqlite_master WHERE type='table' AND name=?;", name).Scan(&existingSchema)
@@ -83,16 +92,18 @@ func (s *SQLite) Table(name string, data any) error {
 		if err != nil {
 			return fmt.Errorf("unable to create table '%s': %v, schema: %s", name, err, schema)
 		}
+		s.tables = append(s.tables, table)
+		// fmt.Printf("return here why? schema: %s\n res: %v", schema, res)
 		return nil
 	}
-
+	// fmt.Printf("existingSchema: %s", existingSchema)
 	err = s.deployUpdatedTable(table, existingSchema)
 	if err != nil {
 		return fmt.Errorf("unable to migrate existing table: %v", err)
 	}
 
 	s.tables = append(s.tables, table)
-	s.tableMap[name] = table
+	// s.tableMap[name] = table
 
 	return nil
 }
