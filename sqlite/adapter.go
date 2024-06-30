@@ -64,12 +64,20 @@ func (s *SQLite) tableExists(name string) bool {
 	return false
 }
 
+func (s *SQLite) TableMust(name string, data any) {
+	err := s.Table(name, data)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // Create table or migrates existing one
 // Requirements:
 // Adding columns is possible, but removing or changing type or attributes is not
 // new unique constrains must be added below the existing ones
 // IMPORTANT: The primary key must always be named id, e.g. `db:"id"...`
 func (s *SQLite) Table(name string, data any) error {
+	// TODO: add old_name for table rename migrations ?
 	if s.tableExists(name) {
 		return fmt.Errorf("table with same name already exists")
 	}
