@@ -11,6 +11,7 @@ import (
 
 // Co-Written with ChatGPT
 
+// return array of pointers
 func (s *SQLite) scanRows(rows *sql.Rows, targetType reflect.Type) ([]interface{}, error) {
 	var outArray []interface{}
 	if targetType.Kind() != reflect.Struct {
@@ -79,7 +80,7 @@ func (s *SQLite) scanRows(rows *sql.Rows, targetType reflect.Type) ([]interface{
 			outRow.Field(targetFields[i]).Set(val)
 		}
 
-		outArray = append(outArray, outRow.Interface())
+		outArray = append(outArray, outRow.Addr().Interface())
 	}
 
 	if err := rows.Err(); err != nil {
