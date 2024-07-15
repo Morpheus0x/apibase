@@ -8,24 +8,34 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func (s *SQLite) CreateOrUpdateRow(data interface{}) error {
+// Returns Inserted ID and possibly error
+func CreateOrUpdateRow(s *SQLite, data interface{}) (int64, error) {
 	insertInsteadOfUpdate := false
 	var idValue uint32 = 0
 	// Ensure that data is a pointer to a struct
 	val := reflect.ValueOf(data)
 	if val.Kind() != reflect.Ptr || val.IsNil() {
-		return fmt.Errorf("data must be a non-nil pointer to a struct")
+		return -1, fmt.Errorf("data must be a non-nil pointer to a struct")
 	}
 
 	// Dereference the pointer to get the struct
 	structValue := val.Elem()
 	if structValue.Kind() != reflect.Struct {
-		return fmt.Errorf("data must be a pointer to a struct")
+		return -1, fmt.Errorf("data must be a pointer to a struct")
 	}
 
 	table, err := s.getTable(reflect.TypeOf(data).Elem())
 	if err != nil {
-		return fmt.Errorf("data must be a known table struct")
+		return -1, fmt.Errorf("data must be a known table struct")
+	}
+
+	skipPrivateFields := make([]bool, structValue.NumField())
+	visibleFields := reflect.VisibleFields(structValue.Type())
+	if structValue.NumField() != len(visibleFields) {
+		return -1, fmt.Errorf("length of struct and visible fields of struct don't match")
+	}
+	for c, f := range visibleFields {
+		skipPrivateFields[c] = !f.IsExported()
 	}
 
 	var columns []string
@@ -34,6 +44,9 @@ func (s *SQLite) CreateOrUpdateRow(data interface{}) error {
 	var values []interface{}
 
 	for i := 0; i < structValue.NumField(); i++ {
+		if skipPrivateFields[i] {
+			continue
+		}
 		field := structValue.Field(i)
 		value := field.Interface()
 		fieldType := structValue.Type().Field(i)
@@ -99,10 +112,14 @@ func (s *SQLite) CreateOrUpdateRow(data interface{}) error {
 			table.Name, strings.Join(updateColumns, ", "), idValue)
 	}
 
-	_, err = s.db.Exec(query, values...)
+	res, err := s.db.Exec(query, values...)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
-	return nil
+	if insertInsteadOfUpdate {
+		return res.LastInsertId()
+	} else {
+		return int64(idValue), nil
+	}
 }
