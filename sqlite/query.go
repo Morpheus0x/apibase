@@ -40,7 +40,7 @@ func Where[T any](s *SQLite, where string) ([]*T, error) {
 }
 
 // full SQL query without FROM ...
-func Raw[T any](s *SQLite, query string) ([]*T, error) {
+func RawQuery[T any](s *SQLite, query string) ([]*T, error) {
 	var myType [0]T
 	table, err := s.getTable(reflect.TypeOf(myType).Elem())
 	if err != nil {
