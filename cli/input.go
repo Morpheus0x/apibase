@@ -50,14 +50,13 @@ func (i Input) getInputInternal() (string, error) {
 		if len(line) > 0 {
 			input = line
 		}
-		if err := i.Validate(input); err != nil {
+		err = i.Validate(input)
+		if err != nil {
 			if i.OnlyOnce {
 				return "", err
-			} else {
-				continue
 			}
-		} else {
-			return i.Default, nil
+			continue
 		}
+		return input, nil
 	}
 }
