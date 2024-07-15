@@ -100,6 +100,7 @@ func (s *SQLite) Table(name string, data any) error {
 		if err != nil {
 			return fmt.Errorf("unable to create table '%s': %v, schema: %s", name, err, schema)
 		}
+		fmt.Printf("### New table created\n%s:\n", schema)
 		s.tables = append(s.tables, table)
 		// fmt.Printf("return here why? schema: %s\n res: %v", schema, res)
 		return nil
