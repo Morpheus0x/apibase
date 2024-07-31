@@ -12,6 +12,16 @@ const (
 	ErrEmptyString
 	// Provided array is empty
 	ErrEmptyArray
+
+	// Package Errors: web
+	// Unknown HTTP Method
+	ErrWebUnknownMethod
+	// ApiServer struct is not initialized
+	ErrWebApiNotInit
+	// ApiServer group already exists
+	ErrWebGroupExists
+	// ApiServer group exists but is required
+	ErrWebGroupNotExists
 )
 
 type Err struct {

@@ -3,7 +3,7 @@ A batteries-included opinionated API framework and collection of generally usefu
 
 
 ## Opinions
-- Gin HTTP Server
+- echo HTTP Server
 - OpenAPI REST & gRPC w/ SwaggerUI
 - PostgreSQL Database driver wrapper with quality of live improvements (pgx & gopsql)
 - Custom user authentication & authorization and basic user management workflow
