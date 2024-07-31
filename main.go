@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/Morpheus0x/apibase/log"
+	"gopkg.cc/apibase/log"
 )
 
 func main() {

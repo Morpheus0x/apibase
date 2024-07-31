@@ -1,8 +1,8 @@
 package web
 
 import (
-	"github.com/Morpheus0x/apibase/log"
 	"github.com/labstack/echo/v4"
+	"gopkg.cc/apibase/log"
 )
 
 func Setup() *ApiServer {

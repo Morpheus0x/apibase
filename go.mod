@@ -1,4 +1,4 @@
-module github.com/Morpheus0x/apibase
+module gopkg.cc/apibase
 
 go 1.21.4
 
