@@ -1,4 +1,7 @@
 
+# TODO Important
+- [ ] have package specific errors always defined in errors.go file inside said package, with an Init() func register those errors with the log package. This is needed if apibase is used with an external program that has their own errors that need to be compareable, maybe by passing the error type to the ErrorNew func, e.g. func ErrorNew\[T myerrtype\](err T, format string, a ...any)
+
 # TODO
 - [ ] Rebase go.mod and force push to git by using fixed module name
 - [ ] Use GoogleCloudPlatform/govanityurls instead of direct github
