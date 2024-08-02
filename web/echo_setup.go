@@ -30,6 +30,12 @@ func (api *ApiServer) Register(method Method, path string, handle echo.HandlerFu
 	default:
 		return log.ErrorNew(log.ErrWebUnknownMethod, "Unknown Method")
 	}
+
+	return api.registerDefaultEndpoints()
+}
+
+func (api *ApiServer) registerDefaultEndpoints() log.Err {
+	// Create default routes for login and general user flow
 	return log.ErrorNil()
 }
 
