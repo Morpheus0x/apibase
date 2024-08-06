@@ -3,7 +3,8 @@ package web
 import "github.com/labstack/echo/v4"
 
 type ApiServer struct {
-	e *echo.Echo
+	e    *echo.Echo
+	kind ApiKind
 
 	// groups     map[string]*echo.Group
 	// middleware []echo.MiddlewareFunc
@@ -22,6 +23,13 @@ const (
 	OPTIONS
 	TRACE
 	PATCH
+)
+
+type ApiKind uint
+
+const (
+	REST ApiKind = iota
+	HTMX
 )
 
 // type HandleFunc func(c echo.Context) error

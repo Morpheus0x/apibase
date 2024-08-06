@@ -2,13 +2,29 @@ package web
 
 import (
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"gopkg.cc/apibase/log"
 )
 
-func Setup() *ApiServer {
-	api := &ApiServer{e: echo.New()}
-
+func SetupRest() *ApiServer {
+	api := &ApiServer{e: echo.New(), kind: REST}
+	api.e.Use(middleware.Logger())
+	api.e.Use(middleware.Recover())
+	api.registerRestDefaultEndpoints()
 	return api
+}
+
+func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
+	// TODO: create auth flow endpoints
+	return log.ErrorNil()
+}
+
+func (api *ApiServer) StartRest(bind string) log.Err {
+	err := api.e.Start(bind)
+	if err != nil {
+		return log.ErrorNew(log.ErrWebBind, "unable to start rest api with bind '%s': %v", bind, err)
+	}
+	return log.ErrorNil()
 }
 
 // func SetupStatic(root string) *ApiServer {
@@ -30,12 +46,6 @@ func (api *ApiServer) Register(method HttpMethod, path string, handle echo.Handl
 	default:
 		return log.ErrorNew(log.ErrWebUnknownMethod, "Unknown Method")
 	}
-
-	return api.registerDefaultEndpoints()
-}
-
-func (api *ApiServer) registerDefaultEndpoints() log.Err {
-	// Create default routes for login and general user flow
 	return log.ErrorNil()
 }
 

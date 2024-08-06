@@ -22,6 +22,8 @@ const (
 	ErrWebGroupExists
 	// ApiServer group exists but is required
 	ErrWebGroupNotExists
+	// Unable to start ApiServer with specified bind
+	ErrWebBind
 )
 
 type Err struct {
