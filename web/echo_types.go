@@ -9,11 +9,11 @@ type ApiServer struct {
 	// middleware []echo.MiddlewareFunc
 }
 
-//go:generate stringer -type Method -output ./stringer_method.go
-type Method uint
+//go:generate stringer -type HttpMethod -output ./stringer_httpmethod.go
+type HttpMethod uint
 
 const (
-	GET Method = iota
+	GET HttpMethod = iota
 	HEAD
 	POST
 	PUT

@@ -20,7 +20,7 @@ func Setup() *ApiServer {
 // 	return api
 // }
 
-func (api *ApiServer) Register(method Method, path string, handle echo.HandlerFunc) log.Err {
+func (api *ApiServer) Register(method HttpMethod, path string, handle echo.HandlerFunc) log.Err {
 	if api.e == nil {
 		return log.ErrorNew(log.ErrWebApiNotInit, "ApiServer not initialized")
 	}
