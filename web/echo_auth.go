@@ -48,6 +48,7 @@ func refreshAccessToken(c echo.Context) {
 		return
 	}
 	// TODO: check DB if refreshToken has been manually invalidated
+	// TODO: if refresh token is valid for less than e.g. 1 week, refresh this one also
 	accessClaims, ok := accessToken.Claims.(*jwtClaims)
 	if !ok {
 		c.Logger().Errorf("unable to parse claims for new access_token")
@@ -60,6 +61,7 @@ func refreshAccessToken(c echo.Context) {
 	}
 	currentRequest := c.Request()
 	c.Logger().Infof("AllCookies, before adding new access_token: %+v", currentRequest.Cookies())
+	// TODO: maybe use longer cookie Expires time to make sure that the an expired access_token will sent (maybe double validity time)
 	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(newAccessTokenValidity)}
 	currentRequest.AddCookie(newAccessTokenCookie)
 	c.Logger().Infof("AllCookies, check for duplicate access_token: %+v", currentRequest.Cookies())
