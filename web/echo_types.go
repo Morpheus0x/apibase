@@ -1,6 +1,9 @@
 package web
 
-import "github.com/labstack/echo/v4"
+import (
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/labstack/echo/v4"
+)
 
 type ApiServer struct {
 	e    *echo.Echo
@@ -31,6 +34,21 @@ const (
 	REST ApiKind = iota
 	HTMX
 )
+
+type UserRole uint
+
+const (
+	OrgViewer UserRole = iota
+	OrgUser
+	OrgAdmin
+	SuperAdmin = 99
+)
+
+type jwtClaims struct {
+	Name string   `json:"name"`
+	Role UserRole `json:"role"`
+	jwt.RegisteredClaims
+}
 
 // type HandleFunc func(c echo.Context) error
 // type HandleFunc echo.HandlerFunc

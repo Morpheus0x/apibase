@@ -1,6 +1,10 @@
 package web
 
 import (
+	"net/http"
+
+	"github.com/golang-jwt/jwt/v5"
+	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"gopkg.cc/apibase/log"
@@ -15,7 +19,24 @@ func SetupRest() *ApiServer {
 }
 
 func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
-	// TODO: create auth flow endpoints
+	// Create middleware requireing JWT authorization
+	api.e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "No Auth Required!")
+	})
+	api.e.POST("/api/v1/auth/login", defaultEndpointLogin)
+	// api.e.POST("/api/v1/auth/signup", defaultEndpointSignup)
+	v1 := api.e.Group("/api/v1/", echojwt.WithConfig(echojwt.Config{
+		NewClaimsFunc: func(c echo.Context) jwt.Claims {
+			return new(jwtClaims)
+		},
+		TokenLookup: "cookie:access_token", // "header:Authorization:Bearer ,cookie:access_token",
+		BeforeFunc:  refreshAccessToken,
+		SigningKey:  []byte("superSecretSecret"),
+	}))
+	v1.GET("", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Welcome")
+	})
+	// Create default routes for login and general user flow
 	return log.ErrorNil()
 }
 
