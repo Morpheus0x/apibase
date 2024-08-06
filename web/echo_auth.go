@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+	"gopkg.cc/apibase/log"
 )
 
 func createAndSignToken(claim *jwtClaims, validity time.Duration, secret string) (string, error) {
@@ -27,39 +28,22 @@ func refreshAccessToken(c echo.Context) {
 	secret := "superSecretSecret"
 	newAccessTokenValidity := time.Second * 15 // time.Hour
 
-	accessTokenRaw, err := c.Cookie("access_token")
-	if err != nil {
-		// ###################
-		// TODO: Setting a very low cookie expiration makes it so that the request doesn't even send the access_token
-		// Therefore, either set access_token cookie expiration to same as refresh_token or don't require an access_token here
-		// ###################
-		c.Logger().Error("Do nothing, since auth will fail, since no access_token cookie was provided") // TODO: remove
-		// Do nothing, since auth will fail, since no access_token cookie was provided
+	// accessTokenIsValid := false
+	accessToken, errx := validateToken(c, "access_token", secret)
+	if errx.IsNil() {
+		// accessTokenIsValid = true
+		accessTokenExpire, err := accessToken.Claims.GetExpirationTime()
+		if accessToken.Valid && err == nil && accessTokenExpire.Time.Add(-time.Minute).After(time.Now()) {
+			// Do nothing, access token is still valid for long enough
+			return
+		}
+	}
+	refreshToken, errx := validateToken(c, secret, "refresh_token")
+	if !errx.IsNil() {
+		c.Logger().Errorf("unable to renew access_token: %s", errx.Text())
 		return
 	}
-	accessToken, err := jwt.ParseWithClaims(accessTokenRaw.Value, new(jwtClaims), func(t *jwt.Token) (interface{}, error) {
-		return []byte(secret), nil
-	})
-	if err != nil {
-		c.Logger().Errorf("Do nothing, since auth will fail, since access_token cannot be parsed, err: %+v", err) // TODO: remove
-		// Do nothing, since auth will fail, since access_token cannot be parsed
-		return
-	}
-	accessTokenExpire, err := accessToken.Claims.GetExpirationTime()
-	if accessToken.Valid && err == nil && accessTokenExpire.Time.Add(-time.Minute).After(time.Now()) {
-		c.Logger().Errorf("Do nothing, access token is still valid for long enough") // TODO: remove
-		// Do nothing, access token is still valid for long enough
-		return
-	}
-	refreshTokenRaw, err := c.Cookie("refresh_token")
-	if err != nil {
-		c.Logger().Errorf("no cookie refresh_token, unable to renew access_token")
-		return
-	}
-	refreshToken, err := jwt.ParseWithClaims(refreshTokenRaw.Value, new(jwtClaims), func(t *jwt.Token) (interface{}, error) {
-		return []byte(secret), nil
-	})
-	if err != nil || !refreshToken.Valid {
+	if !refreshToken.Valid {
 		c.Logger().Errorf("refresh_token is invalid, unable to renew access_token")
 		return
 	}
@@ -81,4 +65,20 @@ func refreshAccessToken(c echo.Context) {
 	c.Logger().Infof("AllCookies, check for duplicate access_token: %+v", currentRequest.Cookies())
 	c.SetRequest(currentRequest)
 	c.SetCookie(newAccessTokenCookie)
+}
+
+func validateToken(c echo.Context, cookieName string, secret string) (*jwt.Token, log.Err) {
+	tokenRaw, err := c.Cookie(cookieName)
+	if err != nil {
+		c.Logger().Debugf("no cookie '%s' in request (%s): %v", cookieName, c.Request().RequestURI, err)
+		return &jwt.Token{}, log.ErrorNew(log.ErrTokenValidate, "no cookie '%s' present in request", cookieName)
+	}
+	token, err := jwt.ParseWithClaims(tokenRaw.Value, new(jwtClaims), func(t *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+	if err != nil {
+		c.Logger().Debugf("error parsing token from cookie: %v", err)
+		return &jwt.Token{}, log.ErrorNew(log.ErrTokenValidate, "error parsing token '%s'", cookieName)
+	}
+	return token, log.ErrorNil()
 }

@@ -24,6 +24,8 @@ const (
 	ErrWebGroupNotExists
 	// Unable to start ApiServer with specified bind
 	ErrWebBind
+	// Token could not be parsed from cookie
+	ErrTokenValidate
 )
 
 type Err struct {
