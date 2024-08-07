@@ -18,7 +18,8 @@ func SetupRest(config ApiConfig) *ApiServer {
 	}
 	api.e.HideBanner = true
 	api.e.HidePort = true
-	api.e.Use(middleware.Logger())
+	api.e.Use(middleware.Logger()) // TODO: replace with custom logger
+	// TODO: replace all commented out e.Logger() calls with custom logger where useful
 	api.e.Use(middleware.Recover())
 	api.e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: api.config.CORS,
@@ -53,7 +54,7 @@ func (api *ApiServer) StartRest(bind string) log.Err {
 	if err != nil {
 		return log.ErrorNew(log.ErrWebBind, "unable to start rest api with bind '%s': %v", bind, err)
 	}
-	fmt.Printf("Rest API Server started on '%s'", bind)
+	fmt.Printf("Rest API Server started on '%s'", bind) // TODO: replace with custom logger
 	return log.ErrorNil()
 }
 

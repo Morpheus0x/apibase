@@ -44,7 +44,7 @@ func authMiddleware(c echo.Context) error {
 		return nil
 	}
 	// TODO: check DB if refreshToken has been manually invalidated
-	// TODO: if refresh token is valid for less than e.g. 1 week, refresh this one also
+	// TODO: if refresh token is valid for less than e.g. 1 week, refresh this one also (also refresh csrf_token cookie value and/or expiration)
 	refreshClaims, ok := refreshToken.Claims.(*jwtRefreshClaims)
 	if !ok {
 		// c.Logger().Errorf("unable to parse refresh token claims")
