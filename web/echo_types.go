@@ -6,11 +6,16 @@ import (
 )
 
 type ApiServer struct {
-	e    *echo.Echo
-	kind ApiKind
+	e      *echo.Echo
+	kind   ApiKind
+	config ApiConfig
 
 	// groups     map[string]*echo.Group
 	// middleware []echo.MiddlewareFunc
+}
+
+type ApiConfig struct {
+	corsUris []string
 }
 
 //go:generate stringer -type HttpMethod -output ./stringer_httpmethod.go

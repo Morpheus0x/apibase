@@ -10,10 +10,16 @@ import (
 	"gopkg.cc/apibase/log"
 )
 
-func SetupRest() *ApiServer {
-	api := &ApiServer{e: echo.New(), kind: REST}
+func SetupRest(config ApiConfig) *ApiServer {
+	api := &ApiServer{e: echo.New(), kind: REST, config: config}
+	if len(config.corsUris) < 1 {
+		api.config.corsUris = []string{"*"}
+	}
 	api.e.Use(middleware.Logger())
 	api.e.Use(middleware.Recover())
+	api.e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: api.config.corsUris,
+	}))
 	api.registerRestDefaultEndpoints()
 	return api
 }
