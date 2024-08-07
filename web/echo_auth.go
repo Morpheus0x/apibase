@@ -8,7 +8,17 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func authMiddleware(c echo.Context) {
+func authMiddlewareWrapper(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		err := authMiddleware(c)
+		if err != nil {
+			return err
+		}
+		return next(c)
+	}
+}
+
+func authMiddleware(c echo.Context) error {
 	// TODO: Add Dependency Injection for secret and newAccessTokenValidity
 	secret := "superSecretSecret"
 	newAccessTokenValidity := time.Second * 15 // time.Hour
@@ -18,24 +28,24 @@ func authMiddleware(c echo.Context) {
 		accessTokenExpire, err := accessToken.Claims.GetExpirationTime()
 		if accessToken.Valid && err == nil && accessTokenExpire.Time.Add(-time.Minute).After(time.Now()) {
 			// Do nothing, access token is still valid for long enough
-			return
+			return nil
 		}
 	}
 	refreshToken, errx := parseRefreshTokenCookie(c, secret)
 	if !errx.IsNil() {
 		c.Logger().Errorf("unable to renew access_token: %s", errx.Text())
-		return
+		return nil
 	}
 	if !refreshToken.Valid {
 		c.Logger().Errorf("refresh_token is invalid, unable to renew access_token")
-		return
+		return nil
 	}
 	// TODO: check DB if refreshToken has been manually invalidated
 	// TODO: if refresh token is valid for less than e.g. 1 week, refresh this one also
 	refreshClaims, ok := refreshToken.Claims.(*jwtRefreshClaims)
 	if !ok {
 		c.Logger().Errorf("unable to parse refresh token claims")
-		return
+		return nil
 	}
 	// TODO: get Access Claims from DB
 	now := time.Now()
@@ -50,7 +60,7 @@ func authMiddleware(c echo.Context) {
 	newAccessToken, err := createSignedAccessToken(accessClaims, newAccessTokenValidity, secret)
 	if err != nil {
 		c.Logger().Errorf("unable to create new access_token")
-		return
+		return nil
 	}
 	currentRequest := c.Request()
 	c.Logger().Infof("AllCookies, before adding new access_token: %+v", currentRequest.Cookies())
@@ -60,4 +70,5 @@ func authMiddleware(c echo.Context) {
 	c.Logger().Infof("AllCookies, check for duplicate access_token: %+v", currentRequest.Cookies())
 	c.SetRequest(currentRequest)
 	c.SetCookie(newAccessTokenCookie)
+	return nil
 }
