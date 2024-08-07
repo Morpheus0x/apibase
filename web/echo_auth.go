@@ -47,7 +47,7 @@ func authMiddleware(c echo.Context) {
 			ExpiresAt: jwt.NewNumericDate(now.Add(newAccessTokenValidity)),
 		},
 	}
-	newAccessToken, err := createAndSignAccessToken(accessClaims, newAccessTokenValidity, secret)
+	newAccessToken, err := createSignedAccessToken(accessClaims, newAccessTokenValidity, secret)
 	if err != nil {
 		c.Logger().Errorf("unable to create new access_token")
 		return

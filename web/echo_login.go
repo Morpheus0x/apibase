@@ -21,11 +21,11 @@ func login(c echo.Context) error {
 		return echo.ErrUnauthorized
 	}
 	// TODO: use different claims for access and refresh token
-	accessToken, err := createAndSignAccessToken(&jwtAccessClaims{Name: username, Role: SuperAdmin}, accessTokenValidity, secret)
+	accessToken, err := createSignedAccessToken(&jwtAccessClaims{Name: username, Role: SuperAdmin}, accessTokenValidity, secret)
 	if err != nil {
 		return fmt.Errorf("unable to create access token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 	}
-	refreshToken, err := createAndSignRefreshToken(&jwtRefreshClaims{Name: username, Role: SuperAdmin}, refreshTokenValidity, secret)
+	refreshToken, err := createSignedRefreshToken(&jwtRefreshClaims{Name: username, Role: SuperAdmin}, refreshTokenValidity, secret)
 	if err != nil {
 		return fmt.Errorf("unable to create refresh token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 	}

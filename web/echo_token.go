@@ -8,7 +8,7 @@ import (
 	"gopkg.cc/apibase/log"
 )
 
-func createAndSignAccessToken(claim *jwtAccessClaims, validity time.Duration, secret string) (string, error) {
+func createSignedAccessToken(claim *jwtAccessClaims, validity time.Duration, secret string) (string, error) {
 	now := time.Now()
 	claims := &jwtAccessClaims{
 		claim.Name,
@@ -22,7 +22,7 @@ func createAndSignAccessToken(claim *jwtAccessClaims, validity time.Duration, se
 	return rawToken.SignedString([]byte(secret))
 }
 
-func createAndSignRefreshToken(claim *jwtRefreshClaims, validity time.Duration, secret string) (string, error) {
+func createSignedRefreshToken(claim *jwtRefreshClaims, validity time.Duration, secret string) (string, error) {
 	now := time.Now()
 	claims := &jwtRefreshClaims{
 		claim.Name,
