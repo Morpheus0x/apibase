@@ -29,9 +29,8 @@ func login(c echo.Context) error {
 	if err != nil {
 		return fmt.Errorf("unable to create refresh token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 	}
-	// TODO: increase cookie Expires by doubling the actual token validity duration (otherwise any old tokens will never be sent to server, limiting logging ability)
-	c.SetCookie(&http.Cookie{Name: "access_token", Value: accessToken, Path: "/", Expires: time.Now().Add(accessTokenValidity)})
-	c.SetCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken, Path: "/", Expires: time.Now().Add(refreshTokenValidity)})
+	c.SetCookie(&http.Cookie{Name: "access_token", Value: accessToken, Path: "/", Expires: time.Now().Add(accessTokenValidity * 2)})
+	c.SetCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken, Path: "/", Expires: time.Now().Add(refreshTokenValidity * 2)})
 	// return c.JSON(http.StatusOK, echo.Map{
 	// 	"accessToken":  accessToken,
 	// 	"refreshToken": refreshToken,

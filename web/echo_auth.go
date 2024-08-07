@@ -64,8 +64,7 @@ func authMiddleware(c echo.Context) error {
 	}
 	currentRequest := c.Request()
 	c.Logger().Infof("AllCookies, before adding new access_token: %+v", currentRequest.Cookies())
-	// TODO: maybe use longer cookie Expires time to make sure that the an expired access_token will sent (maybe double validity time)
-	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(newAccessTokenValidity)}
+	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(newAccessTokenValidity * 2)}
 	currentRequest.AddCookie(newAccessTokenCookie)
 	c.Logger().Infof("AllCookies, check for duplicate access_token: %+v", currentRequest.Cookies())
 	c.SetRequest(currentRequest)
