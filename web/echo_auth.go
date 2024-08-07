@@ -64,7 +64,7 @@ func authMiddleware(c echo.Context) error {
 
 	accessToken, errx := parseAccessTokenCookie(c, secret)
 	if errx.IsNil() {
-		if csrfInvalid(c, accessToken.Claims.(*jwtAccessClaims)) {
+		if !validCSRF(c, accessToken.Claims.(*jwtAccessClaims)) {
 			// Invalid CSRF Header received
 			return c.String(http.StatusUnauthorized, "Unauthorized")
 		}
@@ -90,7 +90,7 @@ func authMiddleware(c echo.Context) error {
 		// c.Logger().Errorf("unable to parse refresh token claims")
 		return nil
 	}
-	if csrfInvalid(c, refreshToken.Claims.(*jwtRefreshClaims)) {
+	if !validCSRF(c, refreshToken.Claims.(*jwtRefreshClaims)) {
 		// Invalid CSRF Header received
 		return c.String(http.StatusUnauthorized, "Unauthorized")
 	}
