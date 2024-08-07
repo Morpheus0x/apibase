@@ -33,10 +33,10 @@ func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
 	// api.e.POST("/api/v1/auth/signup", defaultEndpointSignup)
 	v1 := api.e.Group("/api/v1/", echojwt.WithConfig(echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
-			return new(jwtClaims)
+			return new(jwtAccessClaims)
 		},
 		TokenLookup: "cookie:access_token", // "header:Authorization:Bearer ,cookie:access_token",
-		BeforeFunc:  refreshAccessToken,
+		BeforeFunc:  authMiddleware,
 		SigningKey:  []byte("superSecretSecret"),
 	}))
 	v1.GET("", func(c echo.Context) error {

@@ -49,7 +49,13 @@ const (
 	SuperAdmin = 99
 )
 
-type jwtClaims struct {
+type jwtAccessClaims struct {
+	Name string   `json:"name"`
+	Role UserRole `json:"role"`
+	jwt.RegisteredClaims
+}
+
+type jwtRefreshClaims struct {
 	Name string   `json:"name"`
 	Role UserRole `json:"role"`
 	jwt.RegisteredClaims
