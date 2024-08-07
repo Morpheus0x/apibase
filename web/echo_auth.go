@@ -12,13 +12,11 @@ func authLogin(config ApiConfig) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		csrfValue := "superRandomCSRF" // TODO: generate randomly
 
-		// log := c.Logger()
 		username := c.FormValue("username")
 		password := c.FormValue("password")
 		if password != "123456" {
 			return echo.ErrUnauthorized
 		}
-		// TODO: use different claims for access and refresh token
 		accessToken, err := createSignedAccessToken(&jwtAccessClaims{Name: username, Role: SuperAdmin, CSRFHeader: csrfValue}, config)
 		if err != nil {
 			return fmt.Errorf("unable to create access token: %v", err) // TODO: instead of returning error via http, log it privately on the server
@@ -27,13 +25,11 @@ func authLogin(config ApiConfig) echo.HandlerFunc {
 		if err != nil {
 			return fmt.Errorf("unable to create refresh token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 		}
+		// TODO: save access token to DB
 		c.SetCookie(&http.Cookie{Name: "access_token", Value: accessToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(config.TokenAccessValidity * 2)})
 		c.SetCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(config.TokenRefreshValidity * 2)})
 		c.SetCookie(&http.Cookie{Name: "csrf_token", Value: csrfValue, Path: "/", Expires: time.Now().Add(config.TokenRefreshValidity * 2)})
-		// return c.JSON(http.StatusOK, echo.Map{
-		// 	"accessToken":  accessToken,
-		// 	"refreshToken": refreshToken,
-		// })
+
 		return c.String(http.StatusOK, "access and refresh token set as cookie")
 	}
 }
