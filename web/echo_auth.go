@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -25,6 +24,10 @@ func authMiddleware(c echo.Context) error {
 
 	accessToken, errx := parseAccessTokenCookie(c, secret)
 	if errx.IsNil() {
+		if csrfInvalid(c, accessToken.Claims.(*jwtAccessClaims)) {
+			// Invalid CSRF Header received
+			return c.String(http.StatusUnauthorized, "Unauthorized")
+		}
 		accessTokenExpire, err := accessToken.Claims.GetExpirationTime()
 		if accessToken.Valid && err == nil && accessTokenExpire.Time.Add(-time.Minute).After(time.Now()) {
 			// Do nothing, access token is still valid for long enough
@@ -47,15 +50,15 @@ func authMiddleware(c echo.Context) error {
 		c.Logger().Errorf("unable to parse refresh token claims")
 		return nil
 	}
+	if csrfInvalid(c, refreshToken.Claims.(*jwtRefreshClaims)) {
+		// Invalid CSRF Header received
+		return c.String(http.StatusUnauthorized, "Unauthorized")
+	}
 	// TODO: get Access Claims from DB
-	now := time.Now()
 	accessClaims := &jwtAccessClaims{
-		Name: refreshClaims.Name,
-		Role: refreshClaims.Role,
-		RegisteredClaims: jwt.RegisteredClaims{
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(newAccessTokenValidity)),
-		},
+		Name:       refreshClaims.Name,
+		Role:       refreshClaims.Role,
+		CSRFHeader: refreshClaims.CSRFHeader,
 	}
 	newAccessToken, err := createSignedAccessToken(accessClaims, newAccessTokenValidity, secret)
 	if err != nil {

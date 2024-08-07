@@ -8,30 +8,18 @@ import (
 	"gopkg.cc/apibase/log"
 )
 
-func createSignedAccessToken(claim *jwtAccessClaims, validity time.Duration, secret string) (string, error) {
+func createSignedAccessToken(claims *jwtAccessClaims, validity time.Duration, secret string) (string, error) {
 	now := time.Now()
-	claims := &jwtAccessClaims{
-		claim.Name,
-		claim.Role,
-		jwt.RegisteredClaims{
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(validity)),
-		},
-	}
+	claims.IssuedAt = jwt.NewNumericDate(now)
+	claims.ExpiresAt = jwt.NewNumericDate(now.Add(validity))
 	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return rawToken.SignedString([]byte(secret))
 }
 
-func createSignedRefreshToken(claim *jwtRefreshClaims, validity time.Duration, secret string) (string, error) {
+func createSignedRefreshToken(claims *jwtRefreshClaims, validity time.Duration, secret string) (string, error) {
 	now := time.Now()
-	claims := &jwtRefreshClaims{
-		claim.Name,
-		claim.Role,
-		jwt.RegisteredClaims{
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(validity)),
-		},
-	}
+	claims.IssuedAt = jwt.NewNumericDate(now)
+	claims.ExpiresAt = jwt.NewNumericDate(now.Add(validity))
 	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return rawToken.SignedString([]byte(secret))
 }

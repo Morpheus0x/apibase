@@ -50,14 +50,16 @@ const (
 )
 
 type jwtAccessClaims struct {
-	Name string   `json:"name"`
-	Role UserRole `json:"role"`
+	Name       string   `json:"name"`
+	Role       UserRole `json:"role"`
+	CSRFHeader string   `json:"csrf_header"`
 	jwt.RegisteredClaims
 }
 
 type jwtRefreshClaims struct {
-	Name string   `json:"name"`
-	Role UserRole `json:"role"`
+	Name       string   `json:"name"`
+	Role       UserRole `json:"role"`
+	CSRFHeader string   `json:"csrf_header"`
 	jwt.RegisteredClaims
 }
 
