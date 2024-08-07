@@ -1,8 +1,11 @@
 package web
 
 import (
+	"time"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+	"gopkg.cc/apibase/db"
 )
 
 type ApiServer struct {
@@ -16,6 +19,11 @@ type ApiServer struct {
 
 type ApiConfig struct {
 	CORS []string
+	DB   db.DB
+
+	TokenSecret          string
+	TokenAccessValidity  time.Duration
+	TokenRefreshValidity time.Duration
 }
 
 //go:generate stringer -type HttpMethod -output ./stringer_httpmethod.go

@@ -33,15 +33,15 @@ func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
 	api.e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "No Auth Required!")
 	})
-	api.e.POST("/auth/login", authLogin)
-	api.e.GET("/auth/logout", authLogout)
+	api.e.POST("/auth/login", authLogin(api.config))
+	api.e.GET("/auth/logout", authLogout(api.config))
 	// api.e.POST("/api/v1/auth/signup", defaultEndpointSignup)
-	v1 := api.e.Group("/api/", authMiddlewareWrapper, echojwt.WithConfig(echojwt.Config{
+	v1 := api.e.Group("/api/", authJWT(api.config), echojwt.WithConfig(echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(jwtAccessClaims)
 		},
 		TokenLookup: "cookie:access_token", // "header:Authorization:Bearer ,cookie:access_token",
-		SigningKey:  []byte("superSecretSecret"),
+		SigningKey:  []byte(api.config.TokenSecret),
 	}))
 	v1.GET("", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Welcome")

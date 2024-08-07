@@ -12,7 +12,7 @@ const (
 )
 
 type DB struct {
-	kind     DBKind
-	sqlite   *sqlite.SQLite
-	postgres string // TODO: new
+	Kind     DBKind
+	SQLite   *sqlite.SQLite
+	Postgres string // TODO: new
 }
