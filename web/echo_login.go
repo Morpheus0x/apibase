@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func defaultEndpointLogin(c echo.Context) error {
+func login(c echo.Context) error {
 	// TODO: Add Dependency Injection for secret and access_token ExpiresAt
 	secret := "superSecretSecret"
 	accessTokenValidity := time.Second * 15 // time.Hour
@@ -20,11 +20,12 @@ func defaultEndpointLogin(c echo.Context) error {
 	if password != "123456" {
 		return echo.ErrUnauthorized
 	}
-	accessToken, err := createAndSignToken(&jwtClaims{Name: username, Role: SuperAdmin}, accessTokenValidity, secret)
+	// TODO: use different claims for access and refresh token
+	accessToken, err := createAndSignAccessToken(&jwtAccessClaims{Name: username, Role: SuperAdmin}, accessTokenValidity, secret)
 	if err != nil {
 		return fmt.Errorf("unable to create access token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 	}
-	refreshToken, err := createAndSignToken(&jwtClaims{Name: username, Role: SuperAdmin}, refreshTokenValidity, secret)
+	refreshToken, err := createAndSignRefreshToken(&jwtRefreshClaims{Name: username, Role: SuperAdmin}, refreshTokenValidity, secret)
 	if err != nil {
 		return fmt.Errorf("unable to create refresh token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 	}

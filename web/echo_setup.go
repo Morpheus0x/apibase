@@ -23,7 +23,7 @@ func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
 	api.e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "No Auth Required!")
 	})
-	api.e.POST("/api/v1/auth/login", defaultEndpointLogin)
+	api.e.POST("/api/v1/auth/login", login)
 	// api.e.POST("/api/v1/auth/signup", defaultEndpointSignup)
 	v1 := api.e.Group("/api/v1/", echojwt.WithConfig(echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
