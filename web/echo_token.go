@@ -27,14 +27,14 @@ func createSignedRefreshToken(claims *jwtRefreshClaims, validity time.Duration, 
 func parseAccessTokenCookie(c echo.Context, secret string) (*jwt.Token, log.Err) {
 	tokenRaw, err := c.Cookie("access_token")
 	if err != nil {
-		c.Logger().Debugf("no cookie 'access_token' in request (%s): %v", c.Request().RequestURI, err)
+		// c.Logger().Debugf("no cookie 'access_token' in request (%s): %v", c.Request().RequestURI, err)
 		return &jwt.Token{}, log.ErrorNew(log.ErrTokenValidate, "no cookie 'access_token' present in request")
 	}
 	token, err := jwt.ParseWithClaims(tokenRaw.Value, new(jwtAccessClaims), func(t *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	})
 	if err != nil {
-		c.Logger().Debugf("error parsing token from cookie: %v", err)
+		// c.Logger().Debugf("error parsing token from cookie: %v", err)
 		return &jwt.Token{}, log.ErrorNew(log.ErrTokenValidate, "error parsing token 'access_token'")
 	}
 	return token, log.ErrorNil()
@@ -43,14 +43,14 @@ func parseAccessTokenCookie(c echo.Context, secret string) (*jwt.Token, log.Err)
 func parseRefreshTokenCookie(c echo.Context, secret string) (*jwt.Token, log.Err) {
 	tokenRaw, err := c.Cookie("refresh_token")
 	if err != nil {
-		c.Logger().Debugf("no cookie 'refresh_token' in request (%s): %v", c.Request().RequestURI, err)
+		// c.Logger().Debugf("no cookie 'refresh_token' in request (%s): %v", c.Request().RequestURI, err)
 		return &jwt.Token{}, log.ErrorNew(log.ErrTokenValidate, "no cookie 'refresh_token' present in request")
 	}
 	token, err := jwt.ParseWithClaims(tokenRaw.Value, new(jwtRefreshClaims), func(t *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	})
 	if err != nil {
-		c.Logger().Debugf("error parsing token from cookie: %v", err)
+		// c.Logger().Debugf("error parsing token from cookie: %v", err)
 		return &jwt.Token{}, log.ErrorNew(log.ErrTokenValidate, "error parsing token 'refresh_token'")
 	}
 	return token, log.ErrorNil()

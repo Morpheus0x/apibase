@@ -14,7 +14,7 @@ func csrfInvalid(c echo.Context, claims any) bool {
 	case reflect.TypeOf(jwtRefreshClaims{}):
 		csrfHeader = claims.(*jwtRefreshClaims).CSRFHeader
 	default:
-		c.Logger().Errorf("invalid type for")
+		// c.Logger().Errorf("invalid type for claims")
 		return false
 	}
 	return c.Request().Header.Get("X-XSRF-TOKEN") != csrfHeader

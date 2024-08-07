@@ -36,18 +36,18 @@ func authMiddleware(c echo.Context) error {
 	}
 	refreshToken, errx := parseRefreshTokenCookie(c, secret)
 	if !errx.IsNil() {
-		c.Logger().Errorf("unable to renew access_token: %s", errx.Text())
+		// c.Logger().Errorf("unable to renew access_token: %s", errx.Text())
 		return nil
 	}
 	if !refreshToken.Valid {
-		c.Logger().Errorf("refresh_token is invalid, unable to renew access_token")
+		// c.Logger().Errorf("refresh_token is invalid, unable to renew access_token")
 		return nil
 	}
 	// TODO: check DB if refreshToken has been manually invalidated
 	// TODO: if refresh token is valid for less than e.g. 1 week, refresh this one also
 	refreshClaims, ok := refreshToken.Claims.(*jwtRefreshClaims)
 	if !ok {
-		c.Logger().Errorf("unable to parse refresh token claims")
+		// c.Logger().Errorf("unable to parse refresh token claims")
 		return nil
 	}
 	if csrfInvalid(c, refreshToken.Claims.(*jwtRefreshClaims)) {
@@ -62,14 +62,14 @@ func authMiddleware(c echo.Context) error {
 	}
 	newAccessToken, err := createSignedAccessToken(accessClaims, newAccessTokenValidity, secret)
 	if err != nil {
-		c.Logger().Errorf("unable to create new access_token")
+		// c.Logger().Errorf("unable to create new access_token")
 		return nil
 	}
 	currentRequest := c.Request()
-	c.Logger().Infof("AllCookies, before adding new access_token: %+v", currentRequest.Cookies())
+	// c.Logger().Infof("AllCookies, before adding new access_token: %+v", currentRequest.Cookies())
 	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(newAccessTokenValidity * 2)}
 	currentRequest.AddCookie(newAccessTokenCookie)
-	c.Logger().Infof("AllCookies, check for duplicate access_token: %+v", currentRequest.Cookies())
+	// c.Logger().Infof("AllCookies, check for duplicate access_token: %+v", currentRequest.Cookies())
 	c.SetRequest(currentRequest)
 	c.SetCookie(newAccessTokenCookie)
 	return nil

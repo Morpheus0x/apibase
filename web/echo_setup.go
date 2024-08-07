@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -15,6 +16,8 @@ func SetupRest(config ApiConfig) *ApiServer {
 	if len(config.CORS) < 1 {
 		api.config.CORS = []string{"*"}
 	}
+	api.e.HideBanner = true
+	api.e.HidePort = true
 	api.e.Use(middleware.Logger())
 	api.e.Use(middleware.Recover())
 	api.e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
@@ -50,6 +53,7 @@ func (api *ApiServer) StartRest(bind string) log.Err {
 	if err != nil {
 		return log.ErrorNew(log.ErrWebBind, "unable to start rest api with bind '%s': %v", bind, err)
 	}
+	fmt.Printf("Rest API Server started on '%s'", bind)
 	return log.ErrorNil()
 }
 
