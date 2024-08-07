@@ -15,7 +15,7 @@ type ApiServer struct {
 }
 
 type ApiConfig struct {
-	corsUris []string
+	CORS []string
 }
 
 //go:generate stringer -type HttpMethod -output ./stringer_httpmethod.go

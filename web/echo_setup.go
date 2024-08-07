@@ -12,13 +12,13 @@ import (
 
 func SetupRest(config ApiConfig) *ApiServer {
 	api := &ApiServer{e: echo.New(), kind: REST, config: config}
-	if len(config.corsUris) < 1 {
-		api.config.corsUris = []string{"*"}
+	if len(config.CORS) < 1 {
+		api.config.CORS = []string{"*"}
 	}
 	api.e.Use(middleware.Logger())
 	api.e.Use(middleware.Recover())
 	api.e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: api.config.corsUris,
+		AllowOrigins: api.config.CORS,
 	}))
 	api.registerRestDefaultEndpoints()
 	return api
