@@ -30,9 +30,10 @@ func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
 	api.e.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "No Auth Required!"})
 	})
+
 	api.e.POST("/auth/login", authLogin(api.config))
 	api.e.GET("/auth/logout", authLogout(api.config), authJWT(api.config))
-	// api.e.POST("/api/v1/auth/signup", defaultEndpointSignup)
+	api.e.POST("/auth/signup", authSignup(api.config))
 
 	v1 := api.e.Group("/api/", authJWT(api.config))
 	v1.GET("", func(c echo.Context) error {

@@ -43,6 +43,12 @@ func authLogout(config ApiConfig) echo.HandlerFunc {
 	}
 }
 
+func authSignup(config ApiConfig) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		return c.JSON(http.StatusNotImplemented, map[string]string{"message": "WIP"})
+	}
+}
+
 func authJWT(config ApiConfig) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
