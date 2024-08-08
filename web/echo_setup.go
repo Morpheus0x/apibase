@@ -31,7 +31,7 @@ func SetupRest(config ApiConfig) *ApiServer {
 func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
 	// Create middleware requireing JWT authorization
 	api.e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "No Auth Required!")
+		return c.JSON(http.StatusOK, map[string]string{"message": "No Auth Required!"})
 	})
 	api.e.POST("/auth/login", authLogin(api.config))
 	api.e.GET("/auth/logout", authLogout(api.config))
@@ -44,7 +44,7 @@ func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
 		SigningKey:  []byte(api.config.TokenSecret),
 	}))
 	v1.GET("", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Welcome")
+		return c.JSON(http.StatusOK, map[string]string{"message": "Welcome!"})
 	})
 	// Create default routes for login and general user flow
 	return log.ErrorNil()

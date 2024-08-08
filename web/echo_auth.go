@@ -30,7 +30,7 @@ func authLogin(config ApiConfig) echo.HandlerFunc {
 		c.SetCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(config.TokenRefreshValidity * 2)})
 		c.SetCookie(&http.Cookie{Name: "csrf_token", Value: csrfValue, Path: "/", Expires: time.Now().Add(config.TokenRefreshValidity * 2)})
 
-		return c.String(http.StatusOK, "access and refresh token set as cookie")
+		return c.JSON(http.StatusOK, map[string]string{"message": "access and refresh token set as cookie"})
 	}
 }
 
@@ -39,7 +39,7 @@ func authLogout(config ApiConfig) echo.HandlerFunc {
 		c.SetCookie(&http.Cookie{Name: "access_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
 		c.SetCookie(&http.Cookie{Name: "refresh_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
 		// TODO: invalidate refresh_token in DB
-		return c.String(http.StatusOK, "Logged out")
+		return c.JSON(http.StatusOK, map[string]string{"message": "Logged out!"})
 	}
 }
 
