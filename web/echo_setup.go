@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/golang-jwt/jwt/v5"
-	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"gopkg.cc/apibase/log"
@@ -29,20 +27,14 @@ func SetupRest(config ApiConfig) *ApiServer {
 }
 
 func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
-	// Create middleware requireing JWT authorization
 	api.e.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "No Auth Required!"})
 	})
 	api.e.POST("/auth/login", authLogin(api.config))
-	api.e.GET("/auth/logout", authLogout(api.config))
+	api.e.GET("/auth/logout", authLogout(api.config), authJWT(api.config))
 	// api.e.POST("/api/v1/auth/signup", defaultEndpointSignup)
-	v1 := api.e.Group("/api/", authJWT(api.config), echojwt.WithConfig(echojwt.Config{
-		NewClaimsFunc: func(c echo.Context) jwt.Claims {
-			return new(jwtAccessClaims)
-		},
-		TokenLookup: "cookie:access_token", // "header:Authorization:Bearer ,cookie:access_token",
-		SigningKey:  []byte(api.config.TokenSecret),
-	}))
+
+	v1 := api.e.Group("/api/", authJWT(api.config))
 	v1.GET("", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "Welcome!"})
 	})

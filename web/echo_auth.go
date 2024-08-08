@@ -61,7 +61,7 @@ func authJWTHandler(c echo.Context, config ApiConfig) error {
 	if errx.IsNil() {
 		if !validCSRF(c, accessToken.Claims.(*jwtAccessClaims)) {
 			// Invalid CSRF Header received
-			return c.String(http.StatusUnauthorized, "Unauthorized")
+			return echo.NewHTTPError(http.StatusUnauthorized, "access token CSRF invalid")
 		}
 		accessTokenExpire, err := accessToken.Claims.GetExpirationTime()
 		if accessToken.Valid && err == nil && accessTokenExpire.Time.Add(-time.Minute).After(time.Now()) {
@@ -72,22 +72,22 @@ func authJWTHandler(c echo.Context, config ApiConfig) error {
 	refreshToken, errx := parseRefreshTokenCookie(c, config.TokenSecret)
 	if !errx.IsNil() {
 		// c.Logger().Errorf("unable to renew access_token: %s", errx.Text())
-		return nil
+		return echo.NewHTTPError(http.StatusUnauthorized, "unable to parse refresh token from cookie")
 	}
 	if !refreshToken.Valid {
 		// c.Logger().Errorf("refresh_token is invalid, unable to renew access_token")
-		return nil
+		return echo.NewHTTPError(http.StatusUnauthorized, "refresh token invalid")
 	}
 	// TODO: check DB if refreshToken has been manually invalidated
 	// TODO: if refresh token is valid for less than e.g. 1 week, refresh this one also (also refresh csrf_token cookie value and/or expiration)
 	refreshClaims, ok := refreshToken.Claims.(*jwtRefreshClaims)
 	if !ok {
 		// c.Logger().Errorf("unable to parse refresh token claims")
-		return nil
+		return echo.NewHTTPError(http.StatusUnauthorized, "unable to parse refresh token claims")
 	}
 	if !validCSRF(c, refreshToken.Claims.(*jwtRefreshClaims)) {
 		// Invalid CSRF Header received
-		return c.String(http.StatusUnauthorized, "Unauthorized")
+		return echo.NewHTTPError(http.StatusUnauthorized, "refresh token CSRF invalid")
 	}
 	// TODO: get Access Claims from DB
 	accessClaims := &jwtAccessClaims{
@@ -98,7 +98,7 @@ func authJWTHandler(c echo.Context, config ApiConfig) error {
 	newAccessToken, err := createSignedAccessToken(accessClaims, config)
 	if err != nil {
 		// c.Logger().Errorf("unable to create new access_token")
-		return nil
+		return echo.NewHTTPError(http.StatusUnauthorized, "unable to create new access token")
 	}
 	currentRequest := c.Request()
 	// c.Logger().Infof("AllCookies, before adding new access_token: %+v", currentRequest.Cookies())
