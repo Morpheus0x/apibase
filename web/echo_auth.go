@@ -10,6 +10,7 @@ import (
 
 func authLogin(config ApiConfig) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		// TODO: add fail2ban
 		csrfValue := "superRandomCSRF" // TODO: generate randomly
 
 		username := c.FormValue("username")
@@ -36,6 +37,7 @@ func authLogin(config ApiConfig) echo.HandlerFunc {
 
 func authLogout(config ApiConfig) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		// TODO: add option to disable signup or require invite code, add fail2ban
 		c.SetCookie(&http.Cookie{Name: "access_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
 		c.SetCookie(&http.Cookie{Name: "refresh_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
 		// TODO: invalidate refresh_token in DB
