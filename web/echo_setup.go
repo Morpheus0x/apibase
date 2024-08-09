@@ -44,11 +44,12 @@ func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
 }
 
 func (api *ApiServer) StartRest(bind string) log.Err {
-	err := api.e.Start(bind)
+	fmt.Printf("Rest API Server started on '%s'\n\n", bind) // TODO: replace with custom logger
+
+	err := api.e.Start(bind) // blocking
 	if err != nil {
 		return log.ErrorNew(log.ErrWebBind, "unable to start rest api with bind '%s': %v", bind, err)
 	}
-	fmt.Printf("Rest API Server started on '%s'", bind) // TODO: replace with custom logger
 	return log.ErrorNil()
 }
 
