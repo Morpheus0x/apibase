@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func authLogin(config ApiConfig) echo.HandlerFunc {
+func authLogin(api *ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// TODO: add fail2ban
 		csrfValue := "superRandomCSRF" // TODO: generate randomly
@@ -18,24 +18,24 @@ func authLogin(config ApiConfig) echo.HandlerFunc {
 		if password != "123456" {
 			return echo.ErrUnauthorized
 		}
-		accessToken, err := createSignedAccessToken(&jwtAccessClaims{Name: username, Role: SuperAdmin, CSRFHeader: csrfValue}, config)
+		accessToken, err := createSignedAccessToken(&jwtAccessClaims{Name: username, Role: SuperAdmin, CSRFHeader: csrfValue}, api)
 		if err != nil {
 			return fmt.Errorf("unable to create access token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 		}
-		refreshToken, err := createSignedRefreshToken(&jwtRefreshClaims{Name: username, Role: SuperAdmin, CSRFHeader: csrfValue}, config)
+		refreshToken, err := createSignedRefreshToken(&jwtRefreshClaims{Name: username, Role: SuperAdmin, CSRFHeader: csrfValue}, api)
 		if err != nil {
 			return fmt.Errorf("unable to create refresh token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 		}
 		// TODO: save access token to DB
-		c.SetCookie(&http.Cookie{Name: "access_token", Value: accessToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(config.TokenAccessValidity * 2)})
-		c.SetCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(config.TokenRefreshValidity * 2)})
-		c.SetCookie(&http.Cookie{Name: "csrf_token", Value: csrfValue, Path: "/", Expires: time.Now().Add(config.TokenRefreshValidity * 2)})
+		c.SetCookie(&http.Cookie{Name: "access_token", Value: accessToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(api.config.TokenAccessValidity * 2)})
+		c.SetCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(api.config.TokenRefreshValidity * 2)})
+		c.SetCookie(&http.Cookie{Name: "csrf_token", Value: csrfValue, Path: "/", Expires: time.Now().Add(api.config.TokenRefreshValidity * 2)})
 
 		return c.JSON(http.StatusOK, map[string]string{"message": "access and refresh token set as cookie"})
 	}
 }
 
-func authLogout(config ApiConfig) echo.HandlerFunc {
+func authLogout(api *ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// TODO: add option to disable signup or require invite code, add fail2ban
 		c.SetCookie(&http.Cookie{Name: "access_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
@@ -45,16 +45,16 @@ func authLogout(config ApiConfig) echo.HandlerFunc {
 	}
 }
 
-func authSignup(config ApiConfig) echo.HandlerFunc {
+func authSignup(api *ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		return c.JSON(http.StatusNotImplemented, map[string]string{"message": "WIP"})
 	}
 }
 
-func authJWT(config ApiConfig) echo.MiddlewareFunc {
+func authJWT(api *ApiServer) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			err := authJWTHandler(c, config)
+			err := authJWTHandler(c, api)
 			if err != nil {
 				return err
 			}
@@ -63,9 +63,9 @@ func authJWT(config ApiConfig) echo.MiddlewareFunc {
 	}
 }
 
-func authJWTHandler(c echo.Context, config ApiConfig) error {
+func authJWTHandler(c echo.Context, api *ApiServer) error {
 	fmt.Printf("Request Header X-XSRF-TOKEN: %s\n", c.Request().Header.Get("X-XSRF-TOKEN"))
-	accessToken, errx := parseAccessTokenCookie(c, config.TokenSecret)
+	accessToken, errx := parseAccessTokenCookie(c, api.config.TokenSecret)
 	if errx.IsNil() {
 		if !validCSRF(c, accessToken.Claims.(*jwtAccessClaims)) {
 			// Invalid CSRF Header received
@@ -77,7 +77,7 @@ func authJWTHandler(c echo.Context, config ApiConfig) error {
 			return nil
 		}
 	}
-	refreshToken, errx := parseRefreshTokenCookie(c, config.TokenSecret)
+	refreshToken, errx := parseRefreshTokenCookie(c, api.config.TokenSecret)
 	if !errx.IsNil() {
 		// c.Logger().Errorf("unable to renew access_token: %s", errx.Text())
 		return echo.NewHTTPError(http.StatusUnauthorized, "unable to parse refresh token from cookie")
@@ -103,14 +103,14 @@ func authJWTHandler(c echo.Context, config ApiConfig) error {
 		Role:       refreshClaims.Role,
 		CSRFHeader: refreshClaims.CSRFHeader,
 	}
-	newAccessToken, err := createSignedAccessToken(accessClaims, config)
+	newAccessToken, err := createSignedAccessToken(accessClaims, api)
 	if err != nil {
 		// c.Logger().Errorf("unable to create new access_token")
 		return echo.NewHTTPError(http.StatusUnauthorized, "unable to create new access token")
 	}
 	currentRequest := c.Request()
 	// c.Logger().Infof("AllCookies, before adding new access_token: %+v", currentRequest.Cookies())
-	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(config.TokenAccessValidity * 2)}
+	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(api.config.TokenAccessValidity * 2)}
 	currentRequest.AddCookie(newAccessTokenCookie)
 	// c.Logger().Infof("AllCookies, check for duplicate access_token: %+v", currentRequest.Cookies())
 	c.SetRequest(currentRequest)

@@ -6,10 +6,11 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"gopkg.cc/apibase/app"
 	"gopkg.cc/apibase/log"
 )
 
-func SetupRest(config ApiConfig) *ApiServer {
+func SetupRest(config app.ApiConfig) *ApiServer {
 	api := &ApiServer{e: echo.New(), kind: REST, config: config}
 	if len(config.CORS) < 1 {
 		api.config.CORS = []string{"*"}
@@ -31,11 +32,11 @@ func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
 		return c.JSON(http.StatusOK, map[string]string{"message": "No Auth Required!"})
 	})
 
-	api.e.POST("/auth/login", authLogin(api.config))
-	api.e.GET("/auth/logout", authLogout(api.config), authJWT(api.config))
-	api.e.POST("/auth/signup", authSignup(api.config))
+	api.e.POST("/auth/login", authLogin(api))
+	api.e.GET("/auth/logout", authLogout(api), authJWT(api))
+	api.e.POST("/auth/signup", authSignup(api))
 
-	v1 := api.e.Group("/api/", authJWT(api.config))
+	v1 := api.e.Group("/api/", authJWT(api))
 	v1.GET("", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "Welcome!"})
 	})

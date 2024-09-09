@@ -8,20 +8,20 @@ import (
 	"gopkg.cc/apibase/log"
 )
 
-func createSignedAccessToken(claims *jwtAccessClaims, config ApiConfig) (string, error) {
+func createSignedAccessToken(claims *jwtAccessClaims, api *ApiServer) (string, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
-	claims.ExpiresAt = jwt.NewNumericDate(now.Add(config.TokenAccessValidity))
+	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.config.TokenAccessValidity))
 	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return rawToken.SignedString([]byte(config.TokenSecret))
+	return rawToken.SignedString([]byte(api.config.TokenSecret))
 }
 
-func createSignedRefreshToken(claims *jwtRefreshClaims, config ApiConfig) (string, error) {
+func createSignedRefreshToken(claims *jwtRefreshClaims, api *ApiServer) (string, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
-	claims.ExpiresAt = jwt.NewNumericDate(now.Add(config.TokenRefreshValidity))
+	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.config.TokenRefreshValidity))
 	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return rawToken.SignedString([]byte(config.TokenSecret))
+	return rawToken.SignedString([]byte(api.config.TokenSecret))
 }
 
 func parseAccessTokenCookie(c echo.Context, secret string) (*jwt.Token, log.Err) {
