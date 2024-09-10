@@ -6,11 +6,10 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"gopkg.cc/apibase/app"
 	"gopkg.cc/apibase/log"
 )
 
-func SetupRest(config app.ApiConfig) *ApiServer {
+func SetupRest(config ApiConfig) *ApiServer {
 	api := &ApiServer{e: echo.New(), kind: REST, config: config}
 	if len(config.CORS) < 1 {
 		api.config.CORS = []string{"*"}
