@@ -22,22 +22,18 @@ type DB struct {
 	Gorm   *gorm.DB
 }
 
-func RawQuery[T any](db *DB, query string) ([]*T, error) {
-	switch db.Kind {
+func ValidateDB(database DB) error {
+	switch database.Kind {
 	case SQLite:
-		return sqlite.RawQuery[T](db.SQLite, query)
+		if database.SQLite == nil {
+			return fmt.Errorf("no valid SQLite database adapter")
+		}
 	case PostgreSQL:
-		model := []T{}
-		tx := db.Gorm.Model(&model).Raw(query)
-		if tx.Error != nil {
-			return []*T{}, fmt.Errorf("error running raw postgres query: %v", tx.Error)
+		if database.Gorm == nil {
+			return fmt.Errorf("no valid PostgreSQL database adapter")
 		}
-		out := []*T{}
-		for _, t := range model {
-			out = append(out, &t)
-		}
-		return out, nil
 	default:
-		return []*T{}, fmt.Errorf("no valid DB specified")
+		return fmt.Errorf("no valid DB specified")
 	}
+	return nil
 }

@@ -6,10 +6,15 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
 )
 
-func SetupRest(config ApiConfig) *ApiServer {
+func SetupRest(config ApiConfig) (*ApiServer, error) {
+	// TODO: overall better error logging
+	if err := db.ValidateDB(config.DB); err != nil {
+		return nil, err
+	}
 	api := &ApiServer{e: echo.New(), kind: REST, config: config}
 	if len(config.CORS) < 1 {
 		api.config.CORS = []string{"*"}
@@ -23,7 +28,7 @@ func SetupRest(config ApiConfig) *ApiServer {
 		AllowOrigins: api.config.CORS,
 	}))
 	api.registerRestDefaultEndpoints()
-	return api
+	return api, nil
 }
 
 func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
