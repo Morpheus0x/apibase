@@ -10,5 +10,7 @@ CREATE TABLE users (
     totp_secret TEXT NOT NULL DEFAULT '',
     -- refresh_token INTEGER REFERENCES refresh_tokens(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT unique_name UNIQUE (name),
+    CONSTRAINT unique_email UNIQUE (email)
 );

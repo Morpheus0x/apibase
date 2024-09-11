@@ -37,3 +37,25 @@ func ValidateDB(database DB) error {
 	}
 	return nil
 }
+
+func MigrateDefaultTables(database DB) error {
+	switch database.Kind {
+	case SQLite:
+		// TODO: do this
+		return fmt.Errorf("WIP, not implemented")
+	case PostgreSQL:
+		err := database.Gorm.AutoMigrate(&Users{})
+		if err != nil {
+			return err
+		}
+		err = database.Gorm.AutoMigrate(&RefreshTokens{})
+		if err != nil {
+			return err
+		}
+		// TODO: use own logger
+		fmt.Printf("Successfully migrated PostgreSQL Tables.")
+	default:
+		return fmt.Errorf("no valid DB specified")
+	}
+	return nil
+}

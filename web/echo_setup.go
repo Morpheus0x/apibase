@@ -15,9 +15,12 @@ func SetupRest(config ApiConfig) (*ApiServer, error) {
 	if err := db.ValidateDB(config.DB); err != nil {
 		return nil, err
 	}
+	if err := db.MigrateDefaultTables(config.DB); err != nil {
+		return nil, err
+	}
 	api := &ApiServer{e: echo.New(), kind: REST, config: config}
 	if len(config.CORS) < 1 {
-		api.config.CORS = []string{"*"}
+		api.config.CORS = []string{"*"} // TODO: maybe error instead of assuming *
 	}
 	api.e.HideBanner = true
 	api.e.HidePort = true
