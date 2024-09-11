@@ -4,6 +4,7 @@
 - [ ] User [BuntDB](https://github.com/tidwall/buntdb) to store invalidated jwt login tokens
 
 # TODO
+- [ ] Every database function is a wrapper that catches errors, if that error is due to db timeout, run reconnect function and the re-run db query
 - [ ] Rebase go.mod and force push to git by using fixed module name
 - [ ] Use GoogleCloudPlatform/govanityurls instead of direct github
 - [ ] Add API version wrapper function for every endpoint, incrementing the version can have multiple effects: add new endpoint, change implementation, mark as deprecated, remove endpoint. When breaking changes are decided, the apibase api will get a new major or minor version (v1 -> v1.1 or v2 ...). The default behavior is to just use implementation of the previous version. Think about a way to mark an endpoint as deprecated, removed or changed.
