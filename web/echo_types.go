@@ -18,12 +18,12 @@ type ApiServer struct {
 }
 
 type ApiConfig struct {
-	CORS []string
+	CORS []string `toml:"cors"`
 	DB   db.DB
 
-	TokenSecret          string
-	TokenAccessValidity  time.Duration
-	TokenRefreshValidity time.Duration
+	TokenSecret          string        `toml:"token_secret"`
+	TokenAccessValidity  time.Duration `toml:"token_access_validity"`
+	TokenRefreshValidity time.Duration `toml:"token_refresh_validity"`
 }
 
 //go:generate stringer -type HttpMethod -output ./stringer_httpmethod.go
