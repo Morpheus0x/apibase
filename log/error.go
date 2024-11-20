@@ -13,7 +13,7 @@ func ErrorNew(t ErrorType, format string, a ...any) Err {
 	if format != "" {
 		text = fmt.Sprintf(format, a...)
 	}
-	return Err{Type: t, text: text}
+	return Err{Type: t, text: text, isNil: false}
 }
 
 func ErrorNil() Err {

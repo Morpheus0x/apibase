@@ -18,6 +18,8 @@ const (
 	ErrWebUnknownMethod
 	// ApiServer struct is not initialized
 	ErrWebApiNotInit
+	// Error initializing ApiServer
+	ErrWebApiInit
 	// ApiServer group already exists
 	ErrWebGroupExists
 	// ApiServer group exists but is required

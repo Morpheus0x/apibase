@@ -13,15 +13,16 @@ func _() {
 	_ = x[ErrEmptyArray-2]
 	_ = x[ErrWebUnknownMethod-3]
 	_ = x[ErrWebApiNotInit-4]
-	_ = x[ErrWebGroupExists-5]
-	_ = x[ErrWebGroupNotExists-6]
-	_ = x[ErrWebBind-7]
-	_ = x[ErrTokenValidate-8]
+	_ = x[ErrWebApiInit-5]
+	_ = x[ErrWebGroupExists-6]
+	_ = x[ErrWebGroupNotExists-7]
+	_ = x[ErrWebBind-8]
+	_ = x[ErrTokenValidate-9]
 }
 
-const _ErrorType_name = "ErrUndefinedErrEmptyStringErrEmptyArrayErrWebUnknownMethodErrWebApiNotInitErrWebGroupExistsErrWebGroupNotExistsErrWebBindErrTokenValidate"
+const _ErrorType_name = "ErrUndefinedErrEmptyStringErrEmptyArrayErrWebUnknownMethodErrWebApiNotInitErrWebApiInitErrWebGroupExistsErrWebGroupNotExistsErrWebBindErrTokenValidate"
 
-var _ErrorType_index = [...]uint8{0, 12, 26, 39, 58, 74, 91, 111, 121, 137}
+var _ErrorType_index = [...]uint8{0, 12, 26, 39, 58, 74, 87, 104, 124, 134, 150}
 
 func (i ErrorType) String() string {
 	if i >= ErrorType(len(_ErrorType_index)-1) {
