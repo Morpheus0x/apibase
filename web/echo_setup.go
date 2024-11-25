@@ -30,11 +30,12 @@ func SetupRest(config ApiConfig) (*ApiServer, error) {
 	api.e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: api.config.CORS,
 	}))
-	api.registerRestDefaultEndpoints()
-	return api, nil
+	err := api.registerRestDefaultEndpoints()
+	return api, err
 }
 
-func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
+// Create default routes for login and general user flow
+func (api *ApiServer) registerRestDefaultEndpoints() error {
 	api.e.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "No Auth Required!"})
 	})
@@ -47,8 +48,8 @@ func (api *ApiServer) registerRestDefaultEndpoints() log.Err {
 	v1.GET("", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "Welcome!"})
 	})
-	// Create default routes for login and general user flow
-	return log.ErrorNil()
+
+	return nil
 }
 
 func (api *ApiServer) StartRest(bind string) log.Err {
