@@ -1,7 +1,24 @@
 
+# TODO Now
+Look at  
+- https://github.com/markbates/goth/blob/master/examples/main.go
+- https://www.reddit.com/r/golang/comments/1cf8mji/is_there_a_clear_example_for_using_goth_with_echo/
+- https://go.dev/play/p/-RtLSPL4Wsj
+to understand how goth does oauth authentication.  
+Add code to add support for goth. The current login user flow can be reused, since a user entry in the db needs to be created regardless of signup method.  
+After goth returns the user object:
+- lookup that user in the db
+- skip the password auth (but verify oauth provider callback req).  
+- still generate the jwt with my custom claims
+Make sure that if the user uses a different oauth provider which returns an email address that already exists in the db, associate that provider with the user (does this even need to be stored in the db, other than "local" or "oauth"?). What if the user later uses the same email returned by oauth to login normally?
+
 # TODO Important
+- [ ] make sure that the client is always returned to the page from where they clicked login, use the oauth state query param (https://auth0.com/docs/secure/attack-protection/state-parameters)
 - [ ] have package specific errors always defined in errors.go file inside said package, with an Init() func register those errors with the log package. This is needed if apibase is used with an external program that has their own errors that need to be compareable, maybe by passing the error type to the ErrorNew func, e.g. func ErrorNew\[T myerrtype\](err T, format string, a ...any)
 - [ ] User [BuntDB](https://github.com/tidwall/buntdb) to store invalidated jwt login tokens
+- [ ] Add Support for Hashicorp Vault secret management
+- [ ] Add Support for Secret Key Rotation https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#272-rotation
+- [ ] Add Support for 2FA w/ encrypted via DEK and KEK https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html#encrypting-stored-keys
 
 # TODO
 - [ ] Every database function is a wrapper that catches errors, if that error is due to db timeout, run reconnect function and the re-run db query

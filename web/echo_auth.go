@@ -10,7 +10,7 @@ import (
 
 func authLogin(api *ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: add fail2ban
+		// TODO: add fail2ban or similar/more advanced, for login endpoint
 		csrfValue := "superRandomCSRF" // TODO: generate randomly
 
 		username := c.FormValue("username")
@@ -29,6 +29,8 @@ func authLogin(api *ApiServer) echo.HandlerFunc {
 		// TODO: save access token to DB
 		c.SetCookie(&http.Cookie{Name: "access_token", Value: accessToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(api.config.TokenAccessValidity * 2)})
 		c.SetCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(api.config.TokenRefreshValidity * 2)})
+		// TODO: pass csrf token in json response instead of cookie to prevent it from being also sent as cookie on every request
+		// csrf token is stored in user jwt, which needs to be parsed for any request anyway
 		c.SetCookie(&http.Cookie{Name: "csrf_token", Value: csrfValue, Path: "/", Expires: time.Now().Add(api.config.TokenRefreshValidity * 2)})
 
 		return c.JSON(http.StatusOK, map[string]string{"message": "access and refresh token set as cookie"})
@@ -77,6 +79,8 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 			return nil
 		}
 	}
+	// TODO: configure client to only send refresh token if access token validity < 2 minute (double of server cutoff)
+	// this prevents unnecessary data transmission while still allowing for a single request if refresh token is valid
 	refreshToken, errx := parseRefreshTokenCookie(c, api.config.TokenSecret)
 	if !errx.IsNil() {
 		// c.Logger().Errorf("unable to renew access_token: %s", errx.Text())
