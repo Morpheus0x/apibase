@@ -24,6 +24,9 @@ type ApiConfig struct {
 	TokenSecret          string        `toml:"token_secret"`
 	TokenAccessValidity  time.Duration `toml:"token_access_validity"`
 	TokenRefreshValidity time.Duration `toml:"token_refresh_validity"`
+
+	LocalAuth         bool `toml:"local_auth"`
+	AllowRegistration bool `toml:"allow_registration"`
 }
 
 //go:generate stringer -type HttpMethod -output ./stringer_httpmethod.go

@@ -40,9 +40,11 @@ func (api *ApiServer) registerRestDefaultEndpoints() error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "No Auth Required!"})
 	})
 
-	api.e.POST("/auth/login", authLogin(api))
-	api.e.GET("/auth/logout", authLogout(api), authJWT(api))
-	api.e.POST("/auth/signup", authSignup(api))
+	api.e.POST("/auth/login", localLogin(api))    // login local
+	api.e.POST("/auth/signup", localSignup(api))  // signup local
+	api.e.GET("/auth/:provider", oauthLogin(api)) // login & signup for oauth
+	api.e.GET("/auth/:provider/callback", oauthLogin(api))
+	api.e.GET("/logout/:provider", authLogout(api), authJWT(api)) // logout for local & oauth
 
 	v1 := api.e.Group("/api/", authJWT(api))
 	v1.GET("", func(c echo.Context) error {

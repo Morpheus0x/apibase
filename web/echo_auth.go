@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func authLogin(api *ApiServer) echo.HandlerFunc {
+func localLogin(api *ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// TODO: add fail2ban or similar/more advanced, for login endpoint
 		csrfValue := "superRandomCSRF" // TODO: generate randomly
@@ -47,7 +47,7 @@ func authLogout(api *ApiServer) echo.HandlerFunc {
 	}
 }
 
-func authSignup(api *ApiServer) echo.HandlerFunc {
+func localSignup(api *ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		return c.JSON(http.StatusNotImplemented, map[string]string{"message": "WIP"})
 	}
