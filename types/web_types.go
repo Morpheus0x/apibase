@@ -1,6 +1,7 @@
-package web
+package types
 
 import (
+	"math/rand/v2"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -9,9 +10,10 @@ import (
 )
 
 type ApiServer struct {
-	e      *echo.Echo
-	kind   ApiKind
-	config ApiConfig
+	E      *echo.Echo
+	Kind   ApiKind
+	Config ApiConfig
+	Rand   *rand.PCG
 
 	// groups     map[string]*echo.Group
 	// middleware []echo.MiddlewareFunc
@@ -27,6 +29,8 @@ type ApiConfig struct {
 
 	LocalAuth         bool `toml:"local_auth"`
 	AllowRegistration bool `toml:"allow_registration"`
+
+	ApiURI string `toml:"api_uri"`
 }
 
 //go:generate stringer -type HttpMethod -output ./stringer_httpmethod.go
@@ -60,14 +64,14 @@ const (
 	SuperAdmin = 99
 )
 
-type jwtAccessClaims struct {
+type JwtAccessClaims struct {
 	Name       string   `json:"name"`
 	Role       UserRole `json:"role"`
 	CSRFHeader string   `json:"csrf_header"`
 	jwt.RegisteredClaims
 }
 
-type jwtRefreshClaims struct {
+type JwtRefreshClaims struct {
 	Name       string   `json:"name"`
 	Role       UserRole `json:"role"`
 	CSRFHeader string   `json:"csrf_header"`
@@ -76,3 +80,8 @@ type jwtRefreshClaims struct {
 
 // type HandleFunc func(c echo.Context) error
 // type HandleFunc echo.HandlerFunc
+
+type StateReferrer struct {
+	Nonce string `json:"nonce"`
+	URI   string `json:"uri"`
+}

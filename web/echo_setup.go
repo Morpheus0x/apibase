@@ -4,13 +4,17 @@ import (
 	"fmt"
 	"net/http"
 
+	"math/rand/v2"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
+	t "gopkg.cc/apibase/types"
+	"gopkg.cc/apibase/web_auth"
 )
 
-func SetupRest(config ApiConfig) (*ApiServer, error) {
+func SetupRest(config t.ApiConfig) (*t.ApiServer, error) {
 	// TODO: overall better error logging
 	if err := db.ValidateDB(config.DB); err != nil {
 		return nil, err
@@ -18,46 +22,42 @@ func SetupRest(config ApiConfig) (*ApiServer, error) {
 	if err := db.MigrateDefaultTables(config.DB); err != nil {
 		return nil, err
 	}
-	api := &ApiServer{e: echo.New(), kind: REST, config: config}
-	if len(config.CORS) < 1 {
-		api.config.CORS = []string{"*"} // TODO: maybe error instead of assuming *
+	api := &t.ApiServer{
+		E:      echo.New(),
+		Kind:   t.REST,
+		Config: config,
+		Rand:   rand.NewPCG(rand.Uint64(), rand.Uint64()),
 	}
-	api.e.HideBanner = true
-	api.e.HidePort = true
-	api.e.Use(middleware.Logger()) // TODO: replace with custom logger
+	if len(config.CORS) < 1 {
+		api.Config.CORS = []string{"*"} // TODO: maybe error instead of assuming *
+	}
+	api.E.HideBanner = true
+	api.E.HidePort = true
+	api.E.Use(middleware.Logger()) // TODO: replace with custom logger
 	// TODO: replace all commented out e.Logger() calls with custom logger where useful
-	api.e.Use(middleware.Recover())
-	api.e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: api.config.CORS,
+	api.E.Use(middleware.Recover())
+	api.E.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: api.Config.CORS,
 	}))
-	err := api.registerRestDefaultEndpoints()
-	return api, err
+	RegisterRestDefaultEndpoints(api)
+	return api, nil
 }
 
-// Create default routes for login and general user flow
-func (api *ApiServer) registerRestDefaultEndpoints() error {
-	api.e.GET("/", func(c echo.Context) error {
+func RegisterRestDefaultEndpoints(api *t.ApiServer) {
+	api.E.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "No Auth Required!"})
 	})
 
-	api.e.POST("/auth/login", localLogin(api))    // login local
-	api.e.POST("/auth/signup", localSignup(api))  // signup local
-	api.e.GET("/auth/:provider", oauthLogin(api)) // login & signup for oauth
-	api.e.GET("/auth/:provider/callback", oauthLogin(api))
-	api.e.GET("/logout/:provider", authLogout(api), authJWT(api)) // logout for local & oauth
-
-	v1 := api.e.Group("/api/", authJWT(api))
+	v1 := api.E.Group("/api/", web_auth.AuthJWT(api))
 	v1.GET("", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "Welcome!"})
 	})
-
-	return nil
 }
 
-func (api *ApiServer) StartRest(bind string) log.Err {
+func StartRest(api *t.ApiServer, bind string) log.Err {
 	fmt.Printf("Rest API Server started on '%s'\n\n", bind) // TODO: replace with custom logger
 
-	err := api.e.Start(bind) // blocking
+	err := api.E.Start(bind) // blocking
 	if err != nil {
 		return log.ErrorNew(log.ErrWebBind, "unable to start rest api with bind '%s': %v", bind, err)
 	}
@@ -73,13 +73,13 @@ func (api *ApiServer) StartRest(bind string) log.Err {
 // 	return api
 // }
 
-func (api *ApiServer) Register(method HttpMethod, path string, handle echo.HandlerFunc) log.Err {
-	if api.e == nil {
+func Register(api *t.ApiServer, method t.HttpMethod, path string, handle echo.HandlerFunc) log.Err {
+	if api.E == nil {
 		return log.ErrorNew(log.ErrWebApiNotInit, "ApiServer not initialized")
 	}
 	switch method {
-	case GET:
-		api.e.GET(path, handle) // , api.middleware...
+	case t.GET:
+		api.E.GET(path, handle) // , api.middleware...
 	default:
 		return log.ErrorNew(log.ErrWebUnknownMethod, "Unknown Method")
 	}
