@@ -1,11 +1,10 @@
 package main
 
 import (
-	"fmt"
-
 	"gopkg.cc/apibase/log"
 )
 
 func main() {
-	fmt.Printf("Err: %s", log.ErrEmptyString.String())
+	ErrEmptyString := log.RegisterErrType("ErrEmptyString")
+	log.NewErrorWithType(ErrEmptyString, "no data").Log()
 }

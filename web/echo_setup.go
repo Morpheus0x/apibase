@@ -54,12 +54,12 @@ func RegisterRestDefaultEndpoints(api *t.ApiServer) {
 	})
 }
 
-func StartRest(api *t.ApiServer, bind string) log.Err {
+func StartRest(api *t.ApiServer, bind string) *log.Error {
 	fmt.Printf("Rest API Server started on '%s'\n\n", bind) // TODO: replace with custom logger
 
 	err := api.E.Start(bind) // blocking
 	if err != nil {
-		return log.ErrorNew(log.ErrWebBind, "unable to start rest api with bind '%s': %v", bind, err)
+		return log.NewErrorWithTypef(ErrWebBind, "'%s': %v", bind, err)
 	}
 	return log.ErrorNil()
 }
@@ -73,15 +73,15 @@ func StartRest(api *t.ApiServer, bind string) log.Err {
 // 	return api
 // }
 
-func Register(api *t.ApiServer, method t.HttpMethod, path string, handle echo.HandlerFunc) log.Err {
+func Register(api *t.ApiServer, method t.HttpMethod, path string, handle echo.HandlerFunc) *log.Error {
 	if api.E == nil {
-		return log.ErrorNew(log.ErrWebApiNotInit, "ApiServer not initialized")
+		return log.NewErrorWithType(ErrWebApiNotInit, "")
 	}
 	switch method {
 	case t.GET:
 		api.E.GET(path, handle) // , api.middleware...
 	default:
-		return log.ErrorNew(log.ErrWebUnknownMethod, "Unknown Method")
+		return log.NewErrorWithTypef(ErrWebUnknownMethod, "types.HttpMethod(%d)", method)
 	}
 	return log.ErrorNil()
 }
