@@ -53,11 +53,14 @@ func (e *Error) LogWithTrace() *Error {
 	}
 	e.wasLogged = true
 	if e.errType == DefaultError {
-
+		LogMultiple(e.severity, e.StringWithTrace())
 	} else {
-
+		logOutput := e.StringWithTrace()
+		if len(logOutput) > 0 {
+			logOutput[0] = fmt.Sprintf("%s: %s", e.errType.String(), logOutput[0])
+		}
+		LogMultiple(e.severity, logOutput)
 	}
-	LogMultiple(e.severity, e.StringWithTrace())
 	return e
 }
 
