@@ -50,8 +50,7 @@ func SetupRest(config t.ApiConfig) (*t.ApiServer, *log.Error) {
 	}
 	api.E.HideBanner = true
 	api.E.HidePort = true
-	api.E.Use(middleware.Logger()) // TODO: replace with custom logger
-	// TODO: replace all commented out e.Logger() calls with custom logger where useful
+	api.E.Use(log.EchoLoggerMiddleware(log.LevelDebug))
 	api.E.Use(middleware.Recover())
 	api.E.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: api.Config.CORS,
