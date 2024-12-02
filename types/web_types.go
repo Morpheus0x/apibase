@@ -30,7 +30,8 @@ type ApiConfig struct {
 	LocalAuth         bool `toml:"local_auth"`
 	AllowRegistration bool `toml:"allow_registration"`
 
-	ApiURI string `toml:"api_uri"`
+	// Used for logout redirect and when no valid oauth callback referrer
+	AppURI string `toml:"api_uri"`
 }
 
 //go:generate stringer -type HttpMethod -output ./stringer_httpmethod.go

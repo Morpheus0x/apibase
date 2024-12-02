@@ -72,12 +72,12 @@ func callback(api *t.ApiServer) echo.HandlerFunc {
 		state := queryURL.Get("state")
 		stateBytes, err := base64.StdEncoding.DecodeString(state)
 		if err != nil {
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.ApiURI)
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
 		}
 		stateReferrer := &t.StateReferrer{}
 		err = json.Unmarshal(stateBytes, stateReferrer)
 		if err != nil {
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.ApiURI)
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
 		}
 		return c.Redirect(http.StatusTemporaryRedirect, stateReferrer.URI)
 	}
@@ -97,6 +97,6 @@ func logout(api *t.ApiServer) echo.HandlerFunc {
 		// TODO: invalidate refresh_token in DB
 
 		// return c.JSON(http.StatusOK, map[string]string{"message": "Logged out!"})
-		return c.Redirect(http.StatusTemporaryRedirect, api.Config.ApiURI)
+		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
 	}
 }

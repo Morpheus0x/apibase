@@ -61,6 +61,6 @@ func logout(api *t.ApiServer) echo.HandlerFunc {
 		// TODO: invalidate refresh_token in DB
 
 		// return c.JSON(http.StatusOK, map[string]string{"message": "Logged out!"})
-		return c.Redirect(http.StatusTemporaryRedirect, api.Config.ApiURI)
+		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
 	}
 }
