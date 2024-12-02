@@ -1,8 +1,7 @@
 package db
 
 import (
-	"fmt"
-
+	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/sqlite"
 	"gorm.io/gorm"
 )
@@ -22,40 +21,39 @@ type DB struct {
 	Gorm   *gorm.DB
 }
 
-func ValidateDB(database DB) error {
+func ValidateDB(database DB) *log.Error {
 	switch database.Kind {
 	case SQLite:
 		if database.SQLite == nil {
-			return fmt.Errorf("no valid SQLite database adapter")
+			return log.NewErrorWithType(ErrDatabaseConfig, "no valid SQLite database adapter")
 		}
 	case PostgreSQL:
 		if database.Gorm == nil {
-			return fmt.Errorf("no valid PostgreSQL database adapter")
+			return log.NewErrorWithType(ErrDatabaseConfig, "no valid PostgreSQL database adapter")
 		}
 	default:
-		return fmt.Errorf("no valid DB specified")
+		return log.NewErrorWithType(ErrDatabaseConfig, "no valid DB specified")
 	}
 	return nil
 }
 
-func MigrateDefaultTables(database DB) error {
+func MigrateDefaultTables(database DB) *log.Error {
 	switch database.Kind {
 	case SQLite:
 		// TODO: do this
-		return fmt.Errorf("WIP, not implemented")
+		return log.NewErrorWithType(ErrDatabaseMigration, "WIP, not implemented")
 	case PostgreSQL:
 		err := database.Gorm.AutoMigrate(&Users{})
 		if err != nil {
-			return err
+			return log.NewErrorWithType(ErrDatabaseMigration, err.Error())
 		}
 		err = database.Gorm.AutoMigrate(&RefreshTokens{})
 		if err != nil {
-			return err
+			return log.NewErrorWithType(ErrDatabaseMigration, err.Error())
 		}
-		// TODO: use own logger
-		fmt.Printf("Successfully migrated PostgreSQL Tables.")
+		log.Log(log.LevelInfo, "Successfully migrated PostgreSQL Tables.")
 	default:
-		return fmt.Errorf("no valid DB specified")
+		return log.NewErrorWithTypef(ErrDatabaseMigration, "no valid DB specified, db.DBKind(%d)", database.Kind)
 	}
 	return nil
 }

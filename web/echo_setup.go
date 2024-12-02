@@ -14,13 +14,12 @@ import (
 	"gopkg.cc/apibase/web_auth"
 )
 
-func SetupRest(config t.ApiConfig) (*t.ApiServer, error) {
-	// TODO: overall better error logging
-	if err := db.ValidateDB(config.DB); err != nil {
-		return nil, err
+func SetupRest(config t.ApiConfig) (*t.ApiServer, *log.Error) {
+	if err := db.ValidateDB(config.DB); !err.IsNil() {
+		return nil, err.Extend("unable to setup rest api")
 	}
-	if err := db.MigrateDefaultTables(config.DB); err != nil {
-		return nil, err
+	if err := db.MigrateDefaultTables(config.DB); !err.IsNil() {
+		return nil, err.Extend("unable to migrate db tables")
 	}
 	api := &t.ApiServer{
 		E:      echo.New(),
@@ -40,7 +39,7 @@ func SetupRest(config t.ApiConfig) (*t.ApiServer, error) {
 		AllowOrigins: api.Config.CORS,
 	}))
 	RegisterRestDefaultEndpoints(api)
-	return api, nil
+	return api, log.ErrorNil()
 }
 
 func RegisterRestDefaultEndpoints(api *t.ApiServer) {
