@@ -1,1 +1,3 @@
 .dbconn.env
+.pgconn.yaml
+.pgconn.staging.yaml
