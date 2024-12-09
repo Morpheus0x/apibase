@@ -10,8 +10,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth/gothic"
 	"gopkg.cc/apibase/helper"
-	t "gopkg.cc/apibase/types"
 	"gopkg.cc/apibase/web_auth"
+	t "gopkg.cc/apibase/webtype"
 )
 
 // Create default routes for oauth user flow

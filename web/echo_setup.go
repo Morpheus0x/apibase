@@ -10,8 +10,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
-	t "gopkg.cc/apibase/types"
 	"gopkg.cc/apibase/web_auth"
+	t "gopkg.cc/apibase/webtype"
 )
 
 func SetupRest(config t.ApiConfig) (*t.ApiServer, *log.Error) {

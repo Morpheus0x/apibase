@@ -1,4 +1,4 @@
-package types
+package webtype
 
 import (
 	"math/rand/v2"

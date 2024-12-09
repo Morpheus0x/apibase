@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/labstack/echo/v4"
-	t "gopkg.cc/apibase/types"
+	t "gopkg.cc/apibase/webtype"
 )
 
 func validCSRF(c echo.Context, claims any) bool {

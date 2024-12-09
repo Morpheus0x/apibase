@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	t "gopkg.cc/apibase/types"
+	t "gopkg.cc/apibase/webtype"
 )
 
 func AuthJWT(api *t.ApiServer) echo.MiddlewareFunc {

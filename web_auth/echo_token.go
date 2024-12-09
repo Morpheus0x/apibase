@@ -6,7 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"gopkg.cc/apibase/log"
-	t "gopkg.cc/apibase/types"
+	t "gopkg.cc/apibase/webtype"
 )
 
 func createSignedAccessToken(claims *t.JwtAccessClaims, api *t.ApiServer) (string, error) {
