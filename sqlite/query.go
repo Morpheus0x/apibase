@@ -70,7 +70,7 @@ func RawQuery[T any](s *SQLite, query string) ([]*T, error) {
 
 // returns array of pointers
 func (s *SQLite) sqliteQuery(table Table, query string) ([]interface{}, error) {
-	rows, err := s.db.Query(query)
+	rows, err := s.DB.Query(query)
 	if err != nil {
 		return []interface{}{nil}, err
 	}

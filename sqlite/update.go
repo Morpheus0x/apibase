@@ -112,7 +112,7 @@ func CreateOrUpdateRow(s *SQLite, data interface{}) (int64, error) {
 			table.Name, strings.Join(updateColumns, ", "), idValue)
 	}
 
-	res, err := s.db.Exec(query, values...)
+	res, err := s.DB.Exec(query, values...)
 	if err != nil {
 		return -1, err
 	}

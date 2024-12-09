@@ -27,7 +27,7 @@ type SQLite struct {
 	path   string
 	tables []Table // TODO: register table and match on type of out in Query func
 	// tableMap map[string]Table
-	db *sql.DB
+	DB *sql.DB
 
 	startTime int64
 	config    SQLiteConfig
@@ -47,12 +47,12 @@ func Open(path string) (*SQLite, error) {
 			FORMAT_SQLITE_DATETIME: "2006-01-02 15:04:05",
 		},
 	}
-	sqlite.db, err = sql.Open("sqlite3", sqlite.path)
+	sqlite.DB, err = sql.Open("sqlite3", sqlite.path)
 	return sqlite, err
 }
 
 func (s *SQLite) Close() error {
-	return s.db.Close()
+	return s.DB.Close()
 }
 
 func (s *SQLite) tableExists(name string) bool {
@@ -86,7 +86,7 @@ func (s *SQLite) Table(name string, data any) error {
 	// fmt.Printf("table: %v\ndata: %v\n", table, data)
 	// Query existing tables
 	var existingSchema string
-	err := s.db.QueryRow("SELECT sql FROM sqlite_master WHERE type='table' AND name=?;", name).Scan(&existingSchema)
+	err := s.DB.QueryRow("SELECT sql FROM sqlite_master WHERE type='table' AND name=?;", name).Scan(&existingSchema)
 	if err != nil && err != sql.ErrNoRows {
 		return fmt.Errorf("unabel to query for existing table: %v", err)
 	}
@@ -96,7 +96,7 @@ func (s *SQLite) Table(name string, data any) error {
 		if err != nil {
 			return fmt.Errorf("unable to get schema of table '%s': %v", name, err)
 		}
-		_, err = s.db.Exec(schema)
+		_, err = s.DB.Exec(schema)
 		if err != nil {
 			return fmt.Errorf("unable to create table '%s': %v, schema: %s", name, err, schema)
 		}
@@ -132,12 +132,12 @@ func (s *SQLite) deployUpdatedTable(t Table, existingTableSchema string) error {
 	backupTableName := fmt.Sprintf("%s_bak%d", t.Name, s.startTime)
 
 	// Rename existing DB which old schema
-	res, err := s.db.Exec(fmt.Sprintf("ALTER TABLE %s RENAME TO %s;", t.Name, backupTableName))
+	res, err := s.DB.Exec(fmt.Sprintf("ALTER TABLE %s RENAME TO %s;", t.Name, backupTableName))
 	if err != nil {
 		return fmt.Errorf("unable to create table backup: %v, res: %v", err, res)
 	}
 	// Create new target DB
-	_, err = s.db.Exec(newSchema)
+	_, err = s.DB.Exec(newSchema)
 	if err != nil {
 		return fmt.Errorf("unable to create updated table: %v", err)
 	}
@@ -146,11 +146,11 @@ func (s *SQLite) deployUpdatedTable(t Table, existingTableSchema string) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.db.Exec(fmt.Sprintf("INSERT INTO %s (%s) SELECT %s FROM %s;", t.Name, cols, cols, backupTableName))
+	_, err = s.DB.Exec(fmt.Sprintf("INSERT INTO %s (%s) SELECT %s FROM %s;", t.Name, cols, cols, backupTableName))
 	if err != nil {
 		migrateError := fmt.Errorf("unable to copy data from backup to updated table: %v", err)
-		s.db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS  %s;", t.Name))
-		_, revertError := s.db.Exec(fmt.Sprintf("ALTER TABLE %s RENAME TO %s;", backupTableName, t.Name))
+		s.DB.Exec(fmt.Sprintf("DROP TABLE IF EXISTS  %s;", t.Name))
+		_, revertError := s.DB.Exec(fmt.Sprintf("ALTER TABLE %s RENAME TO %s;", backupTableName, t.Name))
 		if revertError != nil {
 			return fmt.Errorf("unable to restore table after failed migration: %v, original error: %v", revertError, migrateError)
 		}
