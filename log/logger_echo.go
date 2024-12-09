@@ -2,7 +2,6 @@ package log
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -36,25 +35,23 @@ func EchoLoggerMiddleware(level Level) echo.MiddlewareFunc {
 			case statusRaw >= 300:
 				status = col.Cyan(statusRaw)
 			}
-			id := req.Header.Get(echo.HeaderXRequestID)
-			if id == "" {
-				id = res.Header().Get(echo.HeaderXRequestID)
-			}
-			latency := stop.Sub(start)
+			// id := req.Header.Get(echo.HeaderXRequestID)
+			// if id == "" {
+			// 	id = res.Header().Get(echo.HeaderXRequestID)
+			// }
 
 			// echo default logger format
 			// `{"time":"${time_rfc3339_nano}","id":"${id}","remote_ip":"${remote_ip}",` +
 			// 	`"host":"${host}","method":"${method}","uri":"${uri}","user_agent":"${user_agent}",` +
 			// 	`"status":${status},"error":"${error}","latency":${latency},"latency_human":"${latency_human}"` +
 			// 	`,"bytes_in":${bytes_in},"bytes_out":${bytes_out}}` + "\n",
-			out := fmt.Sprintf("HTTP %s %s, ID: %s, IP: %s, URI: %s, Latency: %s (%s)",
+			out := fmt.Sprintf("HTTP %s %s, IP: %s, URI: %s, Latency: %s", // , ID: %s
 				req.Method,
 				status,
-				id,
+				// id,
 				c.RealIP(),
 				req.RequestURI,
-				strconv.FormatInt(int64(latency), 10),
-				latency.String(),
+				stop.Sub(start).String(),
 			)
 
 			for _, w := range loggerLocal.Writers {
