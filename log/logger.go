@@ -105,12 +105,7 @@ func (log *Logger) printWithLevel(text string, level Level) {
 		return
 	}
 	for _, w := range log.Writers {
-		var logOutput []byte
-		if w.WithTime {
-			logOutput = []byte(fmt.Sprintf("%s %s %s\n", time.Now().Format(log.TimeFmt), l.String(), text))
-		} else {
-			logOutput = []byte(fmt.Sprintf("%s %s\n", l.String(), text))
-		}
+		logOutput := formatLogOutput(level, text, log.TimeFmt, w.WithTime)
 		w.Lock()
 		w.Writer.Write(logOutput)
 		w.Unlock()
@@ -126,14 +121,18 @@ func (log *Logger) printMultipleWithLevel(text []string, level Level) {
 	for _, w := range log.Writers {
 		var logOutput []byte
 		for _, s := range text {
-			if w.WithTime {
-				logOutput = append(logOutput, []byte(fmt.Sprintf("%s %s %s\n", time.Now().Format(log.TimeFmt), l.String(), s))...)
-			} else {
-				logOutput = append(logOutput, []byte(fmt.Sprintf("%s %s\n", l.String(), s))...)
-			}
+			logOutput = append(logOutput, formatLogOutput(level, s, log.TimeFmt, w.WithTime)...)
 		}
 		w.Lock()
 		w.Writer.Write(logOutput)
 		w.Unlock()
+	}
+}
+
+func formatLogOutput(level Level, msg string, timeFmt string, withTime bool) []byte {
+	if withTime {
+		return []byte(fmt.Sprintf("%s [%s] %s\n", time.Now().Format(timeFmt), level.String(), msg))
+	} else {
+		return []byte(fmt.Sprintf("[%s] %s\n", level.String(), msg))
 	}
 }

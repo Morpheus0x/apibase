@@ -58,12 +58,7 @@ func EchoLoggerMiddleware(level Level) echo.MiddlewareFunc {
 			)
 
 			for _, w := range loggerLocal.Writers {
-				var logOutput []byte
-				if w.WithTime {
-					logOutput = []byte(fmt.Sprintf("%s %s %s\n", time.Now().Format(loggerLocal.TimeFmt), level.String(), out))
-				} else {
-					logOutput = []byte(fmt.Sprintf("%s %s\n", level.String(), out))
-				}
+				logOutput := formatLogOutput(level, out, loggerLocal.TimeFmt, w.WithTime)
 				w.Lock()
 				w.Writer.Write(logOutput)
 				w.Unlock()
