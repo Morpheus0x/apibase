@@ -36,22 +36,44 @@ func initDefaultLogger() *Logger {
 	return &Logger{
 		Level:   defaultLogLevel,
 		TimeFmt: defaultTimeFormat,
-		Writers: []*SafeWriter{{
-			Writer:   os.Stdout,
-			WithTime: false,
-		}},
+		Writers: DefaultSafeWriter(false),
 	}
 }
 
-func ReplaceLogger(safeWriter ...*SafeWriter) {
-	loggerMutex.Lock()
-	//TODO: this
-	loggerMutex.Unlock()
+// write to stdout, specify if time should also be printed
+func DefaultSafeWriter(withTime bool) []*SafeWriter {
+	return []*SafeWriter{{
+		Writer:   os.Stdout,
+		WithTime: withTime,
+	}}
 }
 
+// specify desired log verbosity, desired time format e.g. time.RFC3339 (always specify this, even if SafeWriter is set to WithTime = false)
+// and the desired log output destination (use DefaultSafeWriter() for stdout)
+func ReplaceLogger(level Level, timeFmt string, safeWriters []*SafeWriter) {
+	loggerMutex.Lock()
+	logger = &Logger{
+		Level:   level,
+		TimeFmt: timeFmt,
+		Writers: safeWriters,
+	}
+	loggerMutex.Unlock()
+	// TODO: tryout this new logger to make sure it doesn't panic, log to info
+	// logger.Writers[len(logger.Writers)-1]
+}
+
+// add an additional log output destination
 func AddLogger(safeWriter *SafeWriter) {
 	loggerMutex.Lock()
-	//TODO: this
+	logger.Writers = append(logger.Writers, safeWriter)
+	loggerMutex.Unlock()
+	// TODO: tryout this new logger to make sure it doesn't panic, log to info
+}
+
+// set log level, this should be done only once in the beginning
+func SetLogLevel(level Level) {
+	loggerMutex.Lock()
+	logger.Level = level
 	loggerMutex.Unlock()
 }
 
@@ -76,7 +98,12 @@ func LogMultiple(l Level, s []string) {
 	log.printMultipleWithLevel(s, l)
 }
 
-func (log *Logger) printWithLevel(text string, l Level) {
+func (log *Logger) printWithLevel(text string, level Level) {
+	if level < log.Level {
+		// fmt.Printf("level(%d) < log.Level(%d) = %v\n", level, log.Level, level < log.Level)
+		// log message is too verbose level is higher than set in logger, ignoring
+		return
+	}
 	for _, w := range log.Writers {
 		var logOutput []byte
 		if w.WithTime {
@@ -90,7 +117,12 @@ func (log *Logger) printWithLevel(text string, l Level) {
 	}
 }
 
-func (log *Logger) printMultipleWithLevel(text []string, l Level) {
+func (log *Logger) printMultipleWithLevel(text []string, level Level) {
+	if level < log.Level {
+		// fmt.Printf("level(%d) < log.Level(%d) = %v\n", level, log.Level, level < log.Level)
+		// log message is too verbose level is higher than set in logger, ignoring
+		return
+	}
 	for _, w := range log.Writers {
 		var logOutput []byte
 		for _, s := range text {
