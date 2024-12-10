@@ -21,8 +21,11 @@ func PostgresInit(pgc PostgresConfig, bc BaseConfig) (DB, *log.Error) {
 	// connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", pgc.User, pgc.Password, pgc.Host, pgc.Port, pgc.DB) // ?ssl=%s , ssl)
 	var dbErr error
 	for attempt := 1; attempt <= int(bc.DB_MAX_RECONNECT_ATTEMPTS); attempt++ {
-		var conn *sql.DB
-		conn, dbErr = sql.Open("postgres", connString)
+		conn, err := sql.Open("postgres", connString)
+		if err != nil {
+			return DB{}, log.NewErrorWithTypef(ErrDatabaseConfig, "postgres connection string parsing: %s", err.Error())
+		}
+		dbErr = conn.Ping()
 		if dbErr != nil {
 			log.Logf(log.LevelInfo, "Connecting to database failed, attempt %d/%d", attempt, bc.DB_MAX_RECONNECT_ATTEMPTS)
 			time.Sleep(bc.DB_RECONNECT_TIMEOUT_DURATION())
@@ -30,5 +33,5 @@ func PostgresInit(pgc PostgresConfig, bc BaseConfig) (DB, *log.Error) {
 		}
 		return DB{Kind: PostgreSQL, Postgres: conn}, log.ErrorNil()
 	}
-	return DB{}, log.NewError(dbErr.Error())
+	return DB{}, log.NewErrorWithType(ErrDatabaseConn, dbErr.Error())
 }
