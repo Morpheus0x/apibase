@@ -5,11 +5,12 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+	"gopkg.cc/apibase/config"
 	"gopkg.cc/apibase/log"
 	t "gopkg.cc/apibase/webtype"
 )
 
-func createSignedAccessToken(claims *t.JwtAccessClaims, api *t.ApiServer) (string, error) {
+func createSignedAccessToken(claims *t.JwtAccessClaims, api *config.ApiServer) (string, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
 	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.TokenAccessValidity))
@@ -17,7 +18,7 @@ func createSignedAccessToken(claims *t.JwtAccessClaims, api *t.ApiServer) (strin
 	return rawToken.SignedString([]byte(api.Config.TokenSecret))
 }
 
-func createSignedRefreshToken(claims *t.JwtRefreshClaims, api *t.ApiServer) (string, error) {
+func createSignedRefreshToken(claims *t.JwtRefreshClaims, api *config.ApiServer) (string, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
 	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.TokenRefreshValidity))

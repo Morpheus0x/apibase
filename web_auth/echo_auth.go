@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"gopkg.cc/apibase/config"
 	t "gopkg.cc/apibase/webtype"
 )
 
 // Create default routes for login and general user flow
-func RegisterAuthEndpoints(api *t.ApiServer) error {
+func RegisterAuthEndpoints(api *config.ApiServer) error {
 	api.E.POST("/auth/login", login(api))
 	api.E.POST("/auth/signup", signup(api))
 	api.E.GET("/auth/logout", logout(api), AuthJWT(api))
@@ -18,7 +19,7 @@ func RegisterAuthEndpoints(api *t.ApiServer) error {
 	return nil
 }
 
-func login(api *t.ApiServer) echo.HandlerFunc {
+func login(api *config.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// TODO: add fail2ban or similar/more advanced, for login endpoint
 		csrfValue := "superRandomCSRF" // TODO: generate randomly
@@ -47,13 +48,13 @@ func login(api *t.ApiServer) echo.HandlerFunc {
 	}
 }
 
-func signup(api *t.ApiServer) echo.HandlerFunc {
+func signup(api *config.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		return c.JSON(http.StatusNotImplemented, map[string]string{"message": "WIP"})
 	}
 }
 
-func logout(api *t.ApiServer) echo.HandlerFunc {
+func logout(api *config.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// TODO: add option to disable signup or require invite code, add fail2ban
 		c.SetCookie(&http.Cookie{Name: "access_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})

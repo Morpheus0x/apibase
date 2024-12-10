@@ -8,43 +8,44 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"gopkg.cc/apibase/config"
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/web_auth"
 	t "gopkg.cc/apibase/webtype"
 )
 
-func SetupRest(config t.ApiConfig) (*t.ApiServer, *log.Error) {
-	if err := db.ValidateDB(config.DB); !err.IsNil() {
+func SetupRest(conf config.ApiConfig) (*config.ApiServer, *log.Error) {
+	if err := db.ValidateDB(conf.DB); !err.IsNil() {
 		return nil, err.Extend("unable to setup rest api")
 	}
-	if err := db.MigrateDefaultTables(config.DB); !err.IsNil() {
+	if err := db.MigrateDefaultTables(conf.DB); !err.IsNil() {
 		return nil, err.Extend("unable to migrate db tables")
 	}
-	if len(config.TokenSecret) < 32 {
+	if len(conf.TokenSecret) < 32 {
 		return nil, log.NewError("TokenSecret must be at least 32 characters")
 	}
-	if !config.LocalAuth && !config.OAuthEnabled {
+	if !conf.LocalAuth && !conf.OAuthEnabled {
 		return nil, log.NewError("No Authentication method enabled, either LocalAuth, OAuthEnabled or both need to be enabled")
 	}
-	if config.AppURI == "" {
+	if conf.AppURI == "" {
 		return nil, log.NewError("No AppURI specified, this must be a fully qualified uri of the application using the api")
 	}
-	api := &t.ApiServer{
+	api := &config.ApiServer{
 		E:      echo.New(),
-		Kind:   t.REST,
-		Config: config,
+		Kind:   config.REST,
+		Config: conf,
 		Rand:   rand.NewPCG(rand.Uint64(), rand.Uint64()),
 	}
-	if len(config.CORS) < 1 {
+	if len(conf.CORS) < 1 {
 		log.Log(log.LevelWarning, "CORS is not set, assuming '*', this should not be used in a production environment!")
 		api.Config.CORS = []string{"*"}
 	}
-	if config.TokenAccessValidity == 0 {
+	if conf.TokenAccessValidity == 0 {
 		log.Logf(log.LevelWarning, "AccessTokenValidity is not set, assuming default validity of %s", TOKEN_ACCESS_VALIDITY.String())
 		api.Config.TokenAccessValidity = TOKEN_ACCESS_VALIDITY
 	}
-	if config.TokenRefreshValidity == 0 {
+	if conf.TokenRefreshValidity == 0 {
 		log.Logf(log.LevelWarning, "TokenRefreshValidity is not set, assuming default validity of %s", TOKEN_REFRESH_VALIDITY.String())
 		api.Config.TokenRefreshValidity = TOKEN_REFRESH_VALIDITY
 	}
@@ -59,7 +60,7 @@ func SetupRest(config t.ApiConfig) (*t.ApiServer, *log.Error) {
 	return api, log.ErrorNil()
 }
 
-func RegisterRestDefaultEndpoints(api *t.ApiServer) {
+func RegisterRestDefaultEndpoints(api *config.ApiServer) {
 	api.E.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "No Auth Required!"})
 	})
@@ -70,7 +71,7 @@ func RegisterRestDefaultEndpoints(api *t.ApiServer) {
 	})
 }
 
-func StartRest(api *t.ApiServer, bind string) *log.Error {
+func StartRest(api *config.ApiServer, bind string) *log.Error {
 	fmt.Printf("Rest API Server started on '%s'\n\n", bind) // TODO: replace with custom logger
 
 	err := api.E.Start(bind) // blocking
@@ -89,7 +90,7 @@ func StartRest(api *t.ApiServer, bind string) *log.Error {
 // 	return api
 // }
 
-func Register(api *t.ApiServer, method t.HttpMethod, path string, handle echo.HandlerFunc) *log.Error {
+func Register(api *config.ApiServer, method t.HttpMethod, path string, handle echo.HandlerFunc) *log.Error {
 	if api.E == nil {
 		return log.NewErrorWithType(ErrWebApiNotInit, "")
 	}

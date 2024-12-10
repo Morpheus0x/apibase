@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"gopkg.cc/apibase/config"
 	t "gopkg.cc/apibase/webtype"
 )
 
-func AuthJWT(api *t.ApiServer) echo.MiddlewareFunc {
+func AuthJWT(api *config.ApiServer) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			err := authJWTHandler(c, api)
@@ -21,7 +22,7 @@ func AuthJWT(api *t.ApiServer) echo.MiddlewareFunc {
 	}
 }
 
-func authJWTHandler(c echo.Context, api *t.ApiServer) error {
+func authJWTHandler(c echo.Context, api *config.ApiServer) error {
 	fmt.Printf("Request Header X-XSRF-TOKEN: %s\n", c.Request().Header.Get("X-XSRF-TOKEN"))
 	accessToken, errx := parseAccessTokenCookie(c, api.Config.TokenSecret)
 	if errx.IsNil() {

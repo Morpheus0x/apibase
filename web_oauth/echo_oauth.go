@@ -9,13 +9,14 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth/gothic"
+	"gopkg.cc/apibase/config"
 	"gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/web_auth"
 	t "gopkg.cc/apibase/webtype"
 )
 
 // Create default routes for oauth user flow
-func RegisterOAuthEndpoints(api *t.ApiServer) error {
+func RegisterOAuthEndpoints(api *config.ApiServer) error {
 	api.E.GET("/auth/:provider", login(api)) // login & signup
 	api.E.GET("/auth/:provider/callback", callback(api))
 	api.E.GET("/auth/logout/:provider", logout(api), web_auth.AuthJWT(api))
@@ -24,7 +25,7 @@ func RegisterOAuthEndpoints(api *t.ApiServer) error {
 }
 
 // TODO: add jwt logic from local auth
-func login(api *t.ApiServer) echo.HandlerFunc {
+func login(api *config.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		request := c.Request()
 		queryURL := request.URL.Query()
@@ -55,7 +56,7 @@ func login(api *t.ApiServer) echo.HandlerFunc {
 	}
 }
 
-func callback(api *t.ApiServer) echo.HandlerFunc {
+func callback(api *config.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		request := c.Request()
 		queryURL := request.URL.Query()
@@ -83,7 +84,7 @@ func callback(api *t.ApiServer) echo.HandlerFunc {
 	}
 }
 
-func logout(api *t.ApiServer) echo.HandlerFunc {
+func logout(api *config.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		request := c.Request()
 		queryURL := request.URL.Query()
