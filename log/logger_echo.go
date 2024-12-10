@@ -55,7 +55,7 @@ func EchoLoggerMiddleware(level Level) echo.MiddlewareFunc {
 			)
 
 			for _, w := range loggerLocal.Writers {
-				logOutput := formatLogOutput(level, out, loggerLocal.TimeFmt, w.WithTime)
+				logOutput := loggerLocal.formatLogOutput(level, out, loggerLocal.TimeFmt, w.WithTime)
 				w.Lock()
 				w.Writer.Write(logOutput)
 				w.Unlock()
