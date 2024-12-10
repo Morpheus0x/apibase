@@ -39,11 +39,7 @@ func (e *Error) Log() *Error {
 		return e
 	}
 	e.wasLogged = true
-	if e.errType == DefaultError {
-		Log(e.severity, e.String())
-	} else {
-		Log(e.severity, fmt.Sprintf("%s: %s", e.errType.String(), e.String()))
-	}
+	Log(e.severity, e.String())
 	return e
 }
 
