@@ -8,3 +8,8 @@ type PostgresConfig struct {
 	DB       string `toml:"db"`
 	SSLMode  bool   `toml:"ssl_enabled"`
 }
+
+type SQLiteConfig struct {
+	FilePath string `toml:"file_path"`
+	LockFile string `toml:"lock_file"`
+}

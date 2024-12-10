@@ -51,6 +51,18 @@ func Open(path string) (*SQLite, error) {
 	return sqlite, err
 }
 
+func OpenWithConfig(path string, conf SQLiteConfig) (*SQLite, error) {
+	var err error
+	// TODO: maybe validate path?
+	sqlite := &SQLite{
+		path:      path,
+		startTime: time.Now().Unix(),
+		config:    conf,
+	}
+	sqlite.DB, err = sql.Open("sqlite3", sqlite.path)
+	return sqlite, err
+}
+
 func (s *SQLite) Close() error {
 	return s.DB.Close()
 }
