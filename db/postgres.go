@@ -7,11 +7,10 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"gopkg.cc/apibase/config"
 	"gopkg.cc/apibase/log"
 )
 
-func PostgresInit(pgc PostgresConfig, bc config.BaseConfig) (DB, *log.Error) {
+func PostgresInit(pgc PostgresConfig, bc BaseConfig) (DB, *log.Error) {
 	ssl := ""
 	if pgc.SSLMode {
 		ssl = "enable"
