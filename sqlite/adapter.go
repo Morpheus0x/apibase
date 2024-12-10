@@ -34,7 +34,7 @@ type SQLite struct {
 }
 
 type SQLiteConfig struct {
-	FORMAT_SQLITE_DATETIME string
+	SQLITE_DATETIME_FORMAT string
 }
 
 func Open(path string) (*SQLite, error) {
@@ -44,7 +44,7 @@ func Open(path string) (*SQLite, error) {
 		path:      path,
 		startTime: time.Now().Unix(),
 		config: SQLiteConfig{
-			FORMAT_SQLITE_DATETIME: "2006-01-02 15:04:05",
+			SQLITE_DATETIME_FORMAT: "2006-01-02 15:04:05",
 		},
 	}
 	sqlite.DB, err = sql.Open("sqlite3", sqlite.path)

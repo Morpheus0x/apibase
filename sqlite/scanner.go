@@ -68,7 +68,7 @@ func (s *SQLite) scanRows(rows *sql.Rows, targetType reflect.Type) ([]interface{
 			targetTypeToParse := reflect.TypeOf(reflect.New(targetType).Elem().Field(targetFields[i]).Addr().Elem().Interface())
 			if targetTypeToParse == reflect.TypeOf(pbTime) || targetTypeToParse == reflect.TypeOf(pbTimeAddr) {
 				timeString := reflect.ValueOf(fields[i]).Elem().Interface().(string)
-				time, err := time.Parse(s.config.FORMAT_SQLITE_DATETIME, timeString)
+				time, err := time.Parse(s.config.SQLITE_DATETIME_FORMAT, timeString)
 				if err != nil {
 					return outArray, fmt.Errorf("unable to parse time (%s) for column %s", timeString, dbField)
 				}

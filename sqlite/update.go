@@ -91,7 +91,7 @@ func CreateOrUpdateRow(s *SQLite, data interface{}) (int64, error) {
 				continue
 			} else {
 				// Default time format contains +0100 timezone offset, this manual formatting disables that
-				value = time.Format(s.config.FORMAT_SQLITE_DATETIME)
+				value = time.Format(s.config.SQLITE_DATETIME_FORMAT)
 			}
 		}
 		// fmt.Printf("value parsed: %v, type: %v\n", value, structValue.Field(i).Type())
