@@ -11,6 +11,7 @@ import (
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/web_auth"
+	"gopkg.cc/apibase/webtype"
 	t "gopkg.cc/apibase/webtype"
 )
 
@@ -40,13 +41,13 @@ func SetupRest(config t.ApiConfig) (*t.ApiServer, *log.Error) {
 		log.Log(log.LevelWarning, "CORS is not set, assuming '*', this should not be used in a production environment!")
 		api.Config.CORS = []string{"*"}
 	}
-	if config.TokenAccessValidity == 0 {
-		log.Logf(log.LevelWarning, "AccessTokenValidity is not set, assuming default validity of %s", TOKEN_ACCESS_VALIDITY.String())
-		api.Config.TokenAccessValidity = TOKEN_ACCESS_VALIDITY
+	if config.TokenAccessValidity == "" {
+		log.Logf(log.LevelWarning, "AccessTokenValidity is not set, assuming default validity of %s", webtype.TOKEN_ACCESS_VALIDITY.String())
+		api.Config.TokenAccessValidity = webtype.TOKEN_ACCESS_VALIDITY.String()
 	}
-	if config.TokenRefreshValidity == 0 {
-		log.Logf(log.LevelWarning, "TokenRefreshValidity is not set, assuming default validity of %s", TOKEN_REFRESH_VALIDITY.String())
-		api.Config.TokenRefreshValidity = TOKEN_REFRESH_VALIDITY
+	if config.TokenRefreshValidity == "" {
+		log.Logf(log.LevelWarning, "TokenRefreshValidity is not set, assuming default validity of %s", webtype.TOKEN_REFRESH_VALIDITY.String())
+		api.Config.TokenRefreshValidity = webtype.TOKEN_REFRESH_VALIDITY.String()
 	}
 	api.E.HideBanner = true
 	api.E.HidePort = true

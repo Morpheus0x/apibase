@@ -6,7 +6,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+	"github.com/xhit/go-str2duration/v2"
 	"gopkg.cc/apibase/db"
+	"gopkg.cc/apibase/log"
 )
 
 type ApiServer struct {
@@ -23,9 +25,9 @@ type ApiConfig struct {
 	CORS []string `toml:"cors"`
 	DB   db.DB
 
-	TokenSecret          string        `toml:"token_secret"`
-	TokenAccessValidity  time.Duration `toml:"token_access_validity"`
-	TokenRefreshValidity time.Duration `toml:"token_refresh_validity"`
+	TokenSecret          string `toml:"token_secret"`
+	TokenAccessValidity  string `toml:"token_access_validity"`
+	TokenRefreshValidity string `toml:"token_refresh_validity"`
 
 	LocalAuth         bool `toml:"local_auth"`
 	OAuthEnabled      bool `tobl:"oauth_enabled"`
@@ -33,6 +35,24 @@ type ApiConfig struct {
 
 	// Used for logout redirect and when no valid oauth callback referrer
 	AppURI string `toml:"api_uri"`
+}
+
+func (ac ApiConfig) TokenAccessValidityDuration() time.Duration {
+	duration, err := str2duration.ParseDuration(ac.TokenAccessValidity)
+	if err != nil {
+		log.Logf(log.LevelCritical, "unable to parse TokenAccessValidity duration: %s, assuming default %s", ac.TokenAccessValidity, TOKEN_ACCESS_VALIDITY.String())
+		return TOKEN_ACCESS_VALIDITY
+	}
+	return duration
+}
+
+func (ac ApiConfig) TokenRefreshValidityDuration() time.Duration {
+	duration, err := str2duration.ParseDuration(ac.TokenAccessValidity)
+	if err != nil {
+		log.Logf(log.LevelCritical, "unable to parse TokenRefreshValidity duration: %s, assuming default %s", ac.TokenRefreshValidity, TOKEN_REFRESH_VALIDITY.String())
+		return TOKEN_REFRESH_VALIDITY
+	}
+	return duration
 }
 
 //go:generate stringer -type HttpMethod -output ./stringer_httpmethod.go

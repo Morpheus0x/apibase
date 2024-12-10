@@ -70,7 +70,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 	}
 	currentRequest := c.Request()
 	// c.Logger().Infof("AllCookies, before adding new access_token: %+v", currentRequest.Cookies())
-	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(api.Config.TokenAccessValidity * 2)}
+	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(api.Config.TokenAccessValidityDuration() * 2)}
 	currentRequest.AddCookie(newAccessTokenCookie)
 	// c.Logger().Infof("AllCookies, check for duplicate access_token: %+v", currentRequest.Cookies())
 	c.SetRequest(currentRequest)

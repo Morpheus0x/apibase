@@ -32,6 +32,7 @@ require (
 	github.com/stytchauth/squirrel v1.5.3-0.20230822204145-fbce445169d2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
+	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
 	golang.org/x/time v0.5.0 // indirect

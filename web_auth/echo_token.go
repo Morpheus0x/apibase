@@ -12,7 +12,7 @@ import (
 func createSignedAccessToken(claims *t.JwtAccessClaims, api *t.ApiServer) (string, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
-	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.TokenAccessValidity))
+	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.TokenAccessValidityDuration()))
 	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return rawToken.SignedString([]byte(api.Config.TokenSecret))
 }
@@ -20,7 +20,7 @@ func createSignedAccessToken(claims *t.JwtAccessClaims, api *t.ApiServer) (strin
 func createSignedRefreshToken(claims *t.JwtRefreshClaims, api *t.ApiServer) (string, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
-	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.TokenRefreshValidity))
+	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.TokenRefreshValidityDuration()))
 	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return rawToken.SignedString([]byte(api.Config.TokenSecret))
 }

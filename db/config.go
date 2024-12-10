@@ -3,8 +3,9 @@ package db
 import "time"
 
 type BaseConfig struct {
-	DB_RECONNECT_TIMEOUT_SEC  uint `toml:"db_reconnect_timeout_sec"`
-	DB_MAX_RECONNECT_ATTEMPTS uint `toml:"db_max_reconnect_attempts"`
+	DB_RECONNECT_TIMEOUT_SEC  uint   `toml:"db_reconnect_timeout_sec"`
+	DB_MAX_RECONNECT_ATTEMPTS uint   `toml:"db_max_reconnect_attempts"`
+	SQLITE_DATETIME_FORMAT    string `toml:"sqlite_datetime_format"`
 }
 
 func (bc *BaseConfig) DB_RECONNECT_TIMEOUT_DURATION() time.Duration {
