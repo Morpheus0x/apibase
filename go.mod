@@ -5,6 +5,7 @@ go 1.23
 toolchain go1.23.4
 
 require (
+	github.com/BurntSushi/toml v1.4.0
 	github.com/chzyer/readline v1.5.1
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/labstack/echo/v4 v4.12.0

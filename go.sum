@@ -1,3 +1,5 @@
+github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
+github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/blockloop/scan/v2 v2.4.0 h1:OO+lnszEMrIl3WjrSkKOzD1f8IROwTX5R3u1Z4ger8s=
 github.com/blockloop/scan/v2 v2.4.0/go.mod h1:OFYyMocUdRW3DUWehPI/fSsnpNMUNiyUaYXRMY5NMIY=
 github.com/chzyer/logex v1.2.1 h1:XHDu3E6q+gdHgsdTPH6ImJMIp436vR6MPtH8gP05QzM=
