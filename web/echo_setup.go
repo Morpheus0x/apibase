@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"net/http"
+	"sync"
 	"time"
 
 	"math/rand/v2"
@@ -106,15 +107,17 @@ func StartRest(api *t.ApiServer, bind string, shutdown chan struct{}, next chan 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond) // TODO: remove hardcoded timeout
 	defer cancel()
 	startErrorChan := make(chan *log.Error)
+	var startErrorMtx sync.Mutex // to protect agains a VERY edge case race-condition
 
 	go func() {
 		err := api.E.Start(bind) // blocking
 		if err != nil && err != http.ErrServerClosed {
-			// Possible, but very unlikely race-condition with checking a channel this way
+			startErrorMtx.Lock()
 			select {
 			case startErrorChan <- log.NewErrorWithTypef(ErrWebBind, "'%s': %v", bind, err):
 			default:
 			}
+			startErrorMtx.Unlock()
 		}
 	}()
 
@@ -125,8 +128,10 @@ func StartRest(api *t.ApiServer, bind string, shutdown chan struct{}, next chan 
 		}
 	case <-ctx.Done():
 	}
-	// for race-condition, close must happen exactly after echo start error catching select checks the channel but before it writes to it, very unlikely
+	startErrorMtx.Lock()
 	close(startErrorChan)
+	startErrorMtx.Unlock()
+
 	log.Logf(log.LevelNotice, "Rest API Server started on '%s'", bind)
 	return log.ErrorNil()
 }
