@@ -33,8 +33,8 @@ type ApiConfig struct {
 	OAuthEnabled      bool `tobl:"oauth_enabled"`
 	AllowRegistration bool `toml:"allow_registration"`
 
-	// Used for logout redirect and when no valid oauth callback referrer
-	AppURI string `toml:"api_uri"`
+	ApiBind string `toml:"api_bind"`
+	AppURI  string `toml:"app_uri"` // Used for logout redirect and when no valid oauth callback referrer
 }
 
 func (ac ApiConfig) TokenAccessValidityDuration() time.Duration {
