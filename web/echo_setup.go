@@ -71,8 +71,9 @@ func RegisterRestDefaultEndpoints(api *t.ApiServer) {
 	})
 }
 
-func StartRest(api *t.ApiServer, bind string) *log.Error {
-	fmt.Printf("Rest API Server started on '%s'\n\n", bind) // TODO: replace with custom logger
+// start rest api server, is blocking
+func StartRestBlocking(api *t.ApiServer, bind string) *log.Error {
+	log.Logf(log.LevelNotice, "Rest API Server starting on '%s'", bind)
 
 	err := api.E.Start(bind) // blocking
 	if err != nil {
