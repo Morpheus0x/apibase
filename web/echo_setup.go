@@ -1,8 +1,9 @@
 package web
 
 import (
-	"fmt"
+	"context"
 	"net/http"
+	"time"
 
 	"math/rand/v2"
 
@@ -79,6 +80,54 @@ func StartRestBlocking(api *t.ApiServer, bind string) *log.Error {
 	if err != nil {
 		return log.NewErrorWithTypef(ErrWebBind, "'%s': %v", bind, err)
 	}
+	return log.ErrorNil()
+}
+
+// start rest api server, is non-blocking
+func StartRest(api *t.ApiServer, bind string, shutdown chan struct{}, next chan struct{}) *log.Error {
+	go func() {
+		<-shutdown
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second) // TODO: remove hardcoded timeout
+		defer cancel()
+		err := api.E.Shutdown(ctx)
+		if err != nil {
+			log.NewErrorWithType(ErrWebShutdown, err.Error()).Log()
+		} else {
+			log.Log(log.LevelNotice, "Rest API Server shutdown successful.")
+		}
+		select {
+		case <-next:
+			log.Log(log.LevelError, "rest api next channel already closed, make sure channel staging is done correctly")
+		default:
+			close(next)
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond) // TODO: remove hardcoded timeout
+	defer cancel()
+	startErrorChan := make(chan *log.Error)
+
+	go func() {
+		err := api.E.Start(bind) // blocking
+		if err != nil && err != http.ErrServerClosed {
+			// Possible, but very unlikely race-condition with checking a channel this way
+			select {
+			case startErrorChan <- log.NewErrorWithTypef(ErrWebBind, "'%s': %v", bind, err):
+			default:
+			}
+		}
+	}()
+
+	select {
+	case err := <-startErrorChan:
+		if err != nil {
+			return err
+		}
+	case <-ctx.Done():
+	}
+	// for race-condition, close must happen exactly after echo start error catching select checks the channel but before it writes to it, very unlikely
+	close(startErrorChan)
+	log.Logf(log.LevelNotice, "Rest API Server started on '%s'", bind)
 	return log.ErrorNil()
 }
 

@@ -1,8 +1,12 @@
 package config
 
 import (
+	"context"
 	"os"
+	"os/signal"
 	"reflect"
+	"syscall"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"gopkg.cc/apibase/db"
@@ -15,23 +19,63 @@ type ApiBase struct {
 	SQLite     db.SQLiteConfig   `toml:"sqlite"`
 	BaseConfig db.BaseConfig     `toml:"baseconfig"`
 	ApiConfig  webtype.ApiConfig `toml:"apiconfig"`
+
+	Interrupt  chan os.Signal
+	CloseChain []chan struct{}
 }
 
-func LoadToml(path string) (*ApiBase, *log.Error) {
+func InitApiBase() *ApiBase {
 	apiBase := &ApiBase{}
 
+	// setup interrupt to catch sigint (Ctrl + C)
+	apiBase.Interrupt = make(chan os.Signal, 1)
+	signal.Notify(apiBase.Interrupt, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	return apiBase
+}
+
+func (ab *ApiBase) WaitAndCleanup() *log.Error {
+	if ab.Interrupt == nil {
+		return log.NewErrorWithType(ErrApiBaseCleanup, "interrupt channel not initialized, make sure to initialize ApiBase struct correctly")
+	}
+	if len(ab.CloseChain) < 1 {
+		log.Log(log.LevelWarning, "no close chain found and therefore no go routines can be closed, done")
+		return log.ErrorNil()
+	}
+	if len(ab.CloseChain) < 2 {
+		return log.NewErrorWithType(ErrApiBaseCleanup, "only one channel in close chain, this should not happen, unable to close go routine(s)")
+	}
+
+	<-ab.Interrupt
+	log.Log(log.LevelNotice, "interrupt received, closing go routines")
+	close(ab.CloseChain[0])
+	timeout := 9 * time.Second // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	// waiting for last channel in close chain to be closed
+	select {
+	case <-ab.CloseChain[len(ab.CloseChain)-1]:
+		log.Log(log.LevelInfo, "all go routines closed")
+		return log.ErrorNil()
+	case <-ctx.Done():
+		return log.NewErrorWithTypef(ErrApiBaseCleanup, "timeout for close chain exceeded, not all go routines exited in defined timeout (%s)", timeout.String())
+	}
+}
+
+func (apiBase *ApiBase) LoadToml(path string) *log.Error {
 	_, err := os.Stat(path)
 	if err != nil {
-		return apiBase, log.NewErrorWithTypef(ErrTomlParsing, "unable to read toml file: %s", err.Error())
+		return log.NewErrorWithTypef(ErrTomlParsing, "unable to read toml file: %s", err.Error())
 	}
 	_, err = toml.DecodeFile(path, apiBase)
 	if err != nil {
-		return apiBase, log.NewErrorWithTypef(ErrTomlParsing, "unable to parse toml: %s", err.Error())
+		return log.NewErrorWithTypef(ErrTomlParsing, "unable to parse toml: %s", err.Error())
 	}
 
 	apiBase.AddMissingDefaults()
 
-	return apiBase, log.ErrorNil()
+	return log.ErrorNil()
 }
 
 func (apiBase *ApiBase) AddMissingDefaults() {
