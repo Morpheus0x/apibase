@@ -18,14 +18,15 @@ type ApiBase struct {
 }
 
 func LoadToml(path string) (*ApiBase, *log.Error) {
+	apiBase := &ApiBase{}
+
 	_, err := os.Stat(path)
 	if err != nil {
-		return &ApiBase{}, log.NewErrorWithTypef(ErrTomlParsing, "unable to read toml file: %s", err.Error())
+		return apiBase, log.NewErrorWithTypef(ErrTomlParsing, "unable to read toml file: %s", err.Error())
 	}
-	apiBase := &ApiBase{}
 	_, err = toml.DecodeFile(path, apiBase)
 	if err != nil {
-		return &ApiBase{}, log.NewErrorWithTypef(ErrTomlParsing, "unable to parse toml: %s", err.Error())
+		return apiBase, log.NewErrorWithTypef(ErrTomlParsing, "unable to parse toml: %s", err.Error())
 	}
 
 	apiBase.AddMissingDefaults()
