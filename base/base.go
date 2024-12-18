@@ -14,18 +14,21 @@ import (
 	"gopkg.cc/apibase/webtype"
 )
 
-type ApiBase struct {
+type ApiBase[T any] struct {
 	Postgres   db.PostgresConfig `toml:"postgres"`
 	SQLite     db.SQLiteConfig   `toml:"sqlite"`
 	BaseConfig db.BaseConfig     `toml:"baseconfig"`
 	ApiConfig  webtype.ApiConfig `toml:"apiconfig"`
 
+	Application T `toml:"application"`
+
 	Interrupt  chan os.Signal
 	CloseChain []chan struct{}
 }
 
-func InitApiBase() *ApiBase {
-	apiBase := &ApiBase{}
+// initialize ApiBase struct without any additional application settings
+func InitApiBase() *ApiBase[struct{}] {
+	apiBase := &ApiBase[struct{}]{}
 
 	// setup interrupt to catch sigint (Ctrl + C)
 	apiBase.Interrupt = make(chan os.Signal, 1)
@@ -34,7 +37,18 @@ func InitApiBase() *ApiBase {
 	return apiBase
 }
 
-func (apiBase *ApiBase) WaitAndCleanup() *log.Error {
+// initialze ApiBase with custom config type used for decoding config file with additional application settings
+func InitApiBaseCustom[T any]() *ApiBase[T] {
+	apiBase := &ApiBase[T]{}
+
+	// setup interrupt to catch sigint (Ctrl + C)
+	apiBase.Interrupt = make(chan os.Signal, 1)
+	signal.Notify(apiBase.Interrupt, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	return apiBase
+}
+
+func (apiBase *ApiBase[T]) WaitAndCleanup() *log.Error {
 	if apiBase.Interrupt == nil {
 		return log.NewErrorWithType(ErrApiBaseCleanup, "interrupt channel not initialized, make sure to initialize ApiBase struct correctly")
 	}
@@ -63,7 +77,7 @@ func (apiBase *ApiBase) WaitAndCleanup() *log.Error {
 	}
 }
 
-func (apiBase *ApiBase) LoadToml(path string) *log.Error {
+func (apiBase *ApiBase[T]) LoadToml(path string) *log.Error {
 	_, err := os.Stat(path)
 	if err != nil {
 		return log.NewErrorWithTypef(ErrTomlParsing, "unable to read toml file: %s", err.Error())
@@ -78,7 +92,7 @@ func (apiBase *ApiBase) LoadToml(path string) *log.Error {
 	return log.ErrorNil()
 }
 
-func (apiBase *ApiBase) AddMissingDefaults() {
+func (apiBase *ApiBase[T]) AddMissingDefaults() {
 	if reflect.ValueOf(apiBase.BaseConfig.DB_MAX_RECONNECT_ATTEMPTS).IsZero() {
 		apiBase.BaseConfig.DB_MAX_RECONNECT_ATTEMPTS = DB_MAX_RECONNECT_ATTEMPTS
 	}
@@ -88,4 +102,8 @@ func (apiBase *ApiBase) AddMissingDefaults() {
 	if reflect.ValueOf(apiBase.BaseConfig.SQLITE_DATETIME_FORMAT).IsZero() {
 		apiBase.BaseConfig.SQLITE_DATETIME_FORMAT = SQLITE_DATETIME_FORMAT
 	}
+}
+
+func (apiBase *ApiBase[T]) GetCustomConfigType() {
+	log.Logf(log.LevelDebug, "Type: %s", reflect.TypeFor[T]().String())
 }

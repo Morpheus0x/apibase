@@ -9,7 +9,7 @@ import (
 
 // used to add a stage in the close channel chain, returns offset of channel to listen to,
 // guarantees offset to be second to last element of chain
-func (apiBase *ApiBase) RegisterCloseStage() uint {
+func (apiBase *ApiBase[T]) RegisterCloseStage() uint {
 	var offset uint
 	if len(apiBase.CloseChain) < 1 {
 		apiBase.CloseChain = append(apiBase.CloseChain, make(chan struct{}))
@@ -21,14 +21,14 @@ func (apiBase *ApiBase) RegisterCloseStage() uint {
 	return offset
 }
 
-func (apiBase *ApiBase) PostgresInit() *log.Error {
+func (apiBase *ApiBase[T]) PostgresInit() *log.Error {
 	var err *log.Error
 	apiBase.ApiConfig.DB, err = db.PostgresInit(apiBase.Postgres, apiBase.BaseConfig)
 	return err
 }
 
 // start rest api server, is non-blocking
-func (apiBase *ApiBase) StartRest(api *webtype.ApiServer) *log.Error {
+func (apiBase *ApiBase[T]) StartRest(api *webtype.ApiServer) *log.Error {
 	i := apiBase.RegisterCloseStage()
 
 	err := web.StartRest(api, apiBase.ApiConfig.ApiBind, apiBase.CloseChain[i], apiBase.CloseChain[i+1])
