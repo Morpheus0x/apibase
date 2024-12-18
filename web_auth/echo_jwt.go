@@ -1,11 +1,11 @@
 package web_auth
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"gopkg.cc/apibase/log"
 	t "gopkg.cc/apibase/webtype"
 )
 
@@ -22,7 +22,7 @@ func AuthJWT(api *t.ApiServer) echo.MiddlewareFunc {
 }
 
 func authJWTHandler(c echo.Context, api *t.ApiServer) error {
-	fmt.Printf("Request Header X-XSRF-TOKEN: %s\n", c.Request().Header.Get("X-XSRF-TOKEN"))
+	log.Logf(log.LevelDebug, "Request Header X-XSRF-TOKEN: %s\n", c.Request().Header.Get("X-XSRF-TOKEN"))
 	accessToken, errx := parseAccessTokenCookie(c, api.Config.TokenSecret)
 	if errx.IsNil() {
 		if !validCSRF(c, accessToken.Claims.(*t.JwtAccessClaims)) {

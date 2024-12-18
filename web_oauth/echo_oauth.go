@@ -3,13 +3,13 @@ package web_oauth
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth/gothic"
 	"gopkg.cc/apibase/helper"
+	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/web_auth"
 	t "gopkg.cc/apibase/webtype"
 )
@@ -66,7 +66,7 @@ func callback(api *t.ApiServer) echo.HandlerFunc {
 			return err
 		}
 		// TODO: create user if email not found in db
-		fmt.Printf("User logged in: %v", user)
+		log.Logf(log.LevelDebug, "User logged in: %v", user)
 
 		// Correct Redirecting
 		state := queryURL.Get("state")

@@ -100,8 +100,7 @@ func LogMultiple(l Level, s []string) {
 
 func (log *Logger) printWithLevel(text string, level Level) {
 	if level < log.Level {
-		// fmt.Printf("level(%d) < log.Level(%d) = %v\n", level, log.Level, level < log.Level)
-		// log message is too verbose level is higher than set in logger, ignoring
+		// log message is too verbose, level is higher than set in logger, ignoring
 		return
 	}
 	for _, w := range log.Writers {
@@ -114,8 +113,7 @@ func (log *Logger) printWithLevel(text string, level Level) {
 
 func (log *Logger) printMultipleWithLevel(text []string, level Level) {
 	if level < log.Level {
-		// fmt.Printf("level(%d) < log.Level(%d) = %v\n", level, log.Level, level < log.Level)
-		// log message is too verbose level is higher than set in logger, ignoring
+		// log message is too verbose, level is higher than set in logger, ignoring
 		return
 	}
 	for _, w := range log.Writers {

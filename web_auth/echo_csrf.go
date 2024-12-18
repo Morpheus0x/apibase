@@ -1,7 +1,6 @@
 package web_auth
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/labstack/echo/v4"
@@ -9,7 +8,6 @@ import (
 )
 
 func validCSRF(c echo.Context, claims any) bool {
-	fmt.Printf("")
 	csrfHeader := ""
 	switch reflect.TypeOf(claims) {
 	case reflect.TypeOf(&t.JwtAccessClaims{}):
