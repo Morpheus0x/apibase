@@ -48,6 +48,32 @@ func InitApiBaseCustom[T any]() *ApiBase[T] {
 	return apiBase
 }
 
+func (apiBase *ApiBase[T]) Cleanup() {
+	if len(apiBase.CloseChain) < 1 {
+		return
+	}
+	if len(apiBase.CloseChain) < 2 {
+		sleep := 500 * time.Millisecond // TODO: remove hardcoded timeout
+		log.Logf(log.LevelCritical, "interrupt received but only one channel found, this should not happen, closing it and waiting %s for go routine to exit", sleep.String())
+		close(apiBase.CloseChain[0])
+		time.Sleep(sleep)
+		return
+	}
+
+	close(apiBase.CloseChain[0])
+	timeout := 9 * time.Second // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	// waiting for last channel in close chain to be closed
+	select {
+	case <-apiBase.CloseChain[len(apiBase.CloseChain)-1]:
+		log.Log(log.LevelInfo, "all go routines closed")
+	case <-ctx.Done():
+		log.Logf(log.LevelNotice, "timeout for close chain exceeded, not all go routines exited in defined timeout (%s)", timeout.String())
+	}
+}
+
 func (apiBase *ApiBase[T]) WaitAndCleanup() *log.Error {
 	if apiBase.Interrupt == nil {
 		return log.NewErrorWithType(ErrApiBaseCleanup, "interrupt channel not initialized, make sure to initialize ApiBase struct correctly")
