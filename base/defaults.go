@@ -1,4 +1,4 @@
-package config
+package base
 
 const (
 	DB_RECONNECT_TIMEOUT_SEC  = 1
