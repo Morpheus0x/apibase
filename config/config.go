@@ -34,28 +34,28 @@ func InitApiBase() *ApiBase {
 	return apiBase
 }
 
-func (ab *ApiBase) WaitAndCleanup() *log.Error {
-	if ab.Interrupt == nil {
+func (apiBase *ApiBase) WaitAndCleanup() *log.Error {
+	if apiBase.Interrupt == nil {
 		return log.NewErrorWithType(ErrApiBaseCleanup, "interrupt channel not initialized, make sure to initialize ApiBase struct correctly")
 	}
-	if len(ab.CloseChain) < 1 {
+	if len(apiBase.CloseChain) < 1 {
 		log.Log(log.LevelWarning, "no close chain found and therefore no go routines can be closed, done")
 		return log.ErrorNil()
 	}
-	if len(ab.CloseChain) < 2 {
+	if len(apiBase.CloseChain) < 2 {
 		return log.NewErrorWithType(ErrApiBaseCleanup, "only one channel in close chain, this should not happen, unable to close go routine(s)")
 	}
 
-	<-ab.Interrupt
+	<-apiBase.Interrupt
 	log.Log(log.LevelNotice, "interrupt received, closing go routines")
-	close(ab.CloseChain[0])
+	close(apiBase.CloseChain[0])
 	timeout := 9 * time.Second // TODO: remove hardcoded timeout
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	// waiting for last channel in close chain to be closed
 	select {
-	case <-ab.CloseChain[len(ab.CloseChain)-1]:
+	case <-apiBase.CloseChain[len(apiBase.CloseChain)-1]:
 		log.Log(log.LevelInfo, "all go routines closed")
 		return log.ErrorNil()
 	case <-ctx.Done():
