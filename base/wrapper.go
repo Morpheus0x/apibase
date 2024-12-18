@@ -34,6 +34,16 @@ func (apiBase *ApiBase[T]) StartRest(api *webtype.ApiServer) *log.Error {
 
 	err := web.StartRest(api, apiBase.ApiConfig.ApiBind, apiBase.CloseChain[i], apiBase.CloseChain[i+1])
 	if !err.IsNil() {
+		// cleanup channel close chain array
+		if len(apiBase.CloseChain) == 2 {
+			// if this is the first entry in the channel close chain remove both shutdown and next channels by clearing the array
+			apiBase.CloseChain = nil
+		} else if len(apiBase.CloseChain) > 2 {
+			// remove the last channel, therefore the new last element will be the "next" channel used to close subsequent go routines
+			apiBase.CloseChain = apiBase.CloseChain[:len(apiBase.CloseChain)-1]
+		} else {
+			log.Log(log.LevelCritical, "close chain array only contains one channel, this should not happen!")
+		}
 		return err
 	}
 	return log.ErrorNil()
