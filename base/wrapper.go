@@ -21,13 +21,14 @@ func (apiBase *ApiBase[T]) RegisterCloseStage() uint {
 	return offset
 }
 
+// doesn't create go routines and therefore doesn't require cleanup
 func (apiBase *ApiBase[T]) PostgresInit() *log.Error {
 	var err *log.Error
 	apiBase.ApiConfig.DB, err = db.PostgresInit(apiBase.Postgres, apiBase.BaseConfig)
 	return err
 }
 
-// start rest api server, is non-blocking
+// start rest api server, is non-blocking but requires cleanup
 func (apiBase *ApiBase[T]) StartRest(api *webtype.ApiServer) *log.Error {
 	i := apiBase.RegisterCloseStage()
 

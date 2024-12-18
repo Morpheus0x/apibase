@@ -86,8 +86,7 @@ func StartRestBlocking(api *t.ApiServer, bind string) *log.Error {
 
 // start rest api server, is non-blocking
 func StartRest(api *t.ApiServer, bind string, shutdown chan struct{}, next chan struct{}) *log.Error {
-	go func() {
-		<-shutdown
+	go func() { // echo shutdown
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second) // TODO: remove hardcoded timeout
 		defer cancel()
 		err := api.E.Shutdown(ctx)
@@ -109,7 +108,7 @@ func StartRest(api *t.ApiServer, bind string, shutdown chan struct{}, next chan 
 	startErrorChan := make(chan *log.Error)
 	var startErrorMtx sync.Mutex // to protect agains a VERY edge case race-condition
 
-	go func() {
+	go func() { // echo start
 		err := api.E.Start(bind) // blocking
 		if err != nil && err != http.ErrServerClosed {
 			startErrorMtx.Lock()
