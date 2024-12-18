@@ -9,7 +9,7 @@ import (
 
 // used to add a stage in the close channel chain, returns offset of channel to listen to,
 // guarantees offset to be second to last element of chain
-func (apiBase *ApiBase[T]) RegisterCloseStage() uint {
+func (apiBase *ApiBase[T]) registerCloseStage() uint {
 	var offset uint
 	if len(apiBase.CloseChain) < 1 {
 		apiBase.CloseChain = append(apiBase.CloseChain, make(chan struct{}))
@@ -21,6 +21,12 @@ func (apiBase *ApiBase[T]) RegisterCloseStage() uint {
 	return offset
 }
 
+// returns shutdown and next channels which can be used for own application go routines
+func (apiBase *ApiBase[T]) GetCloseStageChannels() (shutdown chan struct{}, next chan struct{}) {
+	i := apiBase.registerCloseStage()
+	return apiBase.CloseChain[i], apiBase.CloseChain[i+1]
+}
+
 // doesn't create go routines and therefore doesn't require cleanup
 func (apiBase *ApiBase[T]) PostgresInit() *log.Error {
 	var err *log.Error
@@ -30,7 +36,7 @@ func (apiBase *ApiBase[T]) PostgresInit() *log.Error {
 
 // start rest api server, is non-blocking but requires cleanup
 func (apiBase *ApiBase[T]) StartRest(api *webtype.ApiServer) *log.Error {
-	i := apiBase.RegisterCloseStage()
+	i := apiBase.registerCloseStage()
 
 	err := web.StartRest(api, apiBase.ApiConfig.ApiBind, apiBase.CloseChain[i], apiBase.CloseChain[i+1])
 	if !err.IsNil() {
