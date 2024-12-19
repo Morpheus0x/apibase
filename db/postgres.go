@@ -31,7 +31,7 @@ func PostgresInit(pgc PostgresConfig, bc BaseConfig) (DB, *log.Error) {
 			time.Sleep(bc.DB_RECONNECT_TIMEOUT_DURATION())
 			continue
 		}
-		log.Log(log.LevelInfo, "Postgres database connection established.")
+		log.Logf(log.LevelInfo, "Postgres connection to database '%s' established.", pgc.DB)
 		return DB{Kind: PostgreSQL, Postgres: conn}, log.ErrorNil()
 	}
 	return DB{}, log.NewErrorWithType(ErrDatabaseConn, dbErr.Error())
