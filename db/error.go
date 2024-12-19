@@ -6,4 +6,6 @@ var (
 	ErrDatabaseConfig    = log.RegisterErrType("database config invalid")
 	ErrDatabaseMigration = log.RegisterErrType("database migration failed")
 	ErrDatabaseConn      = log.RegisterErrType("database connect failed")
+	ErrDatabaseQuery     = log.RegisterErrType("database query error")
+	ErrDatabaseNotFound  = log.RegisterErrType("database entry not found")
 )
