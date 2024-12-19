@@ -34,6 +34,15 @@ func (e *Error) Extend(text string) *Error {
 	return e
 }
 
+func (e *Error) Extendf(text string, a ...any) *Error {
+	e.content = append(e.content, ErrorContent{
+		text:  fmt.Sprintf(text, a...),
+		trace: traceError(),
+	})
+	e.wasLogged = false
+	return e
+}
+
 func (e *Error) Log() *Error {
 	if e.wasLogged {
 		return e
