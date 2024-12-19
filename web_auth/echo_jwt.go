@@ -59,8 +59,6 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 	}
 	// TODO: get Access Claims from DB
 	accessClaims := &t.JwtAccessClaims{
-		Name:       refreshClaims.Name,
-		Role:       refreshClaims.Role,
 		CSRFHeader: refreshClaims.CSRFHeader,
 	}
 	newAccessToken, err := createSignedAccessToken(accessClaims, api)

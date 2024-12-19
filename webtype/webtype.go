@@ -94,9 +94,9 @@ type JwtAccessClaims struct {
 }
 
 type JwtRefreshClaims struct {
-	Name       string   `json:"name"`
-	Role       UserRole `json:"role"`
-	CSRFHeader string   `json:"csrf_header"`
+	UserID     int    `json:"user_id"`
+	Nonce      string `json:"nonce"`
+	CSRFHeader string `json:"csrf_header"`
 	jwt.RegisteredClaims
 }
 

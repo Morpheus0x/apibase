@@ -32,7 +32,7 @@ func login(api *t.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			return fmt.Errorf("unable to create access token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 		}
-		refreshToken, err := createSignedRefreshToken(&t.JwtRefreshClaims{Name: username, Role: t.SuperAdmin, CSRFHeader: csrfValue}, api)
+		refreshToken, err := createSignedRefreshToken(&t.JwtRefreshClaims{CSRFHeader: csrfValue}, api)
 		if err != nil {
 			return fmt.Errorf("unable to create refresh token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 		}
