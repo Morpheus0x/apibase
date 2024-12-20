@@ -77,19 +77,15 @@ const (
 	HTMX
 )
 
-type UserRole uint
-
-const (
-	OrgViewer UserRole = iota
-	OrgUser
-	OrgAdmin
-	SuperAdmin = 99
-)
+// If changes are made to JwtAccessClaims, this revision uint must be incremented
+const LatestAccessTokenRevision uint = 1
 
 type JwtAccessClaims struct {
-	Name       string   `json:"name"`
-	Role       UserRole `json:"role"`
-	CSRFHeader string   `json:"csrf_header"`
+	UserID     int    `json:"user_id"`
+	Name       string `json:"name"`
+	Role       string `json:"role"`
+	CSRFHeader string `json:"csrf_header"`
+	Revision   uint   `json:"revision"`
 	jwt.RegisteredClaims
 }
 

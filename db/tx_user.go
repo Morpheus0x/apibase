@@ -9,6 +9,17 @@ import (
 	"gopkg.cc/apibase/tables"
 )
 
+func GetUserByID(id int) (tables.Users, *log.Error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	defer cancel()
+	user, dbErr := getUser(sqx.Eq{"id": id}, Database, ctx)
+	if !dbErr.IsNil() {
+		return user, dbErr
+	}
+	return user, log.ErrorNil()
+}
+
+// unique user is defined by user.Email
 func GetOrCreateUser(user tables.Users) (tables.Users, *log.Error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
@@ -18,7 +29,7 @@ func GetOrCreateUser(user tables.Users) (tables.Users, *log.Error) {
 	}
 	defer tx.Rollback()
 
-	userFromDB, dbErr := getUserByEmail(user.Email, tx, ctx)
+	userFromDB, dbErr := getUser(sqx.Eq{"email": user.Email}, tx, ctx)
 	if !dbErr.IsNil() && !dbErr.IsType(ErrDatabaseNotFound) {
 		return user, dbErr
 	}
@@ -29,7 +40,7 @@ func GetOrCreateUser(user tables.Users) (tables.Users, *log.Error) {
 			return user, dbErr
 		}
 		log.Logf(log.LevelDebug, "User created: %s (%s)", user.Name, user.Email)
-		userFromDB, dbErr = getUserByEmail(user.Email, tx, ctx)
+		userFromDB, dbErr = getUser(sqx.Eq{"email": user.Email}, tx, ctx)
 		if !dbErr.IsNil() {
 			return user, dbErr.Extendf("unable to get just created user with email '%s'", user.Email)
 		}
@@ -41,16 +52,16 @@ func GetOrCreateUser(user tables.Users) (tables.Users, *log.Error) {
 	return userFromDB, log.ErrorNil()
 }
 
-func getUserByEmail(email string, queryable sqx.Queryable, ctx context.Context) (tables.Users, *log.Error) {
-	user, err := sqx.Read[tables.Users](ctx).WithQueryable(queryable).Select("*").From("users").Where(sqx.Eq{"email": email}).All()
+func getUser(where sqx.Eq, queryable sqx.Queryable, ctx context.Context) (tables.Users, *log.Error) {
+	user, err := sqx.Read[tables.Users](ctx).WithQueryable(queryable).Select("*").From("users").Where(where).All()
 	if err != nil {
 		return tables.Users{}, log.NewErrorWithType(ErrDatabaseQuery, err.Error())
 	}
 	if len(user) < 1 {
-		return tables.Users{}, log.NewErrorWithTypef(ErrDatabaseNotFound, "no user with email address '%s' found", email)
+		return tables.Users{}, log.NewErrorWithTypef(ErrDatabaseNotFound, "no user found with specified where clause: %+v", where)
 	}
 	if len(user) > 1 {
-		return tables.Users{}, log.NewErrorWithTypef(ErrDatabaseQuery, "there exists more than one user with email address '%s'", email)
+		return tables.Users{}, log.NewErrorWithTypef(ErrDatabaseQuery, "more than one user found with specified where clause %+v", where)
 	}
 	return user[0], log.ErrorNil()
 }

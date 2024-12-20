@@ -8,8 +8,10 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth/gothic"
+	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
+	"gopkg.cc/apibase/tables"
 	"gopkg.cc/apibase/web_auth"
 	t "gopkg.cc/apibase/webtype"
 )
@@ -59,14 +61,20 @@ func callback(api *t.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		request := c.Request()
 		queryURL := request.URL.Query()
-		queryURL.Set("provider", c.Param("provider"))
+		provider := c.Param("provider")
+		queryURL.Set("provider", provider)
 
 		user, err := gothic.CompleteUserAuth(c.Response(), request)
 		if err != nil {
 			return err
 		}
-		// TODO: create user if email not found in db
-		log.Logf(log.LevelDebug, "User logged in: %v", user)
+		userFromDB, dbErr := db.GetOrCreateUser(tables.Users{Name: user.NickName, Role: "User", AuthProvider: provider, Email: user.Email, EmailVerified: false})
+		if !dbErr.IsNil() {
+			dbErr.Log()
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI) // TODO: add query param or header to show error on client side
+		}
+		log.Logf(log.LevelDebug, "User logged in: %v", userFromDB)
+		// TODO: create tokens
 
 		// Correct Redirecting
 		state := queryURL.Get("state")
