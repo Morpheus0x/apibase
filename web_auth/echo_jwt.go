@@ -77,15 +77,16 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 	}
 
 	// Refresh Access Token
-	user, errx := db.GetUserByID(refreshClaims.UserID)
+	user, errx := db.GetUserByID(refreshClaims.UserID) // TODO: make sure that sql join contains UserRoles[0]
 	if !errx.IsNil() {
 		errx.Extend("unable to get user from refresh token user id").Log()
 		return echo.NewHTTPError(http.StatusUnauthorized, "user doesn't exist")
 	}
 	accessClaims := &t.JwtAccessClaims{
-		UserID:     user.ID,
-		Name:       user.Name,
-		Role:       user.Role,
+		UserID: user.ID,
+		Name:   user.Name,
+		// TODO: fix jwt role
+		Role:       api.Config.DefaultRole,
 		CSRFHeader: refreshClaims.CSRFHeader,
 		Revision:   t.LatestAccessTokenRevision,
 	}

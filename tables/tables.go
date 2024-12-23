@@ -5,15 +5,18 @@ import "time"
 type Users struct {
 	ID             int       `db:"id" default:"true" table:"users"`
 	Name           string    `db:"name"`
-	Role           string    `db:"role"`
 	AuthProvider   string    `db:"auth_provider"`
 	Email          string    `db:"email"`
 	EmailVerified  bool      `db:"email_verified"`
 	PasswordHash   string    `db:"password_hash"`
 	SecretsVersion int       `db:"secrets_version"`
 	TotpSecret     string    `db:"totp_secret"`
-	CreatedAt      time.Time `db:"created_at"`
-	UpdatedAt      time.Time `db:"updated_at"`
+	SuperAdmin     bool      `db:"super_admin"`
+	CreatedAt      time.Time `db:"created_at" default:"true"`
+	UpdatedAt      time.Time `db:"updated_at" default:"true"`
+	// RefreshTokens  []RefreshTokens `scan:"notate" db:"refresh_tokens"`
+	// Organizations  []Organizations `scan:"notate" db:"organizations"`
+	// UserRoles      []UserRoles     `scan:"notate" db:"user_roles"`
 }
 
 type RefreshTokens struct {
@@ -24,4 +27,19 @@ type RefreshTokens struct {
 	CreatedAt    time.Time `db:"created_at" default:"true"`
 	UpdatedAt    time.Time `db:"updated_at" default:"true"`
 	ExpiresAt    time.Time `db:"expires_at"`
+}
+
+type Organizations struct {
+	ID          int    `db:"id" default:"true" table:"organizations"`
+	Name        string `db:"name"`
+	Description string `db:"description"`
+}
+
+type UserRoles struct {
+	ID       int  `db:"id" default:"true" table:"organizations"`
+	UserID   int  `db:"user_id"`
+	OrgID    int  `db:"org_id"`
+	OrgView  bool `db:"org_view"`
+	OrgEdit  bool `db:"org_edit"`
+	OrgAdmin bool `db:"org_admin"`
 }

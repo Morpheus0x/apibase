@@ -28,7 +28,8 @@ func login(api *t.ApiServer) echo.HandlerFunc {
 		if password != "123456" {
 			return echo.ErrUnauthorized
 		}
-		accessToken, err := createSignedAccessToken(&t.JwtAccessClaims{Name: username, Role: "SuperAdmin", CSRFHeader: csrfValue}, api)
+		// TODO: fix jwt role
+		accessToken, err := createSignedAccessToken(&t.JwtAccessClaims{Name: username, Role: api.Config.DefaultRole, CSRFHeader: csrfValue}, api)
 		if err != nil {
 			return fmt.Errorf("unable to create access token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 		}

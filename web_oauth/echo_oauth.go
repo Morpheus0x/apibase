@@ -68,7 +68,14 @@ func callback(api *t.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		userFromDB, dbErr := db.GetOrCreateUser(tables.Users{Name: user.NickName, Role: "User", AuthProvider: provider, Email: user.Email, EmailVerified: false})
+		userFromDB, dbErr := db.GetOrCreateUser(tables.Users{
+			Name: user.NickName,
+			// TODO: create roles from default after user was created
+			// UserRoles:     api.Config.DefaultRole.GetUserRolesArray(),
+			AuthProvider:  provider,
+			Email:         user.Email,
+			EmailVerified: false,
+		})
 		if !dbErr.IsNil() {
 			dbErr.Log()
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI) // TODO: add query param or header to show error on client side
