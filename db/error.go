@@ -8,4 +8,6 @@ var (
 	ErrDatabaseConn      = log.RegisterErrType("database connect failed")
 	ErrDatabaseQuery     = log.RegisterErrType("database query error")
 	ErrDatabaseNotFound  = log.RegisterErrType("database entry not found")
+	ErrDatabaseCommit    = log.RegisterErrType("database tx commit failed")
+	ErrDatabaseScan      = log.RegisterErrType("database scan to struct failed")
 )

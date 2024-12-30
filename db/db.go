@@ -2,9 +2,10 @@ package db
 
 import (
 	"context"
-	"database/sql"
+	"time"
 
-	"github.com/stytchauth/sqx"
+	"github.com/georgysavva/scany/v2/pgxscan"
+	"github.com/jackc/pgx/v5"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/sqlite"
 	"gopkg.cc/apibase/tables"
@@ -19,13 +20,12 @@ const (
 	PostgreSQL
 )
 
-// var sqxInterface sqx.Queryable
-var Database *sql.DB
+var Database *pgx.Conn
 
 type DB struct {
 	Kind     DBKind
 	SQLite   *sqlite.SQLite
-	Postgres *sql.DB
+	Postgres *pgx.Conn
 }
 
 func ValidateDB(database DB) *log.Error {
@@ -34,32 +34,31 @@ func ValidateDB(database DB) *log.Error {
 		if database.SQLite == nil {
 			return log.NewErrorWithType(ErrDatabaseConfig, "no valid SQLite database adapter")
 		}
-		sqx.SetDefaultQueryable(database.SQLite.DB)
 		// TODO: this
 		return log.NewErrorWithType(log.ErrNotImplemented, "sqlite driver for apibase not implemented yet")
 	case PostgreSQL:
 		if database.Postgres == nil {
 			return log.NewErrorWithType(ErrDatabaseConfig, "no valid PostgreSQL database adapter")
 		}
-		// sqx.SetDefaultQueryable(database.Postgres)
 		Database = database.Postgres
 	default:
 		return log.NewErrorWithType(ErrDatabaseConfig, "no valid DB specified")
 	}
-	sqx.SetDefaultLogger(log.NewGenericLogger(log.LevelDebug))
-	// TODO: validate that sqx can query successfully
 	return log.ErrorNil()
 }
 
 func MigrateDefaultTables(database DB) *log.Error {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	defer cancel()
 	switch database.Kind {
 	case SQLite:
 		// TODO: do this
 		return log.NewErrorWithType(log.ErrNotImplemented, "sqlite tables not migrated")
 	case PostgreSQL:
-		users, err := sqx.Read[tables.Users](context.Background()).Select("*").From("users").All() // .WithQueryable(database.Postgres)
+		users := []tables.Users{}
+		err := pgxscan.Select(ctx, database.Postgres, &users, "SELECT * FROM users")
 		if err != nil {
-			return log.NewError(err.Error())
+			return log.NewErrorWithType(ErrDatabaseMigration, err.Error())
 		}
 		log.Logf(log.LevelDebug, "Users: %+v", users)
 		// TODO: read tables from db and verify they match the local struct

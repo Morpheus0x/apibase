@@ -1,38 +1,37 @@
 package db
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	_ "github.com/lib/pq"
 
 	"gopkg.cc/apibase/log"
 )
 
 func PostgresInit(pgc PostgresConfig, bc BaseConfig) (DB, *log.Error) {
-	ssl := ""
-	if pgc.SSLMode {
-		ssl = "enable"
-	} else {
-		ssl = "disable"
-	}
-	connString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", pgc.Host, pgc.Port, pgc.User, pgc.Password, pgc.DB, ssl)
-	// connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", pgc.User, pgc.Password, pgc.Host, pgc.Port, pgc.DB) // ?ssl=%s , ssl)
-	var dbErr error
+	db := DB{Kind: PostgreSQL}
+	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", pgc.User, pgc.Password, pgc.Host, pgc.Port, pgc.DB) // ?ssl=%s , ssl)
+	var err error
 	for attempt := 1; attempt <= int(bc.DB_MAX_RECONNECT_ATTEMPTS); attempt++ {
-		conn, err := sql.Open("postgres", connString)
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+		db.Postgres, err = pgx.Connect(ctx, connString)
 		if err != nil {
-			return DB{}, log.NewErrorWithTypef(ErrDatabaseConfig, "postgres connection string parsing: %s", err.Error())
+			cancel()
+			return db, log.NewErrorWithTypef(ErrDatabaseConfig, "postgres connection string parsing: %s", err.Error())
 		}
-		dbErr = conn.Ping()
-		if dbErr != nil {
+		err = db.Postgres.Ping(ctx)
+		if err != nil {
 			log.Logf(log.LevelInfo, "Connecting to database failed, attempt %d/%d", attempt, bc.DB_MAX_RECONNECT_ATTEMPTS)
 			time.Sleep(bc.DB_RECONNECT_TIMEOUT_DURATION())
+			cancel()
 			continue
 		}
 		log.Logf(log.LevelInfo, "Postgres connection to database '%s' established.", pgc.DB)
-		return DB{Kind: PostgreSQL, Postgres: conn}, log.ErrorNil()
+		cancel()
+		return db, log.ErrorNil()
 	}
-	return DB{}, log.NewErrorWithType(ErrDatabaseConn, dbErr.Error())
+	return db, log.NewErrorWithType(ErrDatabaseConn, err.Error())
 }
