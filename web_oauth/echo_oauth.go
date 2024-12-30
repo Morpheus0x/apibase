@@ -8,7 +8,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth/gothic"
-	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/tables"
@@ -68,7 +67,7 @@ func callback(api *t.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		userFromDB, dbErr := db.GetOrCreateUser(tables.Users{
+		userFromDB, dbErr := api.Config.DB.GetOrCreateUser(tables.Users{
 			Name: user.NickName,
 			// TODO: create roles from default after user was created
 			// UserRoles:     api.Config.DefaultRole.GetUserRolesArray(),

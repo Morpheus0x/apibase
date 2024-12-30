@@ -20,8 +20,6 @@ const (
 	PostgreSQL
 )
 
-var Database *pgx.Conn
-
 type DB struct {
 	Kind     DBKind
 	SQLite   *sqlite.SQLite
@@ -40,7 +38,6 @@ func ValidateDB(database DB) *log.Error {
 		if database.Postgres == nil {
 			return log.NewErrorWithType(ErrDatabaseConfig, "no valid PostgreSQL database adapter")
 		}
-		Database = database.Postgres
 	default:
 		return log.NewErrorWithType(ErrDatabaseConfig, "no valid DB specified")
 	}

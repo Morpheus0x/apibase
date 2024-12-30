@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
 	t "gopkg.cc/apibase/webtype"
 )
@@ -67,7 +66,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 		// log.Logf(log.LevelInfo, "refresh token CSRF invalid, user: %s, request: %s", accessClaims.Name, c.Request().URL.String())
 		return echo.NewHTTPError(http.StatusUnauthorized, "CSRF Error")
 	}
-	valid, errx := db.VerifyRefreshTokenNonce(refreshClaims.UserID, refreshClaims.Nonce)
+	valid, errx := api.Config.DB.VerifyRefreshTokenNonce(refreshClaims.UserID, refreshClaims.Nonce)
 	if !errx.IsNil() {
 		errx.Extend("unable to verify refresh token").Log()
 		return echo.NewHTTPError(http.StatusUnauthorized, "internal error, please contact administrator")
@@ -77,7 +76,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 	}
 
 	// Refresh Access Token
-	user, errx := db.GetUserByID(refreshClaims.UserID) // TODO: make sure that sql join contains UserRoles[0]
+	user, errx := api.Config.DB.GetUserByID(refreshClaims.UserID) // TODO: make sure that sql join contains UserRoles[0]
 	if !errx.IsNil() {
 		errx.Extend("unable to get user from refresh token user id").Log()
 		return echo.NewHTTPError(http.StatusUnauthorized, "user doesn't exist")

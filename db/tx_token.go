@@ -11,11 +11,11 @@ import (
 	"gopkg.cc/apibase/tables"
 )
 
-func VerifyRefreshTokenNonce(userID int, nonce string) (bool, *log.Error) {
+func (db DB) VerifyRefreshTokenNonce(userID int, nonce string) (bool, *log.Error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	token := tables.RefreshTokens{}
-	rows, err := Database.Query(ctx, "SELECT * FROM refresh_tokens WHERE user_id = $1 AND token_nonce = $2", userID, nonce)
+	rows, err := db.Postgres.Query(ctx, "SELECT * FROM refresh_tokens WHERE user_id = $1 AND token_nonce = $2", userID, nonce)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, log.ErrorNil()
 	}
