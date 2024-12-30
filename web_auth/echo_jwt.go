@@ -93,7 +93,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 	// TODO: check why createSignedAccessToken returns error
 	newAccessToken, err := createSignedAccessToken(accessClaims, api)
 	if err != nil {
-		log.Logf(log.LevelDebug, "unable to create new access token for user '%s' (id: '%s')", user.Name, user.ID)
+		log.Logf(log.LevelDebug, "unable to create new access token for user '%s' (id: '%d')", user.Name, user.ID)
 		// c.Logger().Errorf("unable to create new access_token")
 		return echo.NewHTTPError(http.StatusUnauthorized, "internal error, please contact administrator")
 	}
@@ -111,7 +111,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 		}
 		newRefreshToken, err := createSignedRefreshToken(newRefreshClaims, api)
 		if err != nil {
-			log.Logf(log.LevelDebug, "unable to create new refresh token for user '%s' (id: '%s')", user.Name, user.ID)
+			log.Logf(log.LevelDebug, "unable to create new refresh token for user '%s' (id: '%d')", user.Name, user.ID)
 			// c.Logger().Errorf("unable to create new access_token")
 			return echo.NewHTTPError(http.StatusUnauthorized, "internal error, please contact administrator")
 		}
