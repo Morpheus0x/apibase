@@ -12,6 +12,26 @@ import (
 	"gopkg.cc/apibase/tables"
 )
 
+func CreateUser(user tables.Users) *log.Error {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	defer cancel()
+	tx, err := Database.Begin(ctx)
+	if err != nil {
+		return log.NewErrorWithTypef(ErrDatabaseQuery, "unable to start db transaction: %s", err.Error())
+	}
+	defer tx.Rollback(context.Background())
+
+	errx := createUser(user, tx, ctx)
+	if !errx.IsNil() {
+		return errx
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		return log.NewErrorWithType(ErrDatabaseCommit, err.Error())
+	}
+	return log.ErrorNil()
+}
+
 func GetUserByID(id int) (tables.Users, *log.Error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
