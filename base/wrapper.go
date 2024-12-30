@@ -27,10 +27,12 @@ func (apiBase *ApiBase[T]) GetCloseStageChannels() (shutdown chan struct{}, next
 	return apiBase.CloseChain[i], apiBase.CloseChain[i+1]
 }
 
-// doesn't create go routines and therefore doesn't require cleanup
+// setup pgx database connection, requires cleanup
 func (apiBase *ApiBase[T]) PostgresInit() *log.Error {
+	i := apiBase.registerCloseStage()
+
 	var err *log.Error
-	apiBase.ApiConfig.DB, err = db.PostgresInit(apiBase.Postgres, apiBase.BaseConfig)
+	apiBase.ApiConfig.DB, err = db.PostgresInit(apiBase.Postgres, apiBase.BaseConfig, apiBase.CloseChain[i], apiBase.CloseChain[i+1])
 	return err
 }
 
