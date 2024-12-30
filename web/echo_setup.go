@@ -112,32 +112,34 @@ func StartRest(api *t.ApiServer, bind string, shutdown chan struct{}, next chan 
 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond) // TODO: remove hardcoded timeout
 	defer cancel()
-	startErrorChan := make(chan *log.Error)
-	var startErrorMtx sync.Mutex // to protect agains a VERY edge case race-condition
+	startupError := struct {
+		Chan       chan *log.Error
+		sync.Mutex // to protect agains a VERY edge case race-condition
+	}{Chan: make(chan *log.Error)}
 
 	go func() { // echo start
 		err := api.E.Start(bind) // blocking
 		if err != nil && err != http.ErrServerClosed {
-			startErrorMtx.Lock()
+			startupError.Lock()
 			select {
-			case startErrorChan <- log.NewErrorWithTypef(ErrWebBind, "'%s': %v", bind, err):
+			case startupError.Chan <- log.NewErrorWithTypef(ErrWebBind, "'%s': %v", bind, err):
 			default:
 			}
-			startErrorMtx.Unlock()
+			startupError.Unlock()
 		}
 	}()
 
 	select {
-	case err := <-startErrorChan:
+	case err := <-startupError.Chan:
 		if err != nil {
 			close(abort)
 			return err
 		}
 	case <-ctx.Done():
 	}
-	startErrorMtx.Lock()
-	close(startErrorChan)
-	startErrorMtx.Unlock()
+	startupError.Lock()
+	close(startupError.Chan)
+	startupError.Unlock()
 
 	log.Logf(log.LevelNotice, "Rest API Server started on '%s'", bind)
 	return log.ErrorNil()
