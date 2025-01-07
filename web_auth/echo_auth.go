@@ -48,13 +48,13 @@ func login(api *t.ApiServer) echo.HandlerFunc {
 		}
 
 		csrfValue := helper.RandomString(16) // TODO: protect login page with CSRF, completely separate it from auth jwt
-		accessToken, err := t.CreateSignedAccessToken(t.CreateJwtAccessClaims(user.ID, t.JwtRolesFromTable(roles), user.SuperAdmin, csrfValue), api)
+		accessToken, err := t.CreateJwtAccessClaims(user.ID, t.JwtRolesFromTable(roles), user.SuperAdmin, csrfValue).SignToken(api)
 		if err != nil {
 			log.Logf(log.LevelNotice, "unable to create access token for user (id: %d): %s", user.ID, err.Error())
 			return echo.ErrInternalServerError
 		}
 		refreshTokenNonce := helper.RandomString(16)
-		refreshToken, expiresAt, err := t.CreateSignedRefreshToken(t.CreateJwtRefreshClaims(user.ID, refreshTokenNonce, csrfValue), api)
+		refreshToken, expiresAt, err := t.CreateJwtRefreshClaims(user.ID, refreshTokenNonce, csrfValue).SignToken(api)
 		if err != nil {
 			log.Logf(log.LevelNotice, "unable to create refresh token for user (id: %d): %s", user.ID, err.Error())
 			return echo.ErrInternalServerError

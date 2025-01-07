@@ -8,9 +8,22 @@ import (
 	"gopkg.cc/apibase/log"
 )
 
-// TODO: change create functions to be method on claims struct pointer
+// Access Token
 
-func CreateSignedAccessToken(claims *JwtAccessClaims, api *ApiServer) (string, error) {
+// If changes are made to JwtAccessClaims, this revision uint must be incremented
+const LatestAccessTokenRevision uint = 1
+
+// intentionally obfuscated json keys for security and bandwidth savings
+type JwtAccessClaims struct {
+	UserID     int      `json:"a"`
+	Roles      JwtRoles `json:"b"`
+	SuperAdmin bool     `json:"c"`
+	CSRFHeader string   `json:"d"`
+	Revision   uint     `json:"e"`
+	jwt.RegisteredClaims
+}
+
+func (claims *JwtAccessClaims) SignToken(api *ApiServer) (string, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
 	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.TokenAccessValidityDuration()))
@@ -18,14 +31,14 @@ func CreateSignedAccessToken(claims *JwtAccessClaims, api *ApiServer) (string, e
 	return rawToken.SignedString(api.Config.TokenSecretBytes())
 }
 
-func CreateSignedRefreshToken(claims *JwtRefreshClaims, api *ApiServer) (string, time.Time, error) {
-	now := time.Now()
-	claims.IssuedAt = jwt.NewNumericDate(now)
-	expiresAt := now.Add(api.Config.TokenRefreshValidityDuration())
-	claims.ExpiresAt = jwt.NewNumericDate(expiresAt)
-	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	token, err := rawToken.SignedString(api.Config.TokenSecretBytes())
-	return token, expiresAt, err
+func CreateJwtAccessClaims(userID int, roles JwtRoles, superAdmin bool, csrfHeader string) *JwtAccessClaims {
+	return &JwtAccessClaims{
+		UserID:     userID,
+		Roles:      roles,
+		SuperAdmin: superAdmin,
+		CSRFHeader: csrfHeader,
+		Revision:   LatestAccessTokenRevision,
+	}
 }
 
 func ParseAccessTokenCookie(c echo.Context, secret []byte) (*jwt.Token, *log.Error) {
@@ -42,6 +55,40 @@ func ParseAccessTokenCookie(c echo.Context, secret []byte) (*jwt.Token, *log.Err
 		return &jwt.Token{}, log.NewErrorWithType(ErrTokenValidate, "error parsing token 'access_token'")
 	}
 	return token, log.ErrorNil()
+}
+
+// Refresh Token
+
+// If changes are made to JwtAccessClaims, this revision uint must be incremented
+const LatestRefreshTokenRevision uint = 1
+
+// intentionally obfuscated json keys for security and bandwidth savings
+type JwtRefreshClaims struct {
+	UserID     int    `json:"a"`
+	Nonce      string `json:"b"`
+	CSRFHeader string `json:"c"` // TODO: maybe remove CSRF Token from access or refresh claim to reduce bandwidth usage
+	Revision   uint   `json:"d"`
+	jwt.RegisteredClaims
+}
+
+func (claims *JwtRefreshClaims) SignToken(api *ApiServer) (string, time.Time, error) {
+	now := time.Now()
+	claims.IssuedAt = jwt.NewNumericDate(now)
+	expiresAt := now.Add(api.Config.TokenRefreshValidityDuration())
+	claims.ExpiresAt = jwt.NewNumericDate(expiresAt)
+	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	token, err := rawToken.SignedString(api.Config.TokenSecretBytes())
+	return token, expiresAt, err
+
+}
+
+func CreateJwtRefreshClaims(userID int, nonce string, csrfHeader string) *JwtRefreshClaims {
+	return &JwtRefreshClaims{
+		UserID:     userID,
+		Nonce:      nonce,
+		CSRFHeader: csrfHeader,
+		Revision:   LatestRefreshTokenRevision,
+	}
 }
 
 func ParseRefreshTokenCookie(c echo.Context, secret []byte) (*jwt.Token, *log.Error) {

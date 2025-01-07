@@ -115,7 +115,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 			Nonce:      newNonce,
 			CSRFHeader: csrfToken,
 		}
-		newRefreshToken, expiresAt, err := t.CreateSignedRefreshToken(newRefreshClaims, api)
+		newRefreshToken, expiresAt, err := newRefreshClaims.SignToken(api)
 		if err != nil {
 			log.Logf(log.LevelDebug, "unable to create new refresh token for user '%s' (id: '%d')", user.Name, user.ID)
 			// c.Logger().Errorf("unable to create new access_token")
@@ -135,7 +135,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 	}
 
 	// Renew Access Token (after check if refresh token sould also be renewed, so that CSRF token will also be updated)
-	newAccessToken, err := t.CreateSignedAccessToken(accessClaims, api)
+	newAccessToken, err := accessClaims.SignToken(api)
 	if err != nil {
 		log.Logf(log.LevelDebug, "unable to create new access token for user '%s' (id: '%d')", user.Name, user.ID)
 		// c.Logger().Errorf("unable to create new access_token")

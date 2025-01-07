@@ -1,6 +1,6 @@
 
 # TODO Now
-- [ ] get jwt token from claims by method on the claims struct pointer
+- [x] get jwt token from claims by method on the claims struct pointer
 - [ ] make separate CSRF middleware completely separate from jwt to also protect login form/the whole api
 - [ ] Make sure that every function that returns an error doens't add any details to the error that are passed to that function
 - [ ] Resolve all `TODO: remove hardcoded timeout`

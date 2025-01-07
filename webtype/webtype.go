@@ -5,12 +5,10 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/xhit/go-str2duration/v2"
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
-	"gopkg.cc/apibase/tables"
 )
 
 type ApiServer struct {
@@ -94,85 +92,6 @@ const (
 	REST ApiKind = iota
 	HTMX
 )
-
-// intentionally obfuscated json keys for security and bandwidth savings
-type JwtRole struct {
-	OrgView  bool `json:"a"`
-	OrgEdit  bool `json:"b"`
-	OrgAdmin bool `json:"c"`
-}
-
-type JwtRoles map[int]JwtRole
-
-func JwtRolesFromTable(roles []tables.UserRoles) JwtRoles {
-	jwtRoles := JwtRoles{}
-	for _, r := range roles {
-		jwtRoles[r.OrgID] = JwtRole{
-			OrgView:  r.OrgView,
-			OrgEdit:  r.OrgEdit,
-			OrgAdmin: r.OrgAdmin,
-		}
-	}
-	return jwtRoles
-}
-
-// func (roles JwtRoles) GetTableUserRoles(userId int) []tables.UserRoles {
-// 	var userRoles []tables.UserRoles
-// 	for orgID, r := range roles {
-// 		userRoles = append(userRoles, tables.UserRoles{
-// 			UserID:   userId,
-// 			OrgID:    orgID,
-// 			OrgView:  r.OrgView,
-// 			OrgEdit:  r.OrgEdit,
-// 			OrgAdmin: r.OrgAdmin,
-// 		})
-// 	}
-// 	return userRoles
-// }
-
-// If changes are made to JwtAccessClaims, this revision uint must be incremented
-const LatestAccessTokenRevision uint = 1
-
-// intentionally obfuscated json keys for security and bandwidth savings
-type JwtAccessClaims struct {
-	UserID     int      `json:"a"`
-	Roles      JwtRoles `json:"b"`
-	SuperAdmin bool     `json:"c"`
-	CSRFHeader string   `json:"d"`
-	Revision   uint     `json:"e"`
-	jwt.RegisteredClaims
-}
-
-func CreateJwtAccessClaims(userID int, roles JwtRoles, superAdmin bool, csrfHeader string) *JwtAccessClaims {
-	return &JwtAccessClaims{
-		UserID:     userID,
-		Roles:      roles,
-		SuperAdmin: superAdmin,
-		CSRFHeader: csrfHeader,
-		Revision:   LatestAccessTokenRevision,
-	}
-}
-
-// If changes are made to JwtAccessClaims, this revision uint must be incremented
-const LatestRefreshTokenRevision uint = 1
-
-// intentionally obfuscated json keys for security and bandwidth savings
-type JwtRefreshClaims struct {
-	UserID     int    `json:"a"`
-	Nonce      string `json:"b"`
-	CSRFHeader string `json:"c"` // TODO: maybe remove CSRF Token from access or refresh claim to reduce bandwidth usage
-	Revision   uint   `json:"d"`
-	jwt.RegisteredClaims
-}
-
-func CreateJwtRefreshClaims(userID int, nonce string, csrfHeader string) *JwtRefreshClaims {
-	return &JwtRefreshClaims{
-		UserID:     userID,
-		Nonce:      nonce,
-		CSRFHeader: csrfHeader,
-		Revision:   LatestRefreshTokenRevision,
-	}
-}
 
 // type HandleFunc func(c echo.Context) error
 // type HandleFunc echo.HandlerFunc
