@@ -29,10 +29,11 @@ type ApiConfig struct {
 	TokenAccessValidity  string `toml:"token_access_validity"`
 	TokenRefreshValidity string `toml:"token_refresh_validity"`
 
-	LocalAuth         bool `toml:"local_auth"`
-	OAuthEnabled      bool `tobl:"oauth_enabled"`
-	AllowRegistration bool `toml:"allow_registration"`
-	DefaultOrgID      int  `toml:"default_org_id"`
+	LocalAuth          bool `toml:"local_auth"`
+	OAuthEnabled       bool `tobl:"oauth_enabled"`
+	AllowRegistration  bool `toml:"allow_registration"`
+	ReqireConfirmEmail bool `toml:"require_confirmed_email"` // TODO: this // Before user is allowed to login
+	DefaultOrgID       int  `toml:"default_org_id"`
 
 	ApiBind string `toml:"api_bind"`
 	AppURI  string `toml:"app_uri"` // Used for logout redirect and when no valid oauth callback referrer

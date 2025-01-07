@@ -6,7 +6,7 @@ import (
 
 	"github.com/Morpheus0x/argon2id"
 	"github.com/labstack/echo/v4"
-	"gopkg.cc/apibase/helper"
+	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/tables"
 	t "gopkg.cc/apibase/webtype"
@@ -58,9 +58,56 @@ func login(api *t.ApiServer) echo.HandlerFunc {
 func signup(api *t.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// TODO: add option to disable signup or require invite code, add fail2ban
+		email := c.FormValue("email")
+		password := c.FormValue("password")
+		passwordConfirm := c.FormValue("password-confirm")
+		username := c.FormValue("username")
 
-		// TODO: this
-		return c.JSON(http.StatusNotImplemented, map[string]string{"message": "WIP"})
+		if email == "" || password == "" || passwordConfirm == "" || username == "" {
+			return c.JSON(http.StatusUnprocessableEntity, map[string]string{"message": "missing input"})
+		}
+		if password != passwordConfirm {
+			return c.JSON(http.StatusUnprocessableEntity, map[string]string{"message": "password confirmation doesn't match"})
+		}
+		hash, err := argon2id.CreateHash(password, &argonParams)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
+		}
+		userToCreate := tables.Users{
+			Name:           username,
+			AuthProvider:   "local",
+			Email:          email,
+			EmailVerified:  false,
+			PasswordHash:   hash,
+			SecretsVersion: 1,
+			TotpSecret:     "",
+			SuperAdmin:     false,
+		}
+		user, errx := api.Config.DB.CreateUserIfNotExist(userToCreate, api.Config.DefaultOrgID)
+		if errx.IsType(db.ErrUserAlreadyExists) {
+			return c.JSON(http.StatusConflict, map[string]string{"message": "user with that email already exists"})
+		}
+		if !errx.IsNil() {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
+		}
+		roles, errx := api.Config.DB.GetUserRoles(user.ID)
+		if !errx.IsNil() {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
+		}
+
+		if api.Config.ReqireConfirmEmail {
+			// TODO: redirect to page showing email confirmation required,
+			// have option to input code sent via email to directly redirect to where user left off
+			// for this to work the redirect target must be passed to that page via ... header?
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
+		}
+
+		err = t.JwtLogin(c, api, user, roles)
+		if err != nil {
+			return err
+		}
+		// TODO: fix response
+		return c.JSON(http.StatusOK, map[string]string{"message": "access and refresh token set as cookie"})
 	}
 }
 

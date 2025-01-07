@@ -1,7 +1,7 @@
 
 # TODO Now
 - [x] get jwt token from claims by method on the claims struct pointer
-- [ ] impl local signup
+- [x] impl local signup
 - [ ] app root static file path or forward port
 - [ ] all api responses should return an error code that is translated to a error string client side or on server for htmx
 - [ ] make separate CSRF middleware completely separate from jwt to also protect login form/the whole api

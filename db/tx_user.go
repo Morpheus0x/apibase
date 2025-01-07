@@ -12,24 +12,34 @@ import (
 	"gopkg.cc/apibase/tables"
 )
 
-func (db DB) CreateUser(user tables.Users) *log.Error {
+func (db DB) CreateUserIfNotExist(user tables.Users, orgID int) (tables.Users, *log.Error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
 	if err != nil {
-		return log.NewErrorWithTypef(ErrDatabaseQuery, "unable to start db transaction: %s", err.Error())
+		return user, log.NewErrorWithTypef(ErrDatabaseQuery, "unable to start db transaction: %s", err.Error())
 	}
 	defer tx.Rollback(context.Background())
 
-	errx := db.createUser(user, tx, ctx)
-	if !errx.IsNil() {
-		return errx
+	_, dbErr := db.getUserByEmail(user.Email, tx, ctx)
+	if dbErr.IsNil() || (!dbErr.IsNil() && !dbErr.IsType(ErrDatabaseNotFound)) {
+		// TODO: requires wrapped error with multiple error types for propper error handling
+		return user, log.NewErrorWithTypef(ErrUserAlreadyExists, "user can't be created: %s", dbErr.String())
 	}
+	userFromDB, dbErr := db.createUser(user, tx, ctx)
+	if !dbErr.IsNil() {
+		return user, dbErr
+	}
+	dbErr = db.createUserRole(tables.UserRoles{UserID: userFromDB.ID, OrgID: orgID, OrgView: true, OrgEdit: false, OrgAdmin: false}, tx, ctx)
+	if !dbErr.IsNil() {
+		return userFromDB, dbErr.Extendf("unable to create role for user with email '%s'", user.Email)
+	}
+
 	err = tx.Commit(ctx)
 	if err != nil {
-		return log.NewErrorWithType(ErrDatabaseCommit, err.Error())
+		return userFromDB, log.NewErrorWithType(ErrDatabaseCommit, err.Error())
 	}
-	return log.ErrorNil()
+	return userFromDB, log.ErrorNil()
 }
 
 func (db DB) GetUserByID(id int) (tables.Users, *log.Error) {
@@ -89,15 +99,11 @@ func (db DB) GetOrCreateUser(user tables.Users, orgID int) (tables.Users, *log.E
 	}
 	if dbErr.IsType(ErrDatabaseNotFound) {
 		// TODO: validate, that user has non-empty string for NickName, Email
-		dbErr = db.createUser(user, tx, ctx)
+		userFromDB, dbErr = db.createUser(user, tx, ctx)
 		if !dbErr.IsNil() {
 			return user, dbErr
 		}
 		log.Logf(log.LevelDebug, "User created: %s (%s)", user.Name, user.Email)
-		userFromDB, dbErr = db.getUserByEmail(user.Email, tx, ctx)
-		if !dbErr.IsNil() {
-			return user, dbErr.Extendf("unable to get just created user with email '%s'", user.Email)
-		}
 	}
 	_, dbErr = db.getUserRole(userFromDB.ID, orgID, tx, ctx)
 	if !dbErr.IsNil() && !dbErr.IsType(ErrDatabaseNotFound) {
@@ -105,8 +111,11 @@ func (db DB) GetOrCreateUser(user tables.Users, orgID int) (tables.Users, *log.E
 	}
 	if dbErr.IsType(ErrDatabaseNotFound) {
 		dbErr = db.createUserRole(tables.UserRoles{UserID: userFromDB.ID, OrgID: orgID, OrgView: true, OrgEdit: false, OrgAdmin: false}, tx, ctx)
-		return user, dbErr.Extendf("unable to create role for user with email '%s'", user.Email)
+		if !dbErr.IsNil() {
+			return user, dbErr.Extendf("unable to create role for user with email '%s'", user.Email)
+		}
 	}
+
 	err = tx.Commit(ctx)
 	if err != nil {
 		return user, log.NewErrorWithType(ErrDatabaseCommit, err.Error())
@@ -130,11 +139,16 @@ func (db DB) getUserByEmail(email string, tx pgx.Tx, ctx context.Context) (table
 	return user, log.ErrorNil()
 }
 
-func (db DB) createUser(user tables.Users, tx pgx.Tx, ctx context.Context) *log.Error {
-	query := "INSERT INTO users (name, auth_provider, email, email_verified, password_hash, secrets_version, totp_secret, super_admin) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
-	_, err := tx.Exec(ctx, query, user.Name, user.AuthProvider, user.Email, user.EmailVerified, user.PasswordHash, user.SecretsVersion, user.TotpSecret, user.SuperAdmin)
+func (db DB) createUser(user tables.Users, tx pgx.Tx, ctx context.Context) (tables.Users, *log.Error) {
+	createdUser := tables.Users{}
+	query := "INSERT INTO users (name, auth_provider, email, email_verified, password_hash, secrets_version, totp_secret, super_admin) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING (id, name, auth_provider, email, email_verified, password_hash, secrets_version, totp_secret, super_admin, created_at, updated_at)"
+	rows, err := tx.Query(ctx, query, user.Name, user.AuthProvider, user.Email, user.EmailVerified, user.PasswordHash, user.SecretsVersion, user.TotpSecret, user.SuperAdmin)
 	if err != nil {
-		return log.NewErrorWithTypef(ErrDatabaseInsert, "user (email: %s) could not be created: %s", user.Email, err.Error())
+		return createdUser, log.NewErrorWithTypef(ErrDatabaseInsert, "user (email: %s) could not be created: %s", user.Email, err.Error())
 	}
-	return log.ErrorNil()
+	err = pgxscan.ScanOne(&createdUser, rows)
+	if err != nil {
+		return createdUser, log.NewErrorWithType(ErrDatabaseScan, err.Error())
+	}
+	return createdUser, log.ErrorNil()
 }

@@ -13,4 +13,5 @@ var (
 	ErrDatabaseInsert    = log.RegisterErrType("database insert into failed")
 	ErrDatabaseUpdate    = log.RegisterErrType("database update failed")
 	ErrDatabaseDelete    = log.RegisterErrType("database delete failed")
+	ErrUserAlreadyExists = log.RegisterErrType("user already exists")
 )
