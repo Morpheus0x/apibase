@@ -29,6 +29,7 @@ func login(api *t.ApiServer) echo.HandlerFunc {
 		queryURL.Set("provider", c.Param("provider"))
 		// TODO: use other way to get referrer that also includes uri fragment (uri including # part)
 		referrer := request.Header.Get("referrer")
+		// TODO: referrer is a possible attack vector, if it is too large, limit str len to ...
 
 		// Correct Redirecting
 		stateBytes, err := json.Marshal(&t.StateReferrer{Nonce: helper.RandomString(16), URI: referrer})

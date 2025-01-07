@@ -24,11 +24,14 @@ func AuthJWT(api *t.ApiServer) echo.MiddlewareFunc {
 
 func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 	// TODO: use specific error codes for every http error response for easier debugging
+	log.Logf(log.LevelDebug, "Request Header X-XSRF-TOKEN: %s\n", c.Request().Header.Get("X-XSRF-TOKEN")) // TODO: remove hardcoded header name
+
 	// Verify Access Token
 	accessToken, errx := t.ParseAccessTokenCookie(c, api.Config.TokenSecretBytes())
 	if errx.IsNil() {
 		accessClaims, ok := accessToken.Claims.(*t.JwtAccessClaims)
 		if ok {
+			// TODO: unify the api (error) response using webtype.ApiJsonResponse
 			if c.Request().Header.Get("X-XSRF-TOKEN") != accessClaims.CSRFHeader { // TODO: remove hardcoded header name
 				// Invalid CSRF Header received
 				// log.Logf(log.LevelInfo, "access token CSRF invalid, user: %s, request: %s", accessClaims.Name, c.Request().URL.String())
@@ -44,8 +47,6 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 			}
 		}
 	}
-	// TODO: configure client to only send refresh token if access token validity < 2 minute (double of server cutoff)
-	// this prevents unnecessary data transmission while still allowing for a single request if refresh token is valid
 
 	// Verify Refresh Token
 	refreshToken, errx := t.ParseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
