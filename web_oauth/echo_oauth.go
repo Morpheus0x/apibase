@@ -16,12 +16,10 @@ import (
 )
 
 // Create default routes for oauth user flow
-func RegisterOAuthEndpoints(api *t.ApiServer) error {
+func RegisterOAuthEndpoints(api *t.ApiServer) {
 	api.E.GET("/auth/:provider", login(api)) // login & signup
 	api.E.GET("/auth/:provider/callback", callback(api))
 	api.E.GET("/auth/logout/:provider", logout(api), web_auth.AuthJWT(api))
-
-	return nil
 }
 
 func login(api *t.ApiServer) echo.HandlerFunc {

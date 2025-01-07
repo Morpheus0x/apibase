@@ -14,12 +14,10 @@ import (
 )
 
 // Create default routes for login and general user flow
-func RegisterAuthEndpoints(api *t.ApiServer) error {
+func RegisterAuthEndpoints(api *t.ApiServer) {
 	api.E.POST("/auth/login", login(api))
 	api.E.POST("/auth/signup", signup(api))
 	api.E.GET("/auth/logout", logout(api), AuthJWT(api))
-
-	return nil
 }
 
 func login(api *t.ApiServer) echo.HandlerFunc {

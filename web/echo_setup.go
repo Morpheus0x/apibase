@@ -14,6 +14,7 @@ import (
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/web_auth"
+	"gopkg.cc/apibase/web_oauth"
 	"gopkg.cc/apibase/webtype"
 	t "gopkg.cc/apibase/webtype"
 )
@@ -61,6 +62,12 @@ func SetupRest(config t.ApiConfig) (*t.ApiServer, *log.Error) {
 		AllowOrigins: api.Config.CORS,
 	}))
 	RegisterRestDefaultEndpoints(api)
+	if api.Config.LocalAuth {
+		web_auth.RegisterAuthEndpoints(api)
+	}
+	if api.Config.OAuthEnabled {
+		web_oauth.RegisterOAuthEndpoints(api)
+	}
 	return api, log.ErrorNil()
 }
 
