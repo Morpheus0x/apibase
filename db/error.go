@@ -10,4 +10,5 @@ var (
 	ErrDatabaseNotFound  = log.RegisterErrType("database entry not found")
 	ErrDatabaseCommit    = log.RegisterErrType("database tx commit failed")
 	ErrDatabaseScan      = log.RegisterErrType("database scan to struct failed")
+	ErrDatabaseInsert    = log.RegisterErrType("database insert into failed")
 )

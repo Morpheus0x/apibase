@@ -35,6 +35,7 @@ type ApiConfig struct {
 	OAuthEnabled      bool    `tobl:"oauth_enabled"`
 	AllowRegistration bool    `toml:"allow_registration"`
 	DefaultRole       JwtRole `toml:"default_role"`
+	DefaultOrgID      int     `toml:"default_org_id"`
 
 	ApiBind string `toml:"api_bind"`
 	AppURI  string `toml:"app_uri"` // Used for logout redirect and when no valid oauth callback referrer

@@ -52,8 +52,8 @@ func (db DB) GetUserByID(id int) (tables.Users, *log.Error) {
 	return user, log.ErrorNil()
 }
 
-// unique user is defined by user.Email
-func (db DB) GetOrCreateUser(user tables.Users) (tables.Users, *log.Error) {
+// unique user is defined by user.Email, also creates the default viewer role for the specified organization
+func (db DB) GetOrCreateUser(user tables.Users, orgID int) (tables.Users, *log.Error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
@@ -77,6 +77,14 @@ func (db DB) GetOrCreateUser(user tables.Users) (tables.Users, *log.Error) {
 		if !dbErr.IsNil() {
 			return user, dbErr.Extendf("unable to get just created user with email '%s'", user.Email)
 		}
+	}
+	_, dbErr = db.getUserRole(userFromDB.ID, orgID, tx, ctx)
+	if !dbErr.IsNil() && !dbErr.IsType(ErrDatabaseNotFound) {
+		return user, dbErr.Extendf("unable to getting role for user with email '%s'", user.Email)
+	}
+	if dbErr.IsType(ErrDatabaseNotFound) {
+		dbErr = db.createUserRole(tables.UserRoles{UserID: userFromDB.ID, OrgID: orgID, OrgView: true, OrgEdit: false, OrgAdmin: false}, tx, ctx)
+		return user, dbErr.Extendf("unable to create role for user with email '%s'", user.Email)
 	}
 	err = tx.Commit(ctx)
 	if err != nil {

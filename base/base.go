@@ -128,6 +128,9 @@ func (apiBase *ApiBase[T]) AddMissingDefaults() {
 	if reflect.ValueOf(apiBase.BaseConfig.SQLITE_DATETIME_FORMAT).IsZero() {
 		apiBase.BaseConfig.SQLITE_DATETIME_FORMAT = SQLITE_DATETIME_FORMAT
 	}
+	if reflect.ValueOf(apiBase.ApiConfig.DefaultOrgID).IsZero() {
+		apiBase.ApiConfig.DefaultOrgID = DEFAULT_ORG_ID
+	}
 }
 
 func (apiBase *ApiBase[T]) GetCustomConfigType() {
