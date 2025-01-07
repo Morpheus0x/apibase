@@ -1,5 +1,13 @@
 
 # TODO Now
+- [ ] get jwt token from claims by method on the claims struct pointer
+- [ ] make separate CSRF middleware completely separate from jwt to also protect login form/the whole api
+- [ ] Make sure that every function that returns an error doens't add any details to the error that are passed to that function
+- [ ] Resolve all `TODO: remove hardcoded timeout`
+- [ ] Rework log.Error to be a struct compatible with the built-in error interface
+- [ ] Protect any referrer uri content by limiting its size to protect against dos and make sure the uri is always starting with the app uri
+
+# TODO OAuth
 Look at  
 - https://github.com/markbates/goth/blob/master/examples/main.go
 - https://www.reddit.com/r/golang/comments/1cf8mji/is_there_a_clear_example_for_using_goth_with_echo/
@@ -13,17 +21,17 @@ After goth returns the user object:
 Make sure that if the user uses a different oauth provider which returns an email address that already exists in the db, associate that provider with the user (does this even need to be stored in the db, other than "local" or "oauth"?). What if the user later uses the same email returned by oauth to login normally?
 
 # TODO Important
-- [ ] make sure that the client is always returned to the page from where they clicked login, use the oauth state query param (https://auth0.com/docs/secure/attack-protection/state-parameters)
-- [ ] have package specific errors always defined in errors.go file inside said package, with an Init() func register those errors with the log package. This is needed if apibase is used with an external program that has their own errors that need to be compareable, maybe by passing the error type to the ErrorNew func, e.g. func ErrorNew\[T myerrtype\](err T, format string, a ...any)
-- [ ] User [BuntDB](https://github.com/tidwall/buntdb) to store invalidated jwt login tokens
+- [x] make sure that the client is always returned to the page from where they clicked login, use the oauth state query param (https://auth0.com/docs/secure/attack-protection/state-parameters)
+- [x] have package specific errors always defined in errors.go file inside said package, with an Init() func register those errors with the log package. This is needed if apibase is used with an external program that has their own errors that need to be compareable, maybe by passing the error type to the ErrorNew func, e.g. func ErrorNew\[T myerrtype\](err T, format string, a ...any)
+- [x] User [BuntDB](https://github.com/tidwall/buntdb) to store invalidated jwt login tokens
 - [ ] Add Support for Hashicorp Vault secret management
 - [ ] Add Support for Secret Key Rotation https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#272-rotation
 - [ ] Add Support for 2FA w/ encrypted via DEK and KEK https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html#encrypting-stored-keys
 
 # TODO
 - [ ] Every database function is a wrapper that catches errors, if that error is due to db timeout, run reconnect function and the re-run db query
-- [ ] Rebase go.mod and force push to git by using fixed module name
-- [ ] Use GoogleCloudPlatform/govanityurls instead of direct github
+- [x] Rebase go.mod and force push to git by using fixed module name
+- [x] Use GoogleCloudPlatform/govanityurls instead of direct github
 - [ ] Add API version wrapper function for every endpoint, incrementing the version can have multiple effects: add new endpoint, change implementation, mark as deprecated, remove endpoint. When breaking changes are decided, the apibase api will get a new major or minor version (v1 -> v1.1 or v2 ...). The default behavior is to just use implementation of the previous version. Think about a way to mark an endpoint as deprecated, removed or changed.
 - [ ] The apibase api should be either gRPC with created SwaggerUI or OpenAPI definition with example implementation from SwaggerUI, smth like that
 
