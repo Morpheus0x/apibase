@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"gopkg.cc/apibase/log"
 	t "gopkg.cc/apibase/webtype"
 )
 
@@ -28,12 +29,14 @@ func login(api *t.ApiServer) echo.HandlerFunc {
 		if password != "123456" {
 			return echo.ErrUnauthorized
 		}
+		log.Logf(log.LevelDebug, "User logged in: %s", username)
+
 		// TODO: fix jwt role
-		accessToken, err := createSignedAccessToken(&t.JwtAccessClaims{Name: username, Role: api.Config.DefaultRole, CSRFHeader: csrfValue}, api)
+		accessToken, err := t.CreateSignedAccessToken(t.CreateJwtAccessClaims(1, t.JwtRoles{}, false, csrfValue), api)
 		if err != nil {
 			return fmt.Errorf("unable to create access token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 		}
-		refreshToken, err := createSignedRefreshToken(&t.JwtRefreshClaims{CSRFHeader: csrfValue}, api)
+		refreshToken, _, err := t.CreateSignedRefreshToken(t.CreateJwtRefreshClaims(1, "jwtNonce", csrfValue), api)
 		if err != nil {
 			return fmt.Errorf("unable to create refresh token: %v", err) // TODO: instead of returning error via http, log it privately on the server
 		}

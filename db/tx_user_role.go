@@ -11,6 +11,26 @@ import (
 	"gopkg.cc/apibase/tables"
 )
 
+func (db DB) GetUserRoles(userID int) ([]tables.UserRoles, *log.Error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	defer cancel()
+	roles := []tables.UserRoles{}
+	// err := pgxscan.Select(ctx, Database, &user, "SELECT * FROM users WHERE id = $1", id)
+	rows, err := db.Postgres.Query(ctx, "SELECT * FROM user_roles WHERE id = $1", userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return roles, log.NewErrorWithTypef(ErrDatabaseNotFound, "no roles found for user (id: %d)", userID)
+	}
+	if err != nil {
+		return roles, log.NewErrorWithType(ErrDatabaseQuery, err.Error())
+	}
+	err = pgxscan.ScanAll(&roles, rows)
+	if err != nil {
+		return roles, log.NewErrorWithType(ErrDatabaseScan, err.Error())
+	}
+	// err := pgxscan.NewScanner(row).Scan(&user)
+	return roles, log.ErrorNil()
+}
+
 func (db DB) getUserRole(userID int, orgID int, tx pgx.Tx, ctx context.Context) (tables.UserRoles, *log.Error) {
 	role := tables.UserRoles{}
 	rows, err := tx.Query(ctx, "SELECT * FROM user_roles WHERE user_id = $1 AND org_id = $2", userID, orgID)

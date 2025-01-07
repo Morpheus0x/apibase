@@ -11,4 +11,6 @@ var (
 	ErrDatabaseCommit    = log.RegisterErrType("database tx commit failed")
 	ErrDatabaseScan      = log.RegisterErrType("database scan to struct failed")
 	ErrDatabaseInsert    = log.RegisterErrType("database insert into failed")
+	ErrDatabaseUpdate    = log.RegisterErrType("database update failed")
+	ErrDatabaseDelete    = log.RegisterErrType("database delete failed")
 )

@@ -31,11 +31,10 @@ type ApiConfig struct {
 	TokenAccessValidity  string `toml:"token_access_validity"`
 	TokenRefreshValidity string `toml:"token_refresh_validity"`
 
-	LocalAuth         bool    `toml:"local_auth"`
-	OAuthEnabled      bool    `tobl:"oauth_enabled"`
-	AllowRegistration bool    `toml:"allow_registration"`
-	DefaultRole       JwtRole `toml:"default_role"`
-	DefaultOrgID      int     `toml:"default_org_id"`
+	LocalAuth         bool `toml:"local_auth"`
+	OAuthEnabled      bool `tobl:"oauth_enabled"`
+	AllowRegistration bool `toml:"allow_registration"`
+	DefaultOrgID      int  `toml:"default_org_id"`
 
 	ApiBind string `toml:"api_bind"`
 	AppURI  string `toml:"app_uri"` // Used for logout redirect and when no valid oauth callback referrer
@@ -96,58 +95,83 @@ const (
 	HTMX
 )
 
+// intentionally obfuscated json keys for security and bandwidth savings
 type JwtRole struct {
-	OrgView    bool `toml:"org_view" json:"org_view"`
-	OrgEdit    bool `toml:"org_edit" json:"org_edit"`
-	OrgAdmin   bool `toml:"org_admin" json:"org_admin"`
-	SuperAdmin bool `toml:"super_admin" json:"super_admin"`
+	OrgView  bool `json:"a"`
+	OrgEdit  bool `json:"b"`
+	OrgAdmin bool `json:"c"`
 }
 
-func JwtRoleFromTable(role tables.UserRoles) JwtRole {
-	return JwtRole{
-		OrgView:    role.OrgView,
-		OrgEdit:    role.OrgEdit,
-		OrgAdmin:   role.OrgAdmin,
-		SuperAdmin: false,
+type JwtRoles map[int]JwtRole
+
+func JwtRolesFromTable(roles []tables.UserRoles) JwtRoles {
+	jwtRoles := JwtRoles{}
+	for _, r := range roles {
+		jwtRoles[r.OrgID] = JwtRole{
+			OrgView:  r.OrgView,
+			OrgEdit:  r.OrgEdit,
+			OrgAdmin: r.OrgAdmin,
+		}
 	}
+	return jwtRoles
 }
 
-func (role JwtRole) GetUserRoles(id *int, userId int, orgId int) tables.UserRoles {
-	roleId := 0
-	if id != nil {
-		roleId = *id
-	}
-	return tables.UserRoles{
-		ID:       roleId,
-		UserID:   userId,
-		OrgID:    orgId,
-		OrgView:  role.OrgView,
-		OrgEdit:  role.OrgEdit,
-		OrgAdmin: role.OrgAdmin,
-	}
-}
-
-func (role JwtRole) GetUserRolesArray(id *int, userId int, orgId int) []tables.UserRoles {
-	return []tables.UserRoles{role.GetUserRoles(id, userId, orgId)}
-}
+// func (roles JwtRoles) GetTableUserRoles(userId int) []tables.UserRoles {
+// 	var userRoles []tables.UserRoles
+// 	for orgID, r := range roles {
+// 		userRoles = append(userRoles, tables.UserRoles{
+// 			UserID:   userId,
+// 			OrgID:    orgID,
+// 			OrgView:  r.OrgView,
+// 			OrgEdit:  r.OrgEdit,
+// 			OrgAdmin: r.OrgAdmin,
+// 		})
+// 	}
+// 	return userRoles
+// }
 
 // If changes are made to JwtAccessClaims, this revision uint must be incremented
 const LatestAccessTokenRevision uint = 1
 
+// intentionally obfuscated json keys for security and bandwidth savings
 type JwtAccessClaims struct {
-	UserID     int     `json:"user_id"`
-	Name       string  `json:"name"`
-	Role       JwtRole `json:"role"`
-	CSRFHeader string  `json:"csrf_header"`
-	Revision   uint    `json:"revision"`
+	UserID     int      `json:"a"`
+	Roles      JwtRoles `json:"b"`
+	SuperAdmin bool     `json:"c"`
+	CSRFHeader string   `json:"d"`
+	Revision   uint     `json:"e"`
 	jwt.RegisteredClaims
 }
 
+func CreateJwtAccessClaims(userID int, roles JwtRoles, superAdmin bool, csrfHeader string) *JwtAccessClaims {
+	return &JwtAccessClaims{
+		UserID:     userID,
+		Roles:      roles,
+		SuperAdmin: superAdmin,
+		CSRFHeader: csrfHeader,
+		Revision:   LatestAccessTokenRevision,
+	}
+}
+
+// If changes are made to JwtAccessClaims, this revision uint must be incremented
+const LatestRefreshTokenRevision uint = 1
+
+// intentionally obfuscated json keys for security and bandwidth savings
 type JwtRefreshClaims struct {
-	UserID     int    `json:"user_id"`
-	Nonce      string `json:"nonce"`
-	CSRFHeader string `json:"csrf_header"`
+	UserID     int    `json:"a"`
+	Nonce      string `json:"b"`
+	CSRFHeader string `json:"c"` // TODO: maybe remove CSRF Token from access or refresh claim to reduce bandwidth usage
+	Revision   uint   `json:"d"`
 	jwt.RegisteredClaims
+}
+
+func CreateJwtRefreshClaims(userID int, nonce string, csrfHeader string) *JwtRefreshClaims {
+	return &JwtRefreshClaims{
+		UserID:     userID,
+		Nonce:      nonce,
+		CSRFHeader: csrfHeader,
+		Revision:   LatestRefreshTokenRevision,
+	}
 }
 
 // type HandleFunc func(c echo.Context) error

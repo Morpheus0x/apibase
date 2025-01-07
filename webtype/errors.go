@@ -1,4 +1,4 @@
-package web_auth
+package webtype
 
 import "gopkg.cc/apibase/log"
 

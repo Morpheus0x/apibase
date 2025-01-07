@@ -24,7 +24,6 @@ func RegisterOAuthEndpoints(api *t.ApiServer) error {
 	return nil
 }
 
-// TODO: add jwt logic from local auth
 func login(api *t.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		request := c.Request()
@@ -63,22 +62,47 @@ func callback(api *t.ApiServer) echo.HandlerFunc {
 		provider := c.Param("provider")
 		queryURL.Set("provider", provider)
 
-		user, err := gothic.CompleteUserAuth(c.Response(), request)
+		gothUser, err := gothic.CompleteUserAuth(c.Response(), request)
 		if err != nil {
 			return err
 		}
-		userFromDB, dbErr := api.Config.DB.GetOrCreateUser(tables.Users{
-			Name:          user.NickName,
+		// TODO: find a way to get org assignments from goth.User
+		user, errx := api.Config.DB.GetOrCreateUser(tables.Users{
+			Name:          gothUser.NickName,
 			AuthProvider:  provider,
-			Email:         user.Email,
+			Email:         gothUser.Email,
 			EmailVerified: false,
 		}, api.Config.DefaultOrgID)
-		if !dbErr.IsNil() {
-			dbErr.Log()
+		if !errx.IsNil() {
+			errx.Log()
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI) // TODO: add query param or header to show error on client side
 		}
-		log.Logf(log.LevelDebug, "User logged in: %v", userFromDB)
-		// TODO: create tokens
+		log.Logf(log.LevelDebug, "User logged in: %v", user)
+
+		roles, errx := api.Config.DB.GetUserRoles(user.ID)
+		if !errx.IsNil() {
+			errx.Extendf("unable to get any roles for user (id: %d)", user.ID).Log()
+		}
+		csrfValue := helper.RandomString(16) // TODO: protect login page with CSRF, completely separate it from auth jwt
+		accessToken, err := t.CreateSignedAccessToken(t.CreateJwtAccessClaims(user.ID, t.JwtRolesFromTable(roles), user.SuperAdmin, csrfValue), api)
+		if err != nil {
+			log.Logf(log.LevelNotice, "unable to create access token for user (id: %d): %s", user.ID, err.Error())
+			return echo.ErrInternalServerError
+		}
+		refreshTokenNonce := helper.RandomString(16)
+		refreshToken, expiresAt, err := t.CreateSignedRefreshToken(t.CreateJwtRefreshClaims(user.ID, refreshTokenNonce, csrfValue), api)
+		if err != nil {
+			log.Logf(log.LevelNotice, "unable to create refresh token for user (id: %d): %s", user.ID, err.Error())
+			return echo.ErrInternalServerError
+		}
+		errx = api.Config.DB.CreateRefreshTokenEntry(tables.RefreshTokens{UserID: user.ID, TokenNonce: refreshTokenNonce, ReissueCount: 0, ExpiresAt: expiresAt})
+		if !errx.IsNil() {
+			log.Logf(log.LevelNotice, "unable to create refresh token database entry for user (id: %d): %s", user.ID, err.Error())
+			return echo.ErrInternalServerError
+		}
+		// TODO: set cookies to secure/https only (can be configured by ApiConfig setting)
+		c.SetCookie(&http.Cookie{Name: "access_token", Value: accessToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(api.Config.TokenAccessValidityDuration() * 2)})
+		c.SetCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration() * 2)})
 
 		// Correct Redirecting
 		state := queryURL.Get("state")
@@ -103,10 +127,23 @@ func logout(api *t.ApiServer) echo.HandlerFunc {
 
 		gothic.Logout(c.Response(), request) // TODO: check if Logout correctly parses provider from request
 
-		// TODO: add option to disable signup or require invite code, add fail2ban
 		c.SetCookie(&http.Cookie{Name: "access_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
 		c.SetCookie(&http.Cookie{Name: "refresh_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
-		// TODO: invalidate refresh_token in DB
+
+		refreshToken, errx := t.ParseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
+		if !errx.IsNil() {
+			errx.Extendf("user was logged out but unable to parse refresh token").Log()
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
+		}
+		refreshClaims, ok := refreshToken.Claims.(*t.JwtRefreshClaims)
+		if !ok {
+			errx.Extendf("user was logged out but unable to parse refresh claims, refresh token: %v", refreshToken).Log()
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
+		}
+		errx = api.Config.DB.DeleteRefreshToken(refreshClaims.UserID, refreshClaims.Nonce)
+		if !errx.IsNil() {
+			errx.Extendf("user (id: %d) was logged out but unable to delete refresh token", refreshClaims.UserID).Log()
+		}
 
 		// return c.JSON(http.StatusOK, map[string]string{"message": "Logged out!"})
 		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)

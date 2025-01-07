@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
 	t "gopkg.cc/apibase/webtype"
 )
@@ -23,7 +24,8 @@ func AuthJWT(api *t.ApiServer) echo.MiddlewareFunc {
 
 func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 	// TODO: use specific error codes for every http error response for easier debugging
-	accessToken, errx := parseAccessTokenCookie(c, api.Config.TokenSecretBytes())
+	// Verify Access Token
+	accessToken, errx := t.ParseAccessTokenCookie(c, api.Config.TokenSecretBytes())
 	if errx.IsNil() {
 		accessClaims, ok := accessToken.Claims.(*t.JwtAccessClaims)
 		if ok {
@@ -45,7 +47,8 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 	// TODO: configure client to only send refresh token if access token validity < 2 minute (double of server cutoff)
 	// this prevents unnecessary data transmission while still allowing for a single request if refresh token is valid
 
-	refreshToken, errx := parseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
+	// Verify Refresh Token
+	refreshToken, errx := t.ParseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
 	if !errx.IsNil() {
 		// log.Logf(log.LevelDebug, "unable to parse refresh token from cookie, request: %s", c.Request().URL.String())
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid refresh token cookie")
@@ -64,64 +67,84 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 		// log.Logf(log.LevelInfo, "refresh token CSRF invalid, user: %s, request: %s", accessClaims.Name, c.Request().URL.String())
 		return echo.NewHTTPError(http.StatusUnauthorized, "CSRF Error")
 	}
+	refreshTokenExpire, err := refreshClaims.GetExpirationTime()
+	if err != nil || refreshTokenExpire.Time.After(time.Now()) {
+		return echo.NewHTTPError(http.StatusUnauthorized, "refresh token expired")
+	}
 	valid, errx := api.Config.DB.VerifyRefreshTokenNonce(refreshClaims.UserID, refreshClaims.Nonce)
 	if !errx.IsNil() {
-		errx.Extend("unable to verify refresh token").Log()
+		errx.Extend("unable to verify refresh token").Severity(log.LevelDebug).Log()
 		return echo.NewHTTPError(http.StatusUnauthorized, "internal error, please contact administrator")
 	}
 	if !valid {
 		return echo.NewHTTPError(http.StatusUnauthorized, "refresh token invalid")
 	}
 
-	// Refresh Access Token
+	// Create New Access Token Claims
 	user, errx := api.Config.DB.GetUserByID(refreshClaims.UserID) // TODO: make sure that sql join contains UserRoles[0]
 	if !errx.IsNil() {
 		errx.Extend("unable to get user from refresh token user id").Log()
 		return echo.NewHTTPError(http.StatusUnauthorized, "user doesn't exist")
 	}
+	roles, errx := api.Config.DB.GetUserRoles(refreshClaims.UserID)
+	if !errx.IsNil() {
+		errx.Extendf("unable to get roles for jwt access token for user (id: %d)", refreshClaims.UserID).Log()
+	}
 	accessClaims := &t.JwtAccessClaims{
-		UserID: user.ID,
-		Name:   user.Name,
-		// TODO: fix jwt role
-		Role:       api.Config.DefaultRole,
+		UserID:     user.ID,
+		Roles:      t.JwtRolesFromTable(roles),
+		SuperAdmin: user.SuperAdmin,
 		CSRFHeader: refreshClaims.CSRFHeader,
 		Revision:   t.LatestAccessTokenRevision,
 	}
-	// TODO: check why createSignedAccessToken returns error
-	newAccessToken, err := createSignedAccessToken(accessClaims, api)
+
+	// Get http request to modify it with the new JWTs
+	currentRequest := c.Request()
+
+	// Renew Refresh Token, if valid for less than 1 week
+	if refreshTokenExpire.Time.Add(-time.Hour * 24 * 7).After(time.Now()) { // TODO: remove hardcoded timeout
+		csrfToken := helper.RandomString(16) // TODO: maybe use another random generator...
+		newNonce := helper.RandomString(16)
+
+		// On refresh token renew, also change CSRF token for access token
+		accessClaims.CSRFHeader = csrfToken
+
+		newRefreshClaims := &t.JwtRefreshClaims{
+			UserID:     user.ID,
+			Nonce:      newNonce,
+			CSRFHeader: csrfToken,
+		}
+		newRefreshToken, expiresAt, err := t.CreateSignedRefreshToken(newRefreshClaims, api)
+		if err != nil {
+			log.Logf(log.LevelDebug, "unable to create new refresh token for user '%s' (id: '%d')", user.Name, user.ID)
+			// c.Logger().Errorf("unable to create new access_token")
+			return echo.NewHTTPError(http.StatusUnauthorized, "internal error, please contact administrator")
+		}
+		errx := api.Config.DB.UpdateRefreshTokenEntry(refreshClaims.UserID, refreshClaims.Nonce, newNonce, expiresAt)
+		if !errx.IsNil() {
+			errx.Extendf("unable to update refresh token for user (id: %d)", user.ID).Severity(log.LevelDebug).Log()
+			return echo.ErrInternalServerError
+		}
+
+		newRefreshTokenCookie := &http.Cookie{Name: "refresh_token", Value: newRefreshToken, Path: "/", Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration())}
+		currentRequest.AddCookie(newRefreshTokenCookie) // set cookie for current request
+		c.SetCookie(newRefreshTokenCookie)              // set cookie for response
+
+		c.Response().Header().Add("X-XSRF-TOKEN", csrfToken) // TODO: remove hardcoded header name
+	}
+
+	// Renew Access Token (after check if refresh token sould also be renewed, so that CSRF token will also be updated)
+	newAccessToken, err := t.CreateSignedAccessToken(accessClaims, api)
 	if err != nil {
 		log.Logf(log.LevelDebug, "unable to create new access token for user '%s' (id: '%d')", user.Name, user.ID)
 		// c.Logger().Errorf("unable to create new access_token")
 		return echo.NewHTTPError(http.StatusUnauthorized, "internal error, please contact administrator")
 	}
 
-	currentRequest := c.Request()
-
-	accessTokenExpire, err := accessClaims.GetExpirationTime()
-	// if refresh token is valid for less than 1 week, also refresh it
-	if err != nil || accessTokenExpire.Time.Add(-time.Hour*24*7).After(time.Now()) { // TODO: remove hardcoded timeout
-		accessClaims.CSRFHeader = "superRandomCSRF" // TODO: generate randomly
-		newRefreshClaims := &t.JwtRefreshClaims{
-			UserID:     refreshClaims.UserID,
-			Nonce:      refreshClaims.Nonce,
-			CSRFHeader: "superRandomCSRF", // TODO: generate randomly
-		}
-		newRefreshToken, err := createSignedRefreshToken(newRefreshClaims, api)
-		if err != nil {
-			log.Logf(log.LevelDebug, "unable to create new refresh token for user '%s' (id: '%d')", user.Name, user.ID)
-			// c.Logger().Errorf("unable to create new access_token")
-			return echo.NewHTTPError(http.StatusUnauthorized, "internal error, please contact administrator")
-		}
-		newRefreshTokenCookie := &http.Cookie{Name: "refresh_token", Value: newRefreshToken, Path: "/", Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration())}
-		currentRequest.AddCookie(newRefreshTokenCookie)
-		c.SetCookie(newRefreshTokenCookie)
-		// TODO: send new CSRF value as Header, so that client doesn't have to parse jwt every time
-	}
-
 	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(api.Config.TokenAccessValidityDuration())}
-	currentRequest.AddCookie(newAccessTokenCookie)
-	c.SetCookie(newAccessTokenCookie)
+	currentRequest.AddCookie(newAccessTokenCookie) // set cookie for current request
+	c.SetCookie(newAccessTokenCookie)              // set cookie for response
 
-	c.SetRequest(currentRequest)
+	c.SetRequest(currentRequest) // rewrite request with new token(s)
 	return nil
 }
