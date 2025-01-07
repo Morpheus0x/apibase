@@ -47,8 +47,8 @@ func (ac ApiConfig) TokenSecretBytes() []byte {
 	}
 	secret, err := base64.StdEncoding.DecodeString(ac.TokenSecret)
 	if err != nil {
-		log.Logf(log.LevelCritical, "token secret isn't a base64 string: %s", err.Error())
-		panic(1) // is allowed to panic, since this souldn't occur if TokenSecret string is parsed during ApiConfig setup
+		// is allowed to panic, since this should't occur if TokenSecret string is parsed during ApiConfig setup
+		log.NewErrorf("token secret isn't a base64 string: %s", err.Error()).Panic()
 	}
 	ac.tokenSecretBytes = secret
 	return ac.tokenSecretBytes
