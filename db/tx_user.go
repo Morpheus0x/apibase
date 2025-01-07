@@ -52,6 +52,27 @@ func (db DB) GetUserByID(id int) (tables.Users, *log.Error) {
 	return user, log.ErrorNil()
 }
 
+func (db DB) GetUserByEmail(email string) (tables.Users, *log.Error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	defer cancel()
+	tx, err := db.Postgres.Begin(ctx)
+	if err != nil {
+		return tables.Users{}, log.NewErrorWithTypef(ErrDatabaseQuery, "unable to start db transaction: %s", err.Error())
+	}
+	defer tx.Rollback(context.Background())
+
+	user, dbErr := db.getUserByEmail(email, tx, ctx)
+	if !dbErr.IsNil() {
+		return user, dbErr
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return user, log.NewErrorWithType(ErrDatabaseCommit, err.Error())
+	}
+	return user, log.ErrorNil()
+}
+
 // unique user is defined by user.Email, also creates the default viewer role for the specified organization
 func (db DB) GetOrCreateUser(user tables.Users, orgID int) (tables.Users, *log.Error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
@@ -113,7 +134,7 @@ func (db DB) createUser(user tables.Users, tx pgx.Tx, ctx context.Context) *log.
 	query := "INSERT INTO users (name, auth_provider, email, email_verified, password_hash, secrets_version, totp_secret, super_admin) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
 	_, err := tx.Exec(ctx, query, user.Name, user.AuthProvider, user.Email, user.EmailVerified, user.PasswordHash, user.SecretsVersion, user.TotpSecret, user.SuperAdmin)
 	if err != nil {
-		return log.NewErrorWithTypef(ErrDatabaseQuery, "user (email: %s) could not be created: %s", user.Email, err.Error())
+		return log.NewErrorWithTypef(ErrDatabaseInsert, "user (email: %s) could not be created: %s", user.Email, err.Error())
 	}
 	return log.ErrorNil()
 }
