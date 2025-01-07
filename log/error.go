@@ -26,6 +26,9 @@ func (e *Error) Severity(level Level) *Error {
 }
 
 func (e *Error) Extend(text string) *Error {
+	if e.IsNil() {
+		return NewError(text)
+	}
 	e.content = append(e.content, ErrorContent{
 		text:  text,
 		trace: traceError(),
@@ -35,6 +38,9 @@ func (e *Error) Extend(text string) *Error {
 }
 
 func (e *Error) Extendf(text string, a ...any) *Error {
+	if e.IsNil() {
+		return NewErrorf(text, a...)
+	}
 	e.content = append(e.content, ErrorContent{
 		text:  fmt.Sprintf(text, a...),
 		trace: traceError(),
@@ -44,6 +50,9 @@ func (e *Error) Extendf(text string, a ...any) *Error {
 }
 
 func (e *Error) Log() *Error {
+	if e.IsNil() {
+		return e
+	}
 	if e.wasLogged {
 		return e
 	}
@@ -53,6 +62,9 @@ func (e *Error) Log() *Error {
 }
 
 func (e *Error) LogWithTrace() *Error {
+	if e.IsNil() {
+		return e
+	}
 	if e.wasLogged {
 		return e
 	}
@@ -72,6 +84,9 @@ func (e *Error) LogWithTrace() *Error {
 // Error Output Functions
 
 func (e *Error) String() string {
+	if e.IsNil() {
+		return "<nil>"
+	}
 	var sb strings.Builder
 	if e.errType != DefaultError {
 		sb.WriteString(e.errType.String())
@@ -89,6 +104,9 @@ func (e *Error) String() string {
 }
 
 func (e *Error) StringWithTrace() []string {
+	if e.IsNil() {
+		return []string{"<nil>"}
+	}
 	var sb strings.Builder
 	if e.errType != DefaultError {
 		sb.WriteString(e.errType.String())
@@ -113,6 +131,9 @@ func (e *Error) IsNil() bool {
 }
 
 func (e *Error) IsType(errType *errorType) bool {
+	if e.IsNil() {
+		return false
+	}
 	return e.errType == errType
 }
 
