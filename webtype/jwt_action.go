@@ -12,13 +12,13 @@ import (
 
 func JwtLogin(c echo.Context, api *ApiServer, user tables.Users, roles []tables.UserRoles) error {
 	csrfValue := helper.RandomString(16) // TODO: protect login page with CSRF, completely separate it from auth jwt
-	accessToken, err := CreateJwtAccessClaims(user.ID, JwtRolesFromTable(roles), user.SuperAdmin, csrfValue).SignToken(api)
+	accessToken, err := createJwtAccessClaims(user.ID, JwtRolesFromTable(roles), user.SuperAdmin, csrfValue).SignToken(api)
 	if err != nil {
 		log.Logf(log.LevelNotice, "unable to create access token for user (id: %d): %s", user.ID, err.Error())
 		return echo.ErrInternalServerError
 	}
 	refreshTokenNonce := helper.RandomString(16)
-	refreshToken, expiresAt, err := CreateJwtRefreshClaims(user.ID, refreshTokenNonce, csrfValue).SignToken(api)
+	refreshToken, expiresAt, err := createJwtRefreshClaims(user.ID, refreshTokenNonce, csrfValue).SignToken(api)
 	if err != nil {
 		log.Logf(log.LevelNotice, "unable to create refresh token for user (id: %d): %s", user.ID, err.Error())
 		return echo.ErrInternalServerError
