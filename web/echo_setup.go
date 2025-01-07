@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"encoding/base64"
 	"net/http"
 	"sync"
 	"time"
@@ -24,8 +25,9 @@ func SetupRest(config t.ApiConfig) (*t.ApiServer, *log.Error) {
 	if err := db.MigrateDefaultTables(config.DB); !err.IsNil() {
 		return nil, err.Extend("unable to migrate db tables")
 	}
-	if len(config.TokenSecret) < 32 {
-		return nil, log.NewError("TokenSecret must be at least 32 characters")
+	tokenSecretBytes, err := base64.StdEncoding.DecodeString(config.TokenSecret)
+	if err != nil || len(tokenSecretBytes) < 64 {
+		return nil, log.NewError("TokenSecret must be random base64 byte string with at least 64 bytes")
 	}
 	if !config.LocalAuth && !config.OAuthEnabled {
 		return nil, log.NewError("No Authentication method enabled, either LocalAuth, OAuthEnabled or both need to be enabled")

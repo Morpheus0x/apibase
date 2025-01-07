@@ -13,26 +13,26 @@ func createSignedAccessToken(claims *t.JwtAccessClaims, api *t.ApiServer) (strin
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
 	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.TokenAccessValidityDuration()))
-	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return rawToken.SignedString([]byte(api.Config.TokenSecret))
+	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	return rawToken.SignedString(api.Config.TokenSecretBytes())
 }
 
 func createSignedRefreshToken(claims *t.JwtRefreshClaims, api *t.ApiServer) (string, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
 	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.TokenRefreshValidityDuration()))
-	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return rawToken.SignedString([]byte(api.Config.TokenSecret))
+	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	return rawToken.SignedString(api.Config.TokenSecretBytes())
 }
 
-func parseAccessTokenCookie(c echo.Context, secret string) (*jwt.Token, *log.Error) {
+func parseAccessTokenCookie(c echo.Context, secret []byte) (*jwt.Token, *log.Error) {
 	tokenRaw, err := c.Cookie("access_token")
 	if err != nil {
 		// c.Logger().Debugf("no cookie 'access_token' in request (%s): %v", c.Request().RequestURI, err)
 		return &jwt.Token{}, log.NewErrorWithType(ErrTokenValidate, "no cookie 'access_token' present in request")
 	}
 	token, err := jwt.ParseWithClaims(tokenRaw.Value, new(t.JwtAccessClaims), func(t *jwt.Token) (interface{}, error) {
-		return []byte(secret), nil
+		return secret, nil
 	})
 	if err != nil {
 		// c.Logger().Debugf("error parsing token from cookie: %v", err)
@@ -41,14 +41,14 @@ func parseAccessTokenCookie(c echo.Context, secret string) (*jwt.Token, *log.Err
 	return token, log.ErrorNil()
 }
 
-func parseRefreshTokenCookie(c echo.Context, secret string) (*jwt.Token, *log.Error) {
+func parseRefreshTokenCookie(c echo.Context, secret []byte) (*jwt.Token, *log.Error) {
 	tokenRaw, err := c.Cookie("refresh_token")
 	if err != nil {
 		// c.Logger().Debugf("no cookie 'refresh_token' in request (%s): %v", c.Request().RequestURI, err)
 		return &jwt.Token{}, log.NewErrorWithType(ErrTokenValidate, "no cookie 'refresh_token' present in request")
 	}
 	token, err := jwt.ParseWithClaims(tokenRaw.Value, new(t.JwtRefreshClaims), func(t *jwt.Token) (interface{}, error) {
-		return []byte(secret), nil
+		return secret, nil
 	})
 	if err != nil {
 		// c.Logger().Debugf("error parsing token from cookie: %v", err)

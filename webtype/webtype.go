@@ -1,6 +1,7 @@
 package webtype
 
 import (
+	"encoding/base64"
 	"math/rand/v2"
 	"time"
 
@@ -37,6 +38,21 @@ type ApiConfig struct {
 
 	ApiBind string `toml:"api_bind"`
 	AppURI  string `toml:"app_uri"` // Used for logout redirect and when no valid oauth callback referrer
+
+	tokenSecretBytes []byte // decoded from TokenSecret string
+}
+
+func (ac ApiConfig) TokenSecretBytes() []byte {
+	if len(ac.tokenSecretBytes) > 0 {
+		return ac.tokenSecretBytes
+	}
+	secret, err := base64.StdEncoding.DecodeString(ac.TokenSecret)
+	if err != nil {
+		log.Logf(log.LevelCritical, "token secret isn't a base64 string: %s", err.Error())
+		panic(1) // is allowed to panic, since this souldn't occur if TokenSecret string is parsed during ApiConfig setup
+	}
+	ac.tokenSecretBytes = secret
+	return ac.tokenSecretBytes
 }
 
 func (ac ApiConfig) TokenAccessValidityDuration() time.Duration {
