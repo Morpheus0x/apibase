@@ -27,7 +27,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 	if errx.IsNil() {
 		accessClaims, ok := accessToken.Claims.(*t.JwtAccessClaims)
 		if ok {
-			if !validCSRF(c, accessClaims) {
+			if c.Request().Header.Get("X-XSRF-TOKEN") != accessClaims.CSRFHeader { // TODO: remove hardcoded header name
 				// Invalid CSRF Header received
 				// log.Logf(log.LevelInfo, "access token CSRF invalid, user: %s, request: %s", accessClaims.Name, c.Request().URL.String())
 				return echo.NewHTTPError(http.StatusUnauthorized, "CSRF Error")
@@ -59,7 +59,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 		// log.Logf(log.LevelDebug, "unable to parse refresh token claims, request: %s", c.Request().URL.String())
 		return echo.NewHTTPError(http.StatusUnauthorized, "refresh token invalid")
 	}
-	if !validCSRF(c, refreshClaims) {
+	if c.Request().Header.Get("X-XSRF-TOKEN") != refreshClaims.CSRFHeader { // TODO: remove hardcoded header name
 		// Invalid CSRF Header received
 		// log.Logf(log.LevelInfo, "refresh token CSRF invalid, user: %s, request: %s", accessClaims.Name, c.Request().URL.String())
 		return echo.NewHTTPError(http.StatusUnauthorized, "CSRF Error")
