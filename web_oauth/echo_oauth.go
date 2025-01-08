@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth/gothic"
@@ -64,13 +65,17 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
+		role := web.DefaultRole
+		if r, ok := api.Config.DefaultOrgRole[strconv.Itoa(api.Config.DefaultOrgID)]; ok {
+			role = r
+		}
 		// TODO: find a way to get org assignments from goth.User
 		user, errx := api.Config.DB.GetOrCreateUser(tables.Users{
 			Name:          gothUser.NickName,
 			AuthProvider:  provider,
 			Email:         gothUser.Email,
 			EmailVerified: false,
-		}, api.Config.DefaultOrgID)
+		}, role.GetTable(0, api.Config.DefaultOrgID))
 		if !errx.IsNil() {
 			errx.Log()
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI) // TODO: add query param or header to show error on client side

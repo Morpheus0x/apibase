@@ -4,9 +4,9 @@ import "gopkg.cc/apibase/tables"
 
 // intentionally obfuscated json keys for security and bandwidth savings
 type JwtRole struct {
-	OrgView  bool `json:"a"`
-	OrgEdit  bool `json:"b"`
-	OrgAdmin bool `json:"c"`
+	OrgView  bool `json:"a" toml:"org_view"`
+	OrgEdit  bool `json:"b" toml:"org_edit"`
+	OrgAdmin bool `json:"c" toml:"org_admin"`
 }
 
 type JwtRoles map[int]JwtRole
@@ -23,16 +23,12 @@ func JwtRolesFromTable(roles []tables.UserRoles) JwtRoles {
 	return jwtRoles
 }
 
-// func (roles JwtRoles) GetTableUserRoles(userId int) []tables.UserRoles {
-// 	var userRoles []tables.UserRoles
-// 	for orgID, r := range roles {
-// 		userRoles = append(userRoles, tables.UserRoles{
-// 			UserID:   userId,
-// 			OrgID:    orgID,
-// 			OrgView:  r.OrgView,
-// 			OrgEdit:  r.OrgEdit,
-// 			OrgAdmin: r.OrgAdmin,
-// 		})
-// 	}
-// 	return userRoles
-// }
+func (role JwtRole) GetTable(userId int, orgId int) tables.UserRoles {
+	return tables.UserRoles{
+		UserID:   userId,
+		OrgID:    orgId,
+		OrgView:  role.OrgView,
+		OrgEdit:  role.OrgEdit,
+		OrgAdmin: role.OrgAdmin,
+	}
+}

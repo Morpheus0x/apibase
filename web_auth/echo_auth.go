@@ -3,6 +3,7 @@ package web_auth
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/Morpheus0x/argon2id"
 	"github.com/labstack/echo/v4"
@@ -83,7 +84,11 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 			TotpSecret:     "",
 			SuperAdmin:     false,
 		}
-		user, errx := api.Config.DB.CreateUserIfNotExist(userToCreate, api.Config.DefaultOrgID)
+		role := web.DefaultRole
+		if r, ok := api.Config.DefaultOrgRole[strconv.Itoa(api.Config.DefaultOrgID)]; ok {
+			role = r
+		}
+		user, errx := api.Config.DB.CreateUserIfNotExist(userToCreate, role.GetTable(0, api.Config.DefaultOrgID))
 		if errx.IsType(db.ErrUserAlreadyExists) {
 			return c.JSON(http.StatusConflict, map[string]string{"message": "user with that email already exists"})
 		}

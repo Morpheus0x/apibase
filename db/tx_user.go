@@ -12,7 +12,7 @@ import (
 	"gopkg.cc/apibase/tables"
 )
 
-func (db DB) CreateUserIfNotExist(user tables.Users, orgID int) (tables.Users, *log.Error) {
+func (db DB) CreateUserIfNotExist(user tables.Users, role tables.UserRoles) (tables.Users, *log.Error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
@@ -30,7 +30,8 @@ func (db DB) CreateUserIfNotExist(user tables.Users, orgID int) (tables.Users, *
 	if !dbErr.IsNil() {
 		return user, dbErr
 	}
-	dbErr = db.createUserRole(tables.UserRoles{UserID: userFromDB.ID, OrgID: orgID, OrgView: true, OrgEdit: false, OrgAdmin: false}, tx, ctx)
+	role.UserID = userFromDB.ID
+	dbErr = db.createUserRole(role, tx, ctx)
 	if !dbErr.IsNil() {
 		return userFromDB, dbErr.Extendf("unable to create role for user with email '%s'", user.Email)
 	}
@@ -84,7 +85,7 @@ func (db DB) GetUserByEmail(email string) (tables.Users, *log.Error) {
 }
 
 // unique user is defined by user.Email, also creates the default viewer role for the specified organization
-func (db DB) GetOrCreateUser(user tables.Users, orgID int) (tables.Users, *log.Error) {
+func (db DB) GetOrCreateUser(user tables.Users, role tables.UserRoles) (tables.Users, *log.Error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
@@ -103,17 +104,12 @@ func (db DB) GetOrCreateUser(user tables.Users, orgID int) (tables.Users, *log.E
 		if !dbErr.IsNil() {
 			return user, dbErr
 		}
-		log.Logf(log.LevelDebug, "User created: %s (%s)", user.Name, user.Email)
-	}
-	_, dbErr = db.getUserRole(userFromDB.ID, orgID, tx, ctx)
-	if !dbErr.IsNil() && !dbErr.IsType(ErrDatabaseNotFound) {
-		return user, dbErr.Extendf("unable to getting role for user with email '%s'", user.Email)
-	}
-	if dbErr.IsType(ErrDatabaseNotFound) {
-		dbErr = db.createUserRole(tables.UserRoles{UserID: userFromDB.ID, OrgID: orgID, OrgView: true, OrgEdit: false, OrgAdmin: false}, tx, ctx)
+		role.UserID = userFromDB.ID
+		dbErr = db.createUserRole(role, tx, ctx)
 		if !dbErr.IsNil() {
 			return user, dbErr.Extendf("unable to create role for user with email '%s'", user.Email)
 		}
+		log.Logf(log.LevelDebug, "User created: %s (%s)", user.Name, user.Email)
 	}
 
 	err = tx.Commit(ctx)
