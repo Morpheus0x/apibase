@@ -2,12 +2,14 @@
 # TODO Now
 - [x] get jwt token from claims by method on the claims struct pointer
 - [x] impl local signup
+- [ ] rename all db structs to singular (remove trailing "s")
 - [ ] app root static file path or forward port
+- [ ] Rework log.Error to be a struct compatible with the built-in error interface
 - [ ] all api responses should return an error code that is translated to a error string client side or on server for htmx
 - [ ] make separate CSRF middleware completely separate from jwt to also protect login form/the whole api
-- [ ] Make sure that every function that returns an error doens't add any details to the error that are passed to that function
+- [ ] impl email signup integration
+- [ ] Make sure that every function that returns an error doens't add any details not also available outside of itself (e.g. userId func param)
 - [ ] Resolve all `TODO: remove hardcoded timeout`
-- [ ] Rework log.Error to be a struct compatible with the built-in error interface
 - [ ] Protect any referrer uri content by limiting its size to protect against dos and make sure the uri is always starting with the app uri
 - [ ] Store user agent in refresh_tokens db table entry
 - [ ] add captcha for local login and signup
