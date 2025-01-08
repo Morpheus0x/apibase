@@ -11,7 +11,7 @@ type JwtRole struct {
 
 type JwtRoles map[int]JwtRole
 
-func JwtRolesFromTable(roles []table.UserRole) JwtRoles {
+func jwtRolesFromTable(roles []table.UserRole) JwtRoles {
 	jwtRoles := JwtRoles{}
 	for _, r := range roles {
 		jwtRoles[r.OrgID] = JwtRole{

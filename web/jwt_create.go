@@ -12,7 +12,7 @@ import (
 const LatestAccessTokenRevision uint = 1
 
 // intentionally obfuscated json keys for security and bandwidth savings
-type JwtAccessClaims struct {
+type jwtAccessClaims struct {
 	UserID     int      `json:"a"`
 	Roles      JwtRoles `json:"b"`
 	SuperAdmin bool     `json:"c"`
@@ -21,7 +21,7 @@ type JwtAccessClaims struct {
 	jwt.RegisteredClaims
 }
 
-func (claims *JwtAccessClaims) SignToken(api *ApiServer) (string, error) {
+func (claims *jwtAccessClaims) signToken(api *ApiServer) (string, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
 	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.TokenAccessValidityDuration()))
@@ -29,8 +29,8 @@ func (claims *JwtAccessClaims) SignToken(api *ApiServer) (string, error) {
 	return rawToken.SignedString(api.Config.TokenSecretBytes())
 }
 
-func createJwtAccessClaims(userID int, roles JwtRoles, superAdmin bool, csrfHeader string) *JwtAccessClaims {
-	return &JwtAccessClaims{
+func createJwtAccessClaims(userID int, roles JwtRoles, superAdmin bool, csrfHeader string) *jwtAccessClaims {
+	return &jwtAccessClaims{
 		UserID:     userID,
 		Roles:      roles,
 		SuperAdmin: superAdmin,
@@ -45,7 +45,7 @@ func createJwtAccessClaims(userID int, roles JwtRoles, superAdmin bool, csrfHead
 const LatestRefreshTokenRevision uint = 1
 
 // intentionally obfuscated json keys for security and bandwidth savings
-type JwtRefreshClaims struct {
+type jwtRefreshClaims struct {
 	UserID     int    `json:"a"`
 	Nonce      string `json:"b"`
 	CSRFHeader string `json:"c"` // TODO: maybe remove CSRF Token from access or refresh claim to reduce bandwidth usage
@@ -53,7 +53,7 @@ type JwtRefreshClaims struct {
 	jwt.RegisteredClaims
 }
 
-func (claims *JwtRefreshClaims) SignToken(api *ApiServer) (string, time.Time, error) {
+func (claims *jwtRefreshClaims) signToken(api *ApiServer) (string, time.Time, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
 	expiresAt := now.Add(api.Config.TokenRefreshValidityDuration())
@@ -64,8 +64,8 @@ func (claims *JwtRefreshClaims) SignToken(api *ApiServer) (string, time.Time, er
 
 }
 
-func createJwtRefreshClaims(userID int, nonce string, csrfHeader string) *JwtRefreshClaims {
-	return &JwtRefreshClaims{
+func createJwtRefreshClaims(userID int, nonce string, csrfHeader string) *jwtRefreshClaims {
+	return &jwtRefreshClaims{
 		UserID:     userID,
 		Nonce:      nonce,
 		CSRFHeader: csrfHeader,

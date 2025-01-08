@@ -12,14 +12,13 @@ import (
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/table"
 	"gopkg.cc/apibase/web"
-	"gopkg.cc/apibase/web_auth"
 )
 
 // Create default routes for oauth user flow
 func RegisterOAuthEndpoints(api *web.ApiServer) {
 	api.E.GET("/auth/:provider", login(api)) // login & signup
 	api.E.GET("/auth/:provider/callback", callback(api))
-	api.E.GET("/auth/logout/:provider", logout(api), web_auth.AuthJWT(api))
+	api.E.GET("/auth/logout/:provider", logout(api), web.AuthJWT(api))
 }
 
 func login(api *web.ApiServer) echo.HandlerFunc {

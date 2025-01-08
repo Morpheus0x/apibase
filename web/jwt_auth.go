@@ -1,4 +1,4 @@
-package web_auth
+package web
 
 import (
 	"net/http"
@@ -7,10 +7,62 @@ import (
 	"github.com/labstack/echo/v4"
 	"gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
-	"gopkg.cc/apibase/web"
+	"gopkg.cc/apibase/table"
 )
 
-func AuthJWT(api *web.ApiServer) echo.MiddlewareFunc {
+func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.UserRole) error {
+	csrfValue := helper.RandomString(16) // TODO: protect login page with CSRF, completely separate it from auth jwt
+	accessToken, err := createJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin, csrfValue).signToken(api)
+	if err != nil {
+		log.Logf(log.LevelNotice, "unable to create access token for user (id: %d): %s", user.ID, err.Error())
+		return echo.ErrInternalServerError
+	}
+	refreshTokenNonce := helper.RandomString(16)
+	refreshToken, expiresAt, err := createJwtRefreshClaims(user.ID, refreshTokenNonce, csrfValue).signToken(api)
+	if err != nil {
+		log.Logf(log.LevelNotice, "unable to create refresh token for user (id: %d): %s", user.ID, err.Error())
+		return echo.ErrInternalServerError
+	}
+	errx := api.DB.CreateRefreshTokenEntry(table.RefreshToken{UserID: user.ID, TokenNonce: refreshTokenNonce, ReissueCount: 0, ExpiresAt: expiresAt})
+	if !errx.IsNil() {
+		log.Logf(log.LevelNotice, "unable to create refresh token database entry for user (id: %d): %s", user.ID, err.Error())
+		return echo.ErrInternalServerError
+	}
+
+	// TODO: set cookies to secure/https only (can be configured by ApiConfig setting)
+	c.SetCookie(&http.Cookie{Name: "access_token", Value: accessToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(api.Config.TokenAccessValidityDuration() * 2)})
+	c.SetCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration() * 2)})
+	// TODO: pass csrf token in json response instead of cookie to prevent it from being also sent as cookie on every request
+	// csrf token is stored in user jwt, which needs to be parsed for any request anyway
+	c.SetCookie(&http.Cookie{Name: "csrf_token", Value: csrfValue, Path: "/", Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration() * 2)})
+
+	return nil
+}
+
+func JwtLogout(c echo.Context, api *ApiServer) error {
+	c.SetCookie(&http.Cookie{Name: "access_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
+	c.SetCookie(&http.Cookie{Name: "refresh_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
+
+	refreshToken, errx := parseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
+	if !errx.IsNil() {
+		errx.Extendf("user was logged out but unable to parse refresh token").Log()
+		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
+	}
+	refreshClaims, ok := refreshToken.Claims.(*jwtRefreshClaims)
+	if !ok {
+		errx.Extendf("user was logged out but unable to parse refresh claims, refresh token: %v", refreshToken).Log()
+		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
+	}
+	errx = api.DB.DeleteRefreshToken(refreshClaims.UserID, refreshClaims.Nonce)
+	if !errx.IsNil() {
+		errx.Extendf("user (id: %d) was logged out but unable to delete refresh token", refreshClaims.UserID).Log()
+	}
+	// return c.JSON(http.StatusOK, map[string]string{"message": "Logged out!"})
+	// TODO: add query param with logout success msg
+	return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
+}
+
+func AuthJWT(api *ApiServer) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			err := authJWTHandler(c, api)
@@ -22,14 +74,14 @@ func AuthJWT(api *web.ApiServer) echo.MiddlewareFunc {
 	}
 }
 
-func authJWTHandler(c echo.Context, api *web.ApiServer) error {
+func authJWTHandler(c echo.Context, api *ApiServer) error {
 	// TODO: use specific error codes for every http error response for easier debugging
 	log.Logf(log.LevelDebug, "Request Header X-XSRF-TOKEN: %s\n", c.Request().Header.Get("X-XSRF-TOKEN")) // TODO: remove hardcoded header name
 
 	// Verify Access Token
-	accessToken, errx := web.ParseAccessTokenCookie(c, api.Config.TokenSecretBytes())
+	accessToken, errx := parseAccessTokenCookie(c, api.Config.TokenSecretBytes())
 	if errx.IsNil() {
-		accessClaims, ok := accessToken.Claims.(*web.JwtAccessClaims)
+		accessClaims, ok := accessToken.Claims.(*jwtAccessClaims)
 		if ok {
 			// TODO: unify the api (error) response using webtype.ApiJsonResponse
 			if c.Request().Header.Get("X-XSRF-TOKEN") != accessClaims.CSRFHeader { // TODO: remove hardcoded header name
@@ -41,7 +93,7 @@ func authJWTHandler(c echo.Context, api *web.ApiServer) error {
 			if accessToken.Valid &&
 				err == nil &&
 				accessTokenExpire.Time.Add(-time.Minute).After(time.Now()) && // TODO: remove hardcoded timeout
-				accessClaims.Revision == web.LatestAccessTokenRevision {
+				accessClaims.Revision == LatestAccessTokenRevision {
 				// Do nothing, access token is still valid for long enough
 				return nil
 			}
@@ -49,7 +101,7 @@ func authJWTHandler(c echo.Context, api *web.ApiServer) error {
 	}
 
 	// Verify Refresh Token
-	refreshToken, errx := web.ParseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
+	refreshToken, errx := parseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
 	if !errx.IsNil() {
 		// log.Logf(log.LevelDebug, "unable to parse refresh token from cookie, request: %s", c.Request().URL.String())
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid refresh token cookie")
@@ -58,7 +110,7 @@ func authJWTHandler(c echo.Context, api *web.ApiServer) error {
 		// log.Logf(log.LevelDebug, "refresh token invalid, request: %s", c.Request().URL.String())
 		return echo.NewHTTPError(http.StatusUnauthorized, "refresh token invalid")
 	}
-	refreshClaims, ok := refreshToken.Claims.(*web.JwtRefreshClaims)
+	refreshClaims, ok := refreshToken.Claims.(*jwtRefreshClaims)
 	if !ok {
 		// log.Logf(log.LevelDebug, "unable to parse refresh token claims, request: %s", c.Request().URL.String())
 		return echo.NewHTTPError(http.StatusUnauthorized, "refresh token invalid")
@@ -91,12 +143,12 @@ func authJWTHandler(c echo.Context, api *web.ApiServer) error {
 	if !errx.IsNil() {
 		errx.Extendf("unable to get roles for jwt access token for user (id: %d)", refreshClaims.UserID).Log()
 	}
-	accessClaims := &web.JwtAccessClaims{
+	accessClaims := &jwtAccessClaims{
 		UserID:     user.ID,
-		Roles:      web.JwtRolesFromTable(roles),
+		Roles:      jwtRolesFromTable(roles),
 		SuperAdmin: user.SuperAdmin,
 		CSRFHeader: refreshClaims.CSRFHeader,
-		Revision:   web.LatestAccessTokenRevision,
+		Revision:   LatestAccessTokenRevision,
 	}
 
 	// Get http request to modify it with the new JWTs
@@ -110,12 +162,12 @@ func authJWTHandler(c echo.Context, api *web.ApiServer) error {
 		// On refresh token renew, also change CSRF token for access token
 		accessClaims.CSRFHeader = csrfToken
 
-		newRefreshClaims := &web.JwtRefreshClaims{
+		newRefreshClaims := &jwtRefreshClaims{
 			UserID:     user.ID,
 			Nonce:      newNonce,
 			CSRFHeader: csrfToken,
 		}
-		newRefreshToken, expiresAt, err := newRefreshClaims.SignToken(api)
+		newRefreshToken, expiresAt, err := newRefreshClaims.signToken(api)
 		if err != nil {
 			log.Logf(log.LevelDebug, "unable to create new refresh token for user '%s' (id: '%d')", user.Name, user.ID)
 			// c.Logger().Errorf("unable to create new access_token")
@@ -135,7 +187,7 @@ func authJWTHandler(c echo.Context, api *web.ApiServer) error {
 	}
 
 	// Renew Access Token (after check if refresh token sould also be renewed, so that CSRF token will also be updated)
-	newAccessToken, err := accessClaims.SignToken(api)
+	newAccessToken, err := accessClaims.signToken(api)
 	if err != nil {
 		log.Logf(log.LevelDebug, "unable to create new access token for user '%s' (id: '%d')", user.Name, user.ID)
 		// c.Logger().Errorf("unable to create new access_token")

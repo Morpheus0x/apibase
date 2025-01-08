@@ -6,13 +6,13 @@ import (
 	"gopkg.cc/apibase/log"
 )
 
-func ParseAccessTokenCookie(c echo.Context, secret []byte) (*jwt.Token, *log.Error) {
+func parseAccessTokenCookie(c echo.Context, secret []byte) (*jwt.Token, *log.Error) {
 	tokenRaw, err := c.Cookie("access_token")
 	if err != nil {
 		// c.Logger().Debugf("no cookie 'access_token' in request (%s): %v", c.Request().RequestURI, err)
 		return &jwt.Token{}, log.NewErrorWithType(ErrTokenValidate, "no cookie 'access_token' present in request")
 	}
-	token, err := jwt.ParseWithClaims(tokenRaw.Value, new(JwtAccessClaims), func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenRaw.Value, new(jwtAccessClaims), func(t *jwt.Token) (interface{}, error) {
 		return secret, nil
 	})
 	if err != nil {
@@ -23,13 +23,13 @@ func ParseAccessTokenCookie(c echo.Context, secret []byte) (*jwt.Token, *log.Err
 	return token, log.ErrorNil()
 }
 
-func ParseRefreshTokenCookie(c echo.Context, secret []byte) (*jwt.Token, *log.Error) {
+func parseRefreshTokenCookie(c echo.Context, secret []byte) (*jwt.Token, *log.Error) {
 	tokenRaw, err := c.Cookie("refresh_token")
 	if err != nil {
 		// c.Logger().Debugf("no cookie 'refresh_token' in request (%s): %v", c.Request().RequestURI, err)
 		return &jwt.Token{}, log.NewErrorWithType(ErrTokenValidate, "no cookie 'refresh_token' present in request")
 	}
-	token, err := jwt.ParseWithClaims(tokenRaw.Value, new(JwtRefreshClaims), func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenRaw.Value, new(jwtRefreshClaims), func(t *jwt.Token) (interface{}, error) {
 		return secret, nil
 	})
 	if err != nil {
@@ -40,7 +40,7 @@ func ParseRefreshTokenCookie(c echo.Context, secret []byte) (*jwt.Token, *log.Er
 	return token, log.ErrorNil()
 }
 
-func GetRefreshClaimsFromCookie(c echo.Context, secret []byte) (JwtRefreshClaims, *log.Error) {
+func getRefreshClaimsFromCookie(c echo.Context, secret []byte) (jwtRefreshClaims, *log.Error) {
 	// TODO: this
-	return JwtRefreshClaims{}, log.NewErrorWithType(log.ErrNotImplemented, "WIP")
+	return jwtRefreshClaims{}, log.NewErrorWithType(log.ErrNotImplemented, "WIP")
 }

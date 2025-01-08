@@ -116,7 +116,7 @@ func RegisterRestDefaultEndpoints(api *web.ApiServer) {
 		log.NewError("ApiRoot.Kind must be local, static or proxy. This should have been verified during setup!").Panic()
 	}
 
-	apiGroup := api.E.Group("/api/", web_auth.AuthJWT(api))
+	apiGroup := api.E.Group("/api/", web.AuthJWT(api))
 	apiGroup.GET("", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "Welcome!"})
 	})

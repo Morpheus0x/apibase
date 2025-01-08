@@ -17,7 +17,7 @@ import (
 func RegisterAuthEndpoints(api *web.ApiServer) {
 	api.E.POST("/auth/login", login(api))
 	api.E.POST("/auth/signup", signup(api))
-	api.E.GET("/auth/logout", logout(api), AuthJWT(api))
+	api.E.GET("/auth/logout", logout(api), web.AuthJWT(api))
 }
 
 func login(api *web.ApiServer) echo.HandlerFunc {
