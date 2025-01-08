@@ -15,12 +15,12 @@ import (
 )
 
 type ApiServer struct {
-	E      *echo.Echo
-	Kind   ApiKind
-	Config ApiConfig
+	E      *echo.Echo  // Direct access to the echo webserver instance
+	Api    *echo.Group // Used to register API endpoints, leading slash already present (/api/<route>)
+	Kind   ApiKind     // REST (or HTMX, TODO: this)
+	Config ApiConfig   // API config used to initialize ApiServer
 	Rand   *rand.PCG
 
-	// groups     map[string]*echo.Group
 	// middleware []echo.MiddlewareFunc
 }
 
