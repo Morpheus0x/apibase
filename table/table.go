@@ -1,8 +1,8 @@
-package tables
+package table
 
 import "time"
 
-type Users struct {
+type User struct {
 	ID             int       `db:"id" default:"true" table:"users"`
 	Name           string    `db:"name"`
 	AuthProvider   string    `db:"auth_provider"`
@@ -14,12 +14,9 @@ type Users struct {
 	SuperAdmin     bool      `db:"super_admin"`
 	CreatedAt      time.Time `db:"created_at" default:"true"`
 	UpdatedAt      time.Time `db:"updated_at" default:"true"`
-	// RefreshTokens  []RefreshTokens `scan:"notate" db:"refresh_tokens"`
-	// Organizations  []Organizations `scan:"notate" db:"organizations"`
-	// UserRoles      []UserRoles     `scan:"notate" db:"user_roles"`
 }
 
-type RefreshTokens struct {
+type RefreshToken struct {
 	ID           int       `db:"id" default:"true" table:"refresh_tokens"`
 	UserID       int       `db:"user_id"`
 	TokenNonce   string    `db:"token_nonce"`
@@ -29,14 +26,14 @@ type RefreshTokens struct {
 	ExpiresAt    time.Time `db:"expires_at"`
 }
 
-type Organizations struct {
+type Organization struct {
 	ID          int    `db:"id" default:"true" table:"organizations"`
 	Name        string `db:"name"`
 	Description string `db:"description"`
 }
 
-type UserRoles struct {
-	ID       int  `db:"id" default:"true" table:"organizations"`
+type UserRole struct {
+	ID       int  `db:"id" default:"true" table:"user_roles"`
 	UserID   int  `db:"user_id"`
 	OrgID    int  `db:"org_id"`
 	OrgView  bool `db:"org_view"`

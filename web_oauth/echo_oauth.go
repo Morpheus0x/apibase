@@ -10,7 +10,7 @@ import (
 	"github.com/markbates/goth/gothic"
 	"gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
-	"gopkg.cc/apibase/tables"
+	"gopkg.cc/apibase/table"
 	"gopkg.cc/apibase/web"
 	"gopkg.cc/apibase/web_auth"
 )
@@ -70,7 +70,7 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 			role = r
 		}
 		// TODO: find a way to get org assignments from goth.User
-		user, errx := api.Config.DB.GetOrCreateUser(tables.Users{
+		user, errx := api.Config.DB.GetOrCreateUser(table.User{
 			Name:          gothUser.NickName,
 			AuthProvider:  provider,
 			Email:         gothUser.Email,

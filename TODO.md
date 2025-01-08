@@ -2,7 +2,7 @@
 # TODO Now
 - [x] get jwt token from claims by method on the claims struct pointer
 - [x] impl local signup
-- [ ] rename all db structs to singular (remove trailing "s")
+- [x] rename all db structs to singular (remove trailing "s")
 - [ ] app root static file path or forward port
 - [ ] Rework log.Error to be a struct compatible with the built-in error interface
 - [ ] all api responses should return an error code that is translated to a error string client side or on server for htmx

@@ -8,7 +8,7 @@ import (
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
 	"gopkg.cc/apibase/log"
-	"gopkg.cc/apibase/tables"
+	"gopkg.cc/apibase/table"
 )
 
 func (db DB) DeleteRefreshToken(userID int, nonce string) *log.Error {
@@ -75,7 +75,7 @@ func (db DB) UpdateRefreshTokenEntry(userId int, nonce string, newNonce string, 
 
 }
 
-func (db DB) CreateRefreshTokenEntry(token tables.RefreshTokens) *log.Error {
+func (db DB) CreateRefreshTokenEntry(token table.RefreshToken) *log.Error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	query := "INSERT INTO refresh_tokens (user_id, token_nonce, reissue_count, expires_at) VALUES ($1, $2, $3, $4)"
@@ -86,8 +86,8 @@ func (db DB) CreateRefreshTokenEntry(token tables.RefreshTokens) *log.Error {
 	return log.ErrorNil()
 }
 
-func (db DB) getTokenByUserIdAndNonce(ctx context.Context, tx pgx.Tx, userID int, nonce string) (tables.RefreshTokens, *log.Error) {
-	token := tables.RefreshTokens{}
+func (db DB) getTokenByUserIdAndNonce(ctx context.Context, tx pgx.Tx, userID int, nonce string) (table.RefreshToken, *log.Error) {
+	token := table.RefreshToken{}
 	rows, err := tx.Query(ctx, "SELECT * FROM refresh_tokens WHERE user_id = $1 AND token_nonce = $2", userID, nonce)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return token, log.NewErrorWithType(ErrDatabaseNotFound, "no refresh token found")
@@ -102,7 +102,7 @@ func (db DB) getTokenByUserIdAndNonce(ctx context.Context, tx pgx.Tx, userID int
 	return token, log.ErrorNil()
 }
 
-func (db DB) updateToken(ctx context.Context, tx pgx.Tx, token tables.RefreshTokens) *log.Error {
+func (db DB) updateToken(ctx context.Context, tx pgx.Tx, token table.RefreshToken) *log.Error {
 	query := "UPDATE refresh_tokens SET (token_nonce, reissue_count, updated_at, expires_at) = ($1, $2, $3, $4) WHERE id = $5"
 	_, err := tx.Exec(ctx, query, token.TokenNonce, token.ReissueCount+1, token.UpdatedAt, token.ExpiresAt, token.ID)
 	if err != nil {

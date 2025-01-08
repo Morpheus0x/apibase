@@ -1,6 +1,6 @@
 package web
 
-import "gopkg.cc/apibase/tables"
+import "gopkg.cc/apibase/table"
 
 // intentionally obfuscated json keys for security and bandwidth savings
 type JwtRole struct {
@@ -11,7 +11,7 @@ type JwtRole struct {
 
 type JwtRoles map[int]JwtRole
 
-func JwtRolesFromTable(roles []tables.UserRoles) JwtRoles {
+func JwtRolesFromTable(roles []table.UserRole) JwtRoles {
 	jwtRoles := JwtRoles{}
 	for _, r := range roles {
 		jwtRoles[r.OrgID] = JwtRole{
@@ -23,8 +23,8 @@ func JwtRolesFromTable(roles []tables.UserRoles) JwtRoles {
 	return jwtRoles
 }
 
-func (role JwtRole) GetTable(userId int, orgId int) tables.UserRoles {
-	return tables.UserRoles{
+func (role JwtRole) GetTable(userId int, orgId int) table.UserRole {
+	return table.UserRole{
 		UserID:   userId,
 		OrgID:    orgId,
 		OrgView:  role.OrgView,

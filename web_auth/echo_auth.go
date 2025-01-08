@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
-	"gopkg.cc/apibase/tables"
+	"gopkg.cc/apibase/table"
 	"gopkg.cc/apibase/web"
 )
 
@@ -74,7 +74,7 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
 		}
-		userToCreate := tables.Users{
+		userToCreate := table.User{
 			Name:           username,
 			AuthProvider:   "local",
 			Email:          email,

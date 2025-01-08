@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/sqlite"
-	"gopkg.cc/apibase/tables"
+	"gopkg.cc/apibase/table"
 )
 
 // Generic db driver for package web
@@ -52,7 +52,7 @@ func MigrateDefaultTables(database DB) *log.Error {
 		// TODO: do this
 		return log.NewErrorWithType(log.ErrNotImplemented, "sqlite tables not migrated")
 	case PostgreSQL:
-		users := []tables.Users{}
+		users := []table.User{}
 		err := pgxscan.Select(ctx, database.Postgres, &users, "SELECT * FROM users")
 		if err != nil {
 			return log.NewErrorWithType(ErrDatabaseMigration, err.Error())

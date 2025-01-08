@@ -9,10 +9,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gopkg.cc/apibase/log"
-	"gopkg.cc/apibase/tables"
+	"gopkg.cc/apibase/table"
 )
 
-func (db DB) CreateUserIfNotExist(user tables.Users, role tables.UserRoles) (tables.Users, *log.Error) {
+func (db DB) CreateUserIfNotExist(user table.User, role table.UserRole) (table.User, *log.Error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
@@ -43,10 +43,10 @@ func (db DB) CreateUserIfNotExist(user tables.Users, role tables.UserRoles) (tab
 	return userFromDB, log.ErrorNil()
 }
 
-func (db DB) GetUserByID(id int) (tables.Users, *log.Error) {
+func (db DB) GetUserByID(id int) (table.User, *log.Error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
-	user := tables.Users{}
+	user := table.User{}
 	// err := pgxscan.Select(ctx, Database, &user, "SELECT * FROM users WHERE id = $1", id)
 	rows, err := db.Postgres.Query(ctx, "SELECT * FROM users WHERE id = $1", id)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -63,12 +63,12 @@ func (db DB) GetUserByID(id int) (tables.Users, *log.Error) {
 	return user, log.ErrorNil()
 }
 
-func (db DB) GetUserByEmail(email string) (tables.Users, *log.Error) {
+func (db DB) GetUserByEmail(email string) (table.User, *log.Error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
 	if err != nil {
-		return tables.Users{}, log.NewErrorWithTypef(ErrDatabaseQuery, "unable to start db transaction: %s", err.Error())
+		return table.User{}, log.NewErrorWithTypef(ErrDatabaseQuery, "unable to start db transaction: %s", err.Error())
 	}
 	defer tx.Rollback(context.Background())
 
@@ -85,7 +85,7 @@ func (db DB) GetUserByEmail(email string) (tables.Users, *log.Error) {
 }
 
 // unique user is defined by user.Email, also creates the default viewer role for the specified organization
-func (db DB) GetOrCreateUser(user tables.Users, role tables.UserRoles) (tables.Users, *log.Error) {
+func (db DB) GetOrCreateUser(user table.User, role table.UserRole) (table.User, *log.Error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
@@ -119,8 +119,8 @@ func (db DB) GetOrCreateUser(user tables.Users, role tables.UserRoles) (tables.U
 	return userFromDB, log.ErrorNil()
 }
 
-func (db DB) getUserByEmail(email string, tx pgx.Tx, ctx context.Context) (tables.Users, *log.Error) {
-	user := tables.Users{}
+func (db DB) getUserByEmail(email string, tx pgx.Tx, ctx context.Context) (table.User, *log.Error) {
+	user := table.User{}
 	rows, err := tx.Query(ctx, "SELECT * FROM users WHERE email = $1", email)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return user, log.NewErrorWithTypef(ErrDatabaseNotFound, "no user found for email '%s'", email)
@@ -135,8 +135,8 @@ func (db DB) getUserByEmail(email string, tx pgx.Tx, ctx context.Context) (table
 	return user, log.ErrorNil()
 }
 
-func (db DB) createUser(user tables.Users, tx pgx.Tx, ctx context.Context) (tables.Users, *log.Error) {
-	createdUser := tables.Users{}
+func (db DB) createUser(user table.User, tx pgx.Tx, ctx context.Context) (table.User, *log.Error) {
+	createdUser := table.User{}
 	query := "INSERT INTO users (name, auth_provider, email, email_verified, password_hash, secrets_version, totp_secret, super_admin) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING (id, name, auth_provider, email, email_verified, password_hash, secrets_version, totp_secret, super_admin, created_at, updated_at)"
 	rows, err := tx.Query(ctx, query, user.Name, user.AuthProvider, user.Email, user.EmailVerified, user.PasswordHash, user.SecretsVersion, user.TotpSecret, user.SuperAdmin)
 	if err != nil {

@@ -7,10 +7,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
-	"gopkg.cc/apibase/tables"
+	"gopkg.cc/apibase/table"
 )
 
-func JwtLogin(c echo.Context, api *ApiServer, user tables.Users, roles []tables.UserRoles) error {
+func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.UserRole) error {
 	csrfValue := helper.RandomString(16) // TODO: protect login page with CSRF, completely separate it from auth jwt
 	accessToken, err := createJwtAccessClaims(user.ID, JwtRolesFromTable(roles), user.SuperAdmin, csrfValue).SignToken(api)
 	if err != nil {
@@ -23,7 +23,7 @@ func JwtLogin(c echo.Context, api *ApiServer, user tables.Users, roles []tables.
 		log.Logf(log.LevelNotice, "unable to create refresh token for user (id: %d): %s", user.ID, err.Error())
 		return echo.ErrInternalServerError
 	}
-	errx := api.Config.DB.CreateRefreshTokenEntry(tables.RefreshTokens{UserID: user.ID, TokenNonce: refreshTokenNonce, ReissueCount: 0, ExpiresAt: expiresAt})
+	errx := api.Config.DB.CreateRefreshTokenEntry(table.RefreshToken{UserID: user.ID, TokenNonce: refreshTokenNonce, ReissueCount: 0, ExpiresAt: expiresAt})
 	if !errx.IsNil() {
 		log.Logf(log.LevelNotice, "unable to create refresh token database entry for user (id: %d): %s", user.ID, err.Error())
 		return echo.ErrInternalServerError
