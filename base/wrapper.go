@@ -28,12 +28,10 @@ func (apiBase *ApiBase[T]) GetCloseStageChannels() (shutdown chan struct{}, next
 }
 
 // setup pgx database connection, requires cleanup
-func (apiBase *ApiBase[T]) PostgresInit() *log.Error {
+func (apiBase *ApiBase[T]) PostgresInit() (db.DB, *log.Error) {
 	i := apiBase.registerCloseStage()
 
-	var err *log.Error
-	apiBase.ApiConfig.DB, err = db.PostgresInit(apiBase.Postgres, apiBase.BaseConfig, apiBase.CloseChain[i], apiBase.CloseChain[i+1])
-	return err
+	return db.PostgresInit(apiBase.Postgres, apiBase.BaseConfig, apiBase.CloseChain[i], apiBase.CloseChain[i+1])
 }
 
 // start rest api server, is non-blocking but requires cleanup

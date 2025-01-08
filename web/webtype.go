@@ -18,13 +18,13 @@ type ApiServer struct {
 	Api    *echo.Group // Used to register API endpoints, leading slash already present (/api/<route>)
 	Kind   ApiKind     // REST (or HTMX, TODO: this)
 	Config ApiConfig   // API config used to initialize ApiServer
+	DB     db.DB       // Database connection for this ApiServer
 
 	// middleware []echo.MiddlewareFunc
 }
 
 type ApiConfig struct {
 	CORS []string `toml:"cors"`
-	DB   db.DB
 
 	TokenSecret          string `toml:"token_secret"`
 	TokenAccessValidity  string `toml:"token_access_validity"`

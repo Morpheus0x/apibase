@@ -70,7 +70,7 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 			role = r
 		}
 		// TODO: find a way to get org assignments from goth.User
-		user, errx := api.Config.DB.GetOrCreateUser(table.User{
+		user, errx := api.DB.GetOrCreateUser(table.User{
 			Name:          gothUser.NickName,
 			AuthProvider:  provider,
 			Email:         gothUser.Email,
@@ -82,7 +82,7 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 		}
 		log.Logf(log.LevelDebug, "User logged in: %v", user)
 
-		roles, errx := api.Config.DB.GetUserRoles(user.ID)
+		roles, errx := api.DB.GetUserRoles(user.ID)
 		if !errx.IsNil() {
 			errx.Extendf("unable to get any roles for user (id: %d)", user.ID).Log()
 		}

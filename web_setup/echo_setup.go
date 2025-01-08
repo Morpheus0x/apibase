@@ -19,11 +19,11 @@ import (
 	"gopkg.cc/apibase/web_oauth"
 )
 
-func SetupRest(config web.ApiConfig) (*web.ApiServer, *log.Error) {
-	if err := db.ValidateDB(config.DB); !err.IsNil() {
+func SetupRest(config web.ApiConfig, database db.DB) (*web.ApiServer, *log.Error) {
+	if err := db.ValidateDB(database); !err.IsNil() {
 		return nil, err.Extend("unable to setup rest api")
 	}
-	if err := db.MigrateDefaultTables(config.DB); !err.IsNil() {
+	if err := db.MigrateDefaultTables(database); !err.IsNil() {
 		return nil, err.Extend("unable to migrate db tables")
 	}
 	tokenSecretBytes, err := base64.StdEncoding.DecodeString(config.TokenSecret)
@@ -40,9 +40,11 @@ func SetupRest(config web.ApiConfig) (*web.ApiServer, *log.Error) {
 		return nil, err
 	}
 	api := &web.ApiServer{
-		E:      echo.New(),
+		E: echo.New(),
+		// Api: will be set by RegisterRestDefaultEndpoints()
 		Kind:   web.REST,
 		Config: config,
+		DB:     database,
 	}
 	if len(config.CORS) < 1 {
 		log.Log(log.LevelWarning, "CORS is not set, assuming '*', this should not be used in a production environment!")

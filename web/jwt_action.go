@@ -23,7 +23,7 @@ func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.Use
 		log.Logf(log.LevelNotice, "unable to create refresh token for user (id: %d): %s", user.ID, err.Error())
 		return echo.ErrInternalServerError
 	}
-	errx := api.Config.DB.CreateRefreshTokenEntry(table.RefreshToken{UserID: user.ID, TokenNonce: refreshTokenNonce, ReissueCount: 0, ExpiresAt: expiresAt})
+	errx := api.DB.CreateRefreshTokenEntry(table.RefreshToken{UserID: user.ID, TokenNonce: refreshTokenNonce, ReissueCount: 0, ExpiresAt: expiresAt})
 	if !errx.IsNil() {
 		log.Logf(log.LevelNotice, "unable to create refresh token database entry for user (id: %d): %s", user.ID, err.Error())
 		return echo.ErrInternalServerError
@@ -53,7 +53,7 @@ func JwtLogout(c echo.Context, api *ApiServer) error {
 		errx.Extendf("user was logged out but unable to parse refresh claims, refresh token: %v", refreshToken).Log()
 		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
 	}
-	errx = api.Config.DB.DeleteRefreshToken(refreshClaims.UserID, refreshClaims.Nonce)
+	errx = api.DB.DeleteRefreshToken(refreshClaims.UserID, refreshClaims.Nonce)
 	if !errx.IsNil() {
 		errx.Extendf("user (id: %d) was logged out but unable to delete refresh token", refreshClaims.UserID).Log()
 	}

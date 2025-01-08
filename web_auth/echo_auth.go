@@ -27,7 +27,7 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		email := c.FormValue("email")
 		password := c.FormValue("password")
 
-		user, errx := api.Config.DB.GetUserByEmail(email)
+		user, errx := api.DB.GetUserByEmail(email)
 		if !errx.IsNil() {
 			return fmt.Errorf("user not found: %s", errx.String())
 		}
@@ -42,7 +42,7 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 			return echo.ErrUnauthorized // c.String(http.StatusUnauthorized, "invalid password")
 		}
 
-		roles, errx := api.Config.DB.GetUserRoles(user.ID)
+		roles, errx := api.DB.GetUserRoles(user.ID)
 		if !errx.IsNil() {
 			errx.Extendf("unable to get any roles for user (id: %d)", user.ID).Log()
 		}
@@ -88,14 +88,14 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 		if r, ok := api.Config.DefaultOrgRole[strconv.Itoa(api.Config.DefaultOrgID)]; ok {
 			role = r
 		}
-		user, errx := api.Config.DB.CreateUserIfNotExist(userToCreate, role.GetTable(0, api.Config.DefaultOrgID))
+		user, errx := api.DB.CreateUserIfNotExist(userToCreate, role.GetTable(0, api.Config.DefaultOrgID))
 		if errx.IsType(db.ErrUserAlreadyExists) {
 			return c.JSON(http.StatusConflict, map[string]string{"message": "user with that email already exists"})
 		}
 		if !errx.IsNil() {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
 		}
-		roles, errx := api.Config.DB.GetUserRoles(user.ID)
+		roles, errx := api.DB.GetUserRoles(user.ID)
 		if !errx.IsNil() {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
 		}

@@ -72,7 +72,7 @@ func authJWTHandler(c echo.Context, api *web.ApiServer) error {
 	if err != nil || refreshTokenExpire.Time.After(time.Now()) {
 		return echo.NewHTTPError(http.StatusUnauthorized, "refresh token expired")
 	}
-	valid, errx := api.Config.DB.VerifyRefreshTokenNonce(refreshClaims.UserID, refreshClaims.Nonce)
+	valid, errx := api.DB.VerifyRefreshTokenNonce(refreshClaims.UserID, refreshClaims.Nonce)
 	if !errx.IsNil() {
 		errx.Extend("unable to verify refresh token").Severity(log.LevelDebug).Log()
 		return echo.NewHTTPError(http.StatusUnauthorized, "internal error, please contact administrator")
@@ -82,12 +82,12 @@ func authJWTHandler(c echo.Context, api *web.ApiServer) error {
 	}
 
 	// Create New Access Token Claims
-	user, errx := api.Config.DB.GetUserByID(refreshClaims.UserID) // TODO: make sure that sql join contains UserRoles[0]
+	user, errx := api.DB.GetUserByID(refreshClaims.UserID) // TODO: make sure that sql join contains UserRoles[0]
 	if !errx.IsNil() {
 		errx.Extend("unable to get user from refresh token user id").Log()
 		return echo.NewHTTPError(http.StatusUnauthorized, "user doesn't exist")
 	}
-	roles, errx := api.Config.DB.GetUserRoles(refreshClaims.UserID)
+	roles, errx := api.DB.GetUserRoles(refreshClaims.UserID)
 	if !errx.IsNil() {
 		errx.Extendf("unable to get roles for jwt access token for user (id: %d)", refreshClaims.UserID).Log()
 	}
@@ -121,7 +121,7 @@ func authJWTHandler(c echo.Context, api *web.ApiServer) error {
 			// c.Logger().Errorf("unable to create new access_token")
 			return echo.NewHTTPError(http.StatusUnauthorized, "internal error, please contact administrator")
 		}
-		errx := api.Config.DB.UpdateRefreshTokenEntry(refreshClaims.UserID, refreshClaims.Nonce, newNonce, expiresAt)
+		errx := api.DB.UpdateRefreshTokenEntry(refreshClaims.UserID, refreshClaims.Nonce, newNonce, expiresAt)
 		if !errx.IsNil() {
 			errx.Extendf("unable to update refresh token for user (id: %d)", user.ID).Severity(log.LevelDebug).Log()
 			return echo.ErrInternalServerError
