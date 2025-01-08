@@ -2,7 +2,6 @@ package web
 
 import (
 	"encoding/base64"
-	"math/rand/v2"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -19,7 +18,6 @@ type ApiServer struct {
 	Api    *echo.Group // Used to register API endpoints, leading slash already present (/api/<route>)
 	Kind   ApiKind     // REST (or HTMX, TODO: this)
 	Config ApiConfig   // API config used to initialize ApiServer
-	Rand   *rand.PCG
 
 	// middleware []echo.MiddlewareFunc
 }

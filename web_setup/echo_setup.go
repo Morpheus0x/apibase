@@ -10,8 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"math/rand/v2"
-
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"gopkg.cc/apibase/db"
@@ -45,7 +43,6 @@ func SetupRest(config web.ApiConfig) (*web.ApiServer, *log.Error) {
 		E:      echo.New(),
 		Kind:   web.REST,
 		Config: config,
-		Rand:   rand.NewPCG(rand.Uint64(), rand.Uint64()),
 	}
 	if len(config.CORS) < 1 {
 		log.Log(log.LevelWarning, "CORS is not set, assuming '*', this should not be used in a production environment!")
