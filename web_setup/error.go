@@ -1,4 +1,4 @@
-package web
+package web_setup
 
 import "gopkg.cc/apibase/log"
 

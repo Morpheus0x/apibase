@@ -10,18 +10,18 @@ import (
 	"gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/tables"
+	"gopkg.cc/apibase/web"
 	"gopkg.cc/apibase/web_auth"
-	t "gopkg.cc/apibase/webtype"
 )
 
 // Create default routes for oauth user flow
-func RegisterOAuthEndpoints(api *t.ApiServer) {
+func RegisterOAuthEndpoints(api *web.ApiServer) {
 	api.E.GET("/auth/:provider", login(api)) // login & signup
 	api.E.GET("/auth/:provider/callback", callback(api))
 	api.E.GET("/auth/logout/:provider", logout(api), web_auth.AuthJWT(api))
 }
 
-func login(api *t.ApiServer) echo.HandlerFunc {
+func login(api *web.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		request := c.Request()
 		queryURL := request.URL.Query()
@@ -31,7 +31,7 @@ func login(api *t.ApiServer) echo.HandlerFunc {
 		// TODO: referrer is a possible attack vector, if it is too large, limit str len to ...
 
 		// Correct Redirecting
-		stateBytes, err := json.Marshal(&t.StateReferrer{Nonce: helper.RandomString(16), URI: referrer})
+		stateBytes, err := json.Marshal(&web.StateReferrer{Nonce: helper.RandomString(16), URI: referrer})
 		if err != nil {
 			c.Redirect(http.StatusInternalServerError, referrer)
 		}
@@ -53,7 +53,7 @@ func login(api *t.ApiServer) echo.HandlerFunc {
 	}
 }
 
-func callback(api *t.ApiServer) echo.HandlerFunc {
+func callback(api *web.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		request := c.Request()
 		queryURL := request.URL.Query()
@@ -82,7 +82,7 @@ func callback(api *t.ApiServer) echo.HandlerFunc {
 			errx.Extendf("unable to get any roles for user (id: %d)", user.ID).Log()
 		}
 
-		err = t.JwtLogin(c, api, user, roles)
+		err = web.JwtLogin(c, api, user, roles)
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func callback(api *t.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
 		}
-		stateReferrer := &t.StateReferrer{}
+		stateReferrer := &web.StateReferrer{}
 		err = json.Unmarshal(stateBytes, stateReferrer)
 		if err != nil {
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
@@ -102,7 +102,7 @@ func callback(api *t.ApiServer) echo.HandlerFunc {
 	}
 }
 
-func logout(api *t.ApiServer) echo.HandlerFunc {
+func logout(api *web.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		request := c.Request()
 		queryURL := request.URL.Query()
@@ -110,6 +110,6 @@ func logout(api *t.ApiServer) echo.HandlerFunc {
 
 		gothic.Logout(c.Response(), request) // TODO: check if Logout correctly parses provider from request
 
-		return t.JwtLogout(c, api)
+		return web.JwtLogout(c, api)
 	}
 }

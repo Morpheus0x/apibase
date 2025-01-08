@@ -11,14 +11,14 @@ import (
 	"github.com/BurntSushi/toml"
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
-	"gopkg.cc/apibase/webtype"
+	"gopkg.cc/apibase/web"
 )
 
 type ApiBase[T any] struct {
 	Postgres   db.PostgresConfig `toml:"postgres"`
 	SQLite     db.SQLiteConfig   `toml:"sqlite"`
 	BaseConfig db.BaseConfig     `toml:"baseconfig"`
-	ApiConfig  webtype.ApiConfig `toml:"apiconfig"`
+	ApiConfig  web.ApiConfig     `toml:"apiconfig"`
 
 	Application T `toml:"application"`
 

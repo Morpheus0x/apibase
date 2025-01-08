@@ -7,10 +7,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
-	t "gopkg.cc/apibase/webtype"
+	"gopkg.cc/apibase/web"
 )
 
-func AuthJWT(api *t.ApiServer) echo.MiddlewareFunc {
+func AuthJWT(api *web.ApiServer) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			err := authJWTHandler(c, api)
@@ -22,14 +22,14 @@ func AuthJWT(api *t.ApiServer) echo.MiddlewareFunc {
 	}
 }
 
-func authJWTHandler(c echo.Context, api *t.ApiServer) error {
+func authJWTHandler(c echo.Context, api *web.ApiServer) error {
 	// TODO: use specific error codes for every http error response for easier debugging
 	log.Logf(log.LevelDebug, "Request Header X-XSRF-TOKEN: %s\n", c.Request().Header.Get("X-XSRF-TOKEN")) // TODO: remove hardcoded header name
 
 	// Verify Access Token
-	accessToken, errx := t.ParseAccessTokenCookie(c, api.Config.TokenSecretBytes())
+	accessToken, errx := web.ParseAccessTokenCookie(c, api.Config.TokenSecretBytes())
 	if errx.IsNil() {
-		accessClaims, ok := accessToken.Claims.(*t.JwtAccessClaims)
+		accessClaims, ok := accessToken.Claims.(*web.JwtAccessClaims)
 		if ok {
 			// TODO: unify the api (error) response using webtype.ApiJsonResponse
 			if c.Request().Header.Get("X-XSRF-TOKEN") != accessClaims.CSRFHeader { // TODO: remove hardcoded header name
@@ -41,7 +41,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 			if accessToken.Valid &&
 				err == nil &&
 				accessTokenExpire.Time.Add(-time.Minute).After(time.Now()) && // TODO: remove hardcoded timeout
-				accessClaims.Revision == t.LatestAccessTokenRevision {
+				accessClaims.Revision == web.LatestAccessTokenRevision {
 				// Do nothing, access token is still valid for long enough
 				return nil
 			}
@@ -49,7 +49,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 	}
 
 	// Verify Refresh Token
-	refreshToken, errx := t.ParseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
+	refreshToken, errx := web.ParseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
 	if !errx.IsNil() {
 		// log.Logf(log.LevelDebug, "unable to parse refresh token from cookie, request: %s", c.Request().URL.String())
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid refresh token cookie")
@@ -58,7 +58,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 		// log.Logf(log.LevelDebug, "refresh token invalid, request: %s", c.Request().URL.String())
 		return echo.NewHTTPError(http.StatusUnauthorized, "refresh token invalid")
 	}
-	refreshClaims, ok := refreshToken.Claims.(*t.JwtRefreshClaims)
+	refreshClaims, ok := refreshToken.Claims.(*web.JwtRefreshClaims)
 	if !ok {
 		// log.Logf(log.LevelDebug, "unable to parse refresh token claims, request: %s", c.Request().URL.String())
 		return echo.NewHTTPError(http.StatusUnauthorized, "refresh token invalid")
@@ -91,12 +91,12 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 	if !errx.IsNil() {
 		errx.Extendf("unable to get roles for jwt access token for user (id: %d)", refreshClaims.UserID).Log()
 	}
-	accessClaims := &t.JwtAccessClaims{
+	accessClaims := &web.JwtAccessClaims{
 		UserID:     user.ID,
-		Roles:      t.JwtRolesFromTable(roles),
+		Roles:      web.JwtRolesFromTable(roles),
 		SuperAdmin: user.SuperAdmin,
 		CSRFHeader: refreshClaims.CSRFHeader,
-		Revision:   t.LatestAccessTokenRevision,
+		Revision:   web.LatestAccessTokenRevision,
 	}
 
 	// Get http request to modify it with the new JWTs
@@ -110,7 +110,7 @@ func authJWTHandler(c echo.Context, api *t.ApiServer) error {
 		// On refresh token renew, also change CSRF token for access token
 		accessClaims.CSRFHeader = csrfToken
 
-		newRefreshClaims := &t.JwtRefreshClaims{
+		newRefreshClaims := &web.JwtRefreshClaims{
 			UserID:     user.ID,
 			Nonce:      newNonce,
 			CSRFHeader: csrfToken,

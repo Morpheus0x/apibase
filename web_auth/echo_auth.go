@@ -9,17 +9,17 @@ import (
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/tables"
-	t "gopkg.cc/apibase/webtype"
+	"gopkg.cc/apibase/web"
 )
 
 // Create default routes for login and general user flow
-func RegisterAuthEndpoints(api *t.ApiServer) {
+func RegisterAuthEndpoints(api *web.ApiServer) {
 	api.E.POST("/auth/login", login(api))
 	api.E.POST("/auth/signup", signup(api))
 	api.E.GET("/auth/logout", logout(api), AuthJWT(api))
 }
 
-func login(api *t.ApiServer) echo.HandlerFunc {
+func login(api *web.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// TODO: add fail2ban or similar/more advanced, for login endpoint
 
@@ -46,7 +46,7 @@ func login(api *t.ApiServer) echo.HandlerFunc {
 			errx.Extendf("unable to get any roles for user (id: %d)", user.ID).Log()
 		}
 
-		err = t.JwtLogin(c, api, user, roles)
+		err = web.JwtLogin(c, api, user, roles)
 		if err != nil {
 			return err
 		}
@@ -55,7 +55,7 @@ func login(api *t.ApiServer) echo.HandlerFunc {
 	}
 }
 
-func signup(api *t.ApiServer) echo.HandlerFunc {
+func signup(api *web.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// TODO: add option to disable signup or require invite code, add fail2ban
 		email := c.FormValue("email")
@@ -102,7 +102,7 @@ func signup(api *t.ApiServer) echo.HandlerFunc {
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
 		}
 
-		err = t.JwtLogin(c, api, user, roles)
+		err = web.JwtLogin(c, api, user, roles)
 		if err != nil {
 			return err
 		}
@@ -111,8 +111,8 @@ func signup(api *t.ApiServer) echo.HandlerFunc {
 	}
 }
 
-func logout(api *t.ApiServer) echo.HandlerFunc {
+func logout(api *web.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		return t.JwtLogout(c, api)
+		return web.JwtLogout(c, api)
 	}
 }

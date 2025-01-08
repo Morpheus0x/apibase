@@ -1,4 +1,4 @@
-package web
+package web_setup
 
 import (
 	"context"
@@ -13,13 +13,12 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
+	"gopkg.cc/apibase/web"
 	"gopkg.cc/apibase/web_auth"
 	"gopkg.cc/apibase/web_oauth"
-	"gopkg.cc/apibase/webtype"
-	t "gopkg.cc/apibase/webtype"
 )
 
-func SetupRest(config t.ApiConfig) (*t.ApiServer, *log.Error) {
+func SetupRest(config web.ApiConfig) (*web.ApiServer, *log.Error) {
 	if err := db.ValidateDB(config.DB); !err.IsNil() {
 		return nil, err.Extend("unable to setup rest api")
 	}
@@ -36,9 +35,9 @@ func SetupRest(config t.ApiConfig) (*t.ApiServer, *log.Error) {
 	if config.AppURI == "" {
 		return nil, log.NewError("No AppURI specified, this must be a fully qualified uri of the application using the api")
 	}
-	api := &t.ApiServer{
+	api := &web.ApiServer{
 		E:      echo.New(),
-		Kind:   t.REST,
+		Kind:   web.REST,
 		Config: config,
 		Rand:   rand.NewPCG(rand.Uint64(), rand.Uint64()),
 	}
@@ -47,12 +46,12 @@ func SetupRest(config t.ApiConfig) (*t.ApiServer, *log.Error) {
 		api.Config.CORS = []string{"*"}
 	}
 	if config.TokenAccessValidity == "" {
-		log.Logf(log.LevelWarning, "AccessTokenValidity is not set, assuming default validity of %s", webtype.TOKEN_ACCESS_VALIDITY.String())
-		api.Config.TokenAccessValidity = webtype.TOKEN_ACCESS_VALIDITY.String()
+		log.Logf(log.LevelWarning, "AccessTokenValidity is not set, assuming default validity of %s", web.TOKEN_ACCESS_VALIDITY.String())
+		api.Config.TokenAccessValidity = web.TOKEN_ACCESS_VALIDITY.String()
 	}
 	if config.TokenRefreshValidity == "" {
-		log.Logf(log.LevelWarning, "TokenRefreshValidity is not set, assuming default validity of %s", webtype.TOKEN_REFRESH_VALIDITY.String())
-		api.Config.TokenRefreshValidity = webtype.TOKEN_REFRESH_VALIDITY.String()
+		log.Logf(log.LevelWarning, "TokenRefreshValidity is not set, assuming default validity of %s", web.TOKEN_REFRESH_VALIDITY.String())
+		api.Config.TokenRefreshValidity = web.TOKEN_REFRESH_VALIDITY.String()
 	}
 	api.E.HideBanner = true
 	api.E.HidePort = true
@@ -71,7 +70,7 @@ func SetupRest(config t.ApiConfig) (*t.ApiServer, *log.Error) {
 	return api, log.ErrorNil()
 }
 
-func RegisterRestDefaultEndpoints(api *t.ApiServer) {
+func RegisterRestDefaultEndpoints(api *web.ApiServer) {
 	api.E.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "No Auth Required!"})
 	})
@@ -83,7 +82,7 @@ func RegisterRestDefaultEndpoints(api *t.ApiServer) {
 }
 
 // start rest api server, is blocking
-func StartRestBlocking(api *t.ApiServer, bind string) *log.Error {
+func StartRestBlocking(api *web.ApiServer, bind string) *log.Error {
 	log.Logf(log.LevelNotice, "Rest API Server starting on '%s'", bind)
 
 	err := api.E.Start(bind) // blocking
@@ -94,7 +93,7 @@ func StartRestBlocking(api *t.ApiServer, bind string) *log.Error {
 }
 
 // start rest api server, is non-blocking
-func StartRest(api *t.ApiServer, bind string, shutdown chan struct{}, next chan struct{}) *log.Error {
+func StartRest(api *web.ApiServer, bind string, shutdown chan struct{}, next chan struct{}) *log.Error {
 	abort := make(chan struct{})
 
 	go func() { // echo shutdown
@@ -163,12 +162,12 @@ func StartRest(api *t.ApiServer, bind string, shutdown chan struct{}, next chan 
 // 	return api
 // }
 
-func Register(api *t.ApiServer, method t.HttpMethod, path string, handle echo.HandlerFunc) *log.Error {
+func Register(api *web.ApiServer, method web.HttpMethod, path string, handle echo.HandlerFunc) *log.Error {
 	if api.E == nil {
 		return log.NewErrorWithType(ErrWebApiNotInit, "")
 	}
 	switch method {
-	case t.GET:
+	case web.GET:
 		api.E.GET(path, handle) // , api.middleware...
 	default:
 		return log.NewErrorWithTypef(ErrWebUnknownMethod, "types.HttpMethod(%d)", method)

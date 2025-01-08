@@ -4,7 +4,7 @@ import (
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/web"
-	"gopkg.cc/apibase/webtype"
+	"gopkg.cc/apibase/web_setup"
 )
 
 // used to add a stage in the close channel chain, returns offset of channel to listen to,
@@ -37,10 +37,10 @@ func (apiBase *ApiBase[T]) PostgresInit() *log.Error {
 }
 
 // start rest api server, is non-blocking but requires cleanup
-func (apiBase *ApiBase[T]) StartRest(api *webtype.ApiServer) *log.Error {
+func (apiBase *ApiBase[T]) StartRest(api *web.ApiServer) *log.Error {
 	i := apiBase.registerCloseStage()
 
-	err := web.StartRest(api, apiBase.ApiConfig.ApiBind, apiBase.CloseChain[i], apiBase.CloseChain[i+1])
+	err := web_setup.StartRest(api, apiBase.ApiConfig.ApiBind, apiBase.CloseChain[i], apiBase.CloseChain[i+1])
 	if !err.IsNil() {
 		apiBase.startupErrorCleanup()
 		return err

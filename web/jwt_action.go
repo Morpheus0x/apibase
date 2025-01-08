@@ -1,4 +1,4 @@
-package webtype
+package web
 
 import (
 	"net/http"
