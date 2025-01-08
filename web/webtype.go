@@ -3,6 +3,9 @@ package web
 import (
 	"encoding/base64"
 	"math/rand/v2"
+	"net/url"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -34,12 +37,16 @@ type ApiConfig struct {
 	AllowRegistration  bool `toml:"allow_registration"`
 	ReqireConfirmEmail bool `toml:"require_confirmed_email"` // TODO: this // Before user is allowed to login
 
-	DefaultOrgID   int                `toml:"default_org_id"`
-	DefaultOrgRole map[string]JwtRole `toml:"default_org_role"`
+	DefaultOrgID int `toml:"default_org_id"`
 
 	ApiBind string `toml:"api_bind"`
 	AppURI  string `toml:"app_uri"` // Used for logout redirect and when no valid oauth callback referrer
 
+	// Nested Structs
+	ApiRoot        RootOptions        `toml:"api_root"` // Configure the apibase root behaviour (local, static, (reverse) proxy)
+	DefaultOrgRole map[string]JwtRole `toml:"default_org_role"`
+
+	// Internal Data
 	tokenSecretBytes []byte // decoded from TokenSecret string
 }
 
@@ -95,6 +102,39 @@ const (
 	REST ApiKind = iota
 	HTMX
 )
+
+type RootOptions struct {
+	Kind   string `toml:"kind"`
+	Target string `toml:"target"`
+}
+
+func (ro RootOptions) Validate() *log.Error {
+	switch ro.Kind {
+	case "local":
+		return log.ErrorNil()
+	case "static":
+		path, err := filepath.Abs(ro.Target)
+		if err != nil {
+			return log.NewErrorf("unable to validate RootOptions static: %s", err.Error())
+		}
+		if _, err := os.Stat(path); err != nil {
+			return log.NewErrorf("unable to validate RootOptions static: %s", err.Error())
+		}
+		return log.ErrorNil()
+	case "proxy":
+		url, err := url.Parse(ro.Target)
+		if err != nil {
+			return log.NewErrorf("unable to validate RootOptions proxy: %s", err.Error())
+		}
+		if url.Scheme != "http" && url.Scheme != "https" {
+			return log.NewError("schema for RootOptions proxy must be http(s)")
+		}
+		// TODO: maybe add additional validation for url
+		return log.ErrorNil()
+	default:
+		return log.NewError("no RootOptions Kind specified, must be local, static or proxy")
+	}
+}
 
 // type HandleFunc func(c echo.Context) error
 // type HandleFunc echo.HandlerFunc

@@ -3,7 +3,10 @@ package web_setup
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,6 +37,9 @@ func SetupRest(config web.ApiConfig) (*web.ApiServer, *log.Error) {
 	}
 	if config.AppURI == "" {
 		return nil, log.NewError("No AppURI specified, this must be a fully qualified uri of the application using the api")
+	}
+	if err := config.ApiRoot.Validate(); !err.IsNil() {
+		return nil, err
 	}
 	api := &web.ApiServer{
 		E:      echo.New(),
@@ -71,10 +77,45 @@ func SetupRest(config web.ApiConfig) (*web.ApiServer, *log.Error) {
 }
 
 func RegisterRestDefaultEndpoints(api *web.ApiServer) {
-	api.E.GET("/", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"message": "No Auth Required!"})
-	})
-
+	switch api.Config.ApiRoot.Kind {
+	case "local":
+		api.E.GET("/", func(c echo.Context) error {
+			return c.JSON(http.StatusOK, map[string]string{"message": "apibase"})
+		})
+		// TODO: change default local response and optionally add additional routes
+	case "static":
+		api.E.Use(middleware.StaticWithConfig(middleware.StaticConfig{
+			Root:   api.Config.ApiRoot.Target,
+			Index:  "index.html",
+			Browse: false,
+		}))
+	case "proxy":
+		url, err := url.Parse(api.Config.ApiRoot.Target)
+		if err != nil {
+			// Allowed to panic
+			log.NewErrorf("ApiRoot proxy must contain valid uri target: %s", err.Error()).Panic()
+		}
+		api.E.Use(middleware.ProxyWithConfig(middleware.ProxyConfig{
+			Skipper: func(e echo.Context) bool {
+				path := e.Request().URL.Path
+				return strings.HasPrefix(path, "/api") || strings.HasPrefix(path, "/auth")
+			},
+			Balancer: middleware.NewRoundRobinBalancer([]*middleware.ProxyTarget{{
+				URL: url,
+			}}),
+			ErrorHandler: func(c echo.Context, err error) error {
+				echoErr := &echo.HTTPError{}
+				valid := errors.As(err, &echoErr)
+				if valid && echoErr.Code > 499 && echoErr.Code < 600 {
+					return c.HTML(http.StatusBadGateway, web.GatewayTimeoutHTML)
+				}
+				return err
+			},
+		}))
+	default:
+		// Allowed to panic
+		log.NewError("ApiRoot.Kind must be local, static or proxy. This should have been verified during setup!").Panic()
+	}
 	v1 := api.E.Group("/api/", web_auth.AuthJWT(api))
 	v1.GET("", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "Welcome!"})
