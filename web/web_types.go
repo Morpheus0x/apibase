@@ -134,9 +134,7 @@ func (ro RootOptions) Validate() *log.Error {
 	}
 }
 
-// type HandleFunc func(c echo.Context) error
-// type HandleFunc echo.HandlerFunc
-
+// used for correct forwarding after oauth callback
 type StateReferrer struct {
 	Nonce string `json:"nonce"`
 	URI   string `json:"uri"`
