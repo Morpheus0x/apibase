@@ -30,7 +30,7 @@ type ApiConfig struct {
 	TokenRefreshValidity string `toml:"token_refresh_validity"`
 
 	LocalAuth          bool `toml:"local_auth"`
-	OAuthEnabled       bool `tobl:"oauth_enabled"`
+	OAuthEnabled       bool `toml:"oauth_enabled"`
 	AllowRegistration  bool `toml:"allow_registration"`
 	ReqireConfirmEmail bool `toml:"require_confirmed_email"` // TODO: this // Before user is allowed to login
 
