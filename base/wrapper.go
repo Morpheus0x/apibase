@@ -28,22 +28,22 @@ func (apiBase *ApiBase[T]) GetCloseStageChannels() (shutdown chan struct{}, next
 }
 
 // setup pgx database connection, requires cleanup
-func (apiBase *ApiBase[T]) PostgresInit() (db.DB, *log.Error) {
+func (apiBase *ApiBase[T]) PostgresInit() (db.DB, error) {
 	i := apiBase.registerCloseStage()
 
 	return db.PostgresInit(apiBase.Postgres, apiBase.BaseConfig, apiBase.CloseChain[i], apiBase.CloseChain[i+1])
 }
 
 // start rest api server, is non-blocking but requires cleanup
-func (apiBase *ApiBase[T]) StartRest(api *web.ApiServer) *log.Error {
+func (apiBase *ApiBase[T]) StartRest(api *web.ApiServer) error {
 	i := apiBase.registerCloseStage()
 
 	err := web_setup.StartRest(api, apiBase.ApiConfig.ApiBind, apiBase.CloseChain[i], apiBase.CloseChain[i+1])
-	if !err.IsNil() {
+	if err != nil {
 		apiBase.startupErrorCleanup()
 		return err
 	}
-	return log.ErrorNil()
+	return nil
 }
 
 // cleanup channel close chain array

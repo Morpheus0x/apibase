@@ -8,11 +8,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	_ "github.com/lib/pq"
 
+	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/log"
 )
 
 // require shutdown and next channels for clean shutdown, these can be created using base.ApiBase[T].GetCloseStageChannels()
-func PostgresInit(pgc PostgresConfig, bc BaseConfig, shutdown chan struct{}, next chan struct{}) (DB, *log.Error) {
+func PostgresInit(pgc PostgresConfig, bc BaseConfig, shutdown chan struct{}, next chan struct{}) (DB, error) {
 	db := DB{Kind: PostgreSQL}
 	abort := make(chan struct{})
 
@@ -47,7 +48,7 @@ func PostgresInit(pgc PostgresConfig, bc BaseConfig, shutdown chan struct{}, nex
 		db.Postgres, err = pgx.Connect(ctx, connString)
 		if err != nil {
 			cancel()
-			return db, log.NewErrorWithTypef(ErrDatabaseConfig, "postgres connection string parsing: %s", err.Error())
+			return db, errx.NewWithTypef(ErrDatabaseConfig, "postgres connection string parsing: %s", err.Error())
 		}
 		err = db.Postgres.Ping(ctx)
 		if err != nil {
@@ -58,8 +59,8 @@ func PostgresInit(pgc PostgresConfig, bc BaseConfig, shutdown chan struct{}, nex
 		}
 		log.Logf(log.LevelInfo, "Postgres connection to database '%s' established.", pgc.DB)
 		cancel()
-		return db, log.ErrorNil()
+		return db, nil
 	}
 	close(abort)
-	return db, log.NewErrorWithType(ErrDatabaseConn, err.Error())
+	return db, errx.WrapWithType(ErrDatabaseConn, err, "")
 }

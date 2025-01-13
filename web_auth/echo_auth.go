@@ -1,7 +1,7 @@
 package web_auth
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -27,9 +27,10 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		email := c.FormValue("email")
 		password := c.FormValue("password")
 
-		user, errx := api.DB.GetUserByEmail(email)
-		if !errx.IsNil() {
-			return fmt.Errorf("user not found: %s", errx.String())
+		user, err := api.DB.GetUserByEmail(email)
+		if err != nil {
+			log.Logf(log.LevelDebug, "user not found: %s", err.Error())
+			return c.JSON(http.StatusUnauthorized, "user doesn't exist")
 		}
 
 		// TODO: unify the api (error) response using webtype.ApiJsonResponse
@@ -42,9 +43,10 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 			return echo.ErrUnauthorized // c.String(http.StatusUnauthorized, "invalid password")
 		}
 
-		roles, errx := api.DB.GetUserRoles(user.ID)
-		if !errx.IsNil() {
-			errx.Extendf("unable to get any roles for user (id: %d)", user.ID).Log()
+		roles, err := api.DB.GetUserRoles(user.ID)
+		if err != nil {
+			log.Logf(log.LevelError, "no roles exist for user (id: %d), unable to login", user.ID)
+			return c.JSON(http.StatusUnauthorized, map[string]string{"message": "no roles exist for user"})
 		}
 
 		err = web.JwtLogin(c, api, user, roles)
@@ -88,15 +90,17 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 		if r, ok := api.Config.DefaultOrgRole[strconv.Itoa(api.Config.DefaultOrgID)]; ok {
 			role = r
 		}
-		user, errx := api.DB.CreateUserIfNotExist(userToCreate, role.GetTable(0, api.Config.DefaultOrgID))
-		if errx.IsType(db.ErrUserAlreadyExists) {
+		user, err := api.DB.CreateUserIfNotExist(userToCreate, role.GetTable(0, api.Config.DefaultOrgID))
+		if errors.Is(err, db.ErrUserAlreadyExists) {
 			return c.JSON(http.StatusConflict, map[string]string{"message": "user with that email already exists"})
 		}
-		if !errx.IsNil() {
+		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
 		}
-		roles, errx := api.DB.GetUserRoles(user.ID)
-		if !errx.IsNil() {
+		roles, err := api.DB.GetUserRoles(user.ID)
+		if err != nil {
+			// roles should already exist or have been created by CreateUserIfNotExist
+			log.Logf(log.LevelError, "unable to get any roles for user (id: %d)", user.ID)
 			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
 		}
 

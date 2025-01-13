@@ -1,10 +1,10 @@
 package web_setup
 
-import "gopkg.cc/apibase/log"
+import "gopkg.cc/apibase/errx"
 
 var (
-	ErrWebBind          = log.RegisterErrType("invalid bind")
-	ErrWebApiNotInit    = log.RegisterErrType("ApiServer not initialized")
-	ErrWebUnknownMethod = log.RegisterErrType("Unknown HTTP Method")
-	ErrWebShutdown      = log.RegisterErrType("unable to gracefully shutdown web server")
+	ErrWebBind          = errx.NewType("invalid bind")
+	ErrWebApiNotInit    = errx.NewType("ApiServer not initialized")
+	ErrWebUnknownMethod = errx.NewType("Unknown HTTP Method")
+	ErrWebShutdown      = errx.NewType("unable to gracefully shutdown web server")
 )

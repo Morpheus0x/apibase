@@ -4,8 +4,8 @@
 - [x] impl local signup
 - [x] rename all db structs to singular (remove trailing "s")
 - [x] app root static file path or forward port
+- [x] Rework log.Error to be a struct compatible with the built-in error interface
 - [ ] test full auth flow for apibase
-- [ ] Rework log.Error to be a struct compatible with the built-in error interface
 - [ ] all api responses should return an error code that is translated to a error string client side or on server for htmx
 - [ ] make separate CSRF middleware completely separate from jwt to also protect login form/the whole api
 - [ ] impl email signup integration

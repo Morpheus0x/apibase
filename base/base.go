@@ -10,6 +10,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"gopkg.cc/apibase/db"
+	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/web"
 )
@@ -74,16 +75,16 @@ func (apiBase *ApiBase[T]) Cleanup() {
 	}
 }
 
-func (apiBase *ApiBase[T]) WaitAndCleanup() *log.Error {
+func (apiBase *ApiBase[T]) WaitAndCleanup() error {
 	if apiBase.Interrupt == nil {
-		return log.NewErrorWithType(ErrApiBaseCleanup, "interrupt channel not initialized, make sure to initialize ApiBase struct correctly")
+		return errx.NewWithType(ErrApiBaseCleanup, "interrupt channel not initialized, make sure to initialize ApiBase struct correctly")
 	}
 	if len(apiBase.CloseChain) < 1 {
 		log.Log(log.LevelWarning, "no close chain found and therefore no go routines can be closed, done")
-		return log.ErrorNil()
+		return nil
 	}
 	if len(apiBase.CloseChain) < 2 {
-		return log.NewErrorWithType(ErrApiBaseCleanup, "only one channel in close chain, this should not happen, unable to close go routine(s)")
+		return errx.NewWithType(ErrApiBaseCleanup, "only one channel in close chain, this should not happen, unable to close go routine(s)")
 	}
 
 	<-apiBase.Interrupt
@@ -97,25 +98,25 @@ func (apiBase *ApiBase[T]) WaitAndCleanup() *log.Error {
 	select {
 	case <-apiBase.CloseChain[len(apiBase.CloseChain)-1]:
 		log.Log(log.LevelInfo, "all go routines closed")
-		return log.ErrorNil()
+		return nil
 	case <-ctx.Done():
-		return log.NewErrorWithTypef(ErrApiBaseCleanup, "timeout for close chain exceeded, not all go routines exited in defined timeout (%s)", timeout.String())
+		return errx.NewWithTypef(ErrApiBaseCleanup, "timeout for close chain exceeded, not all go routines exited in defined timeout (%s)", timeout.String())
 	}
 }
 
-func (apiBase *ApiBase[T]) LoadToml(path string) *log.Error {
+func (apiBase *ApiBase[T]) LoadToml(path string) error {
 	_, err := os.Stat(path)
 	if err != nil {
-		return log.NewErrorWithTypef(ErrTomlParsing, "unable to read toml file: %s", err.Error())
+		return errx.WrapWithType(ErrTomlParsing, err, "unable to read toml file")
 	}
 	_, err = toml.DecodeFile(path, apiBase)
 	if err != nil {
-		return log.NewErrorWithTypef(ErrTomlParsing, "unable to parse toml: %s", err.Error())
+		return errx.WrapWithType(ErrTomlParsing, err, "unable to parse toml")
 	}
 
 	apiBase.AddMissingDefaults()
 
-	return log.ErrorNil()
+	return nil
 }
 
 func (apiBase *ApiBase[T]) AddMissingDefaults() {

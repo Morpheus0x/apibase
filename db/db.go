@@ -6,6 +6,7 @@ import (
 
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
+	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/sqlite"
 	"gopkg.cc/apibase/table"
@@ -26,42 +27,42 @@ type DB struct {
 	Postgres *pgx.Conn
 }
 
-func ValidateDB(database DB) *log.Error {
+func ValidateDB(database DB) error {
 	switch database.Kind {
 	case SQLite:
 		if database.SQLite == nil {
-			return log.NewErrorWithType(ErrDatabaseConfig, "no valid SQLite database adapter")
+			return errx.NewWithType(ErrDatabaseConfig, "no valid SQLite database adapter")
 		}
 		// TODO: this
-		return log.NewErrorWithType(log.ErrNotImplemented, "sqlite driver for apibase not implemented yet")
+		return errx.NewWithType(errx.ErrNotImplemented, "sqlite driver for apibase not implemented yet")
 	case PostgreSQL:
 		if database.Postgres == nil {
-			return log.NewErrorWithType(ErrDatabaseConfig, "no valid PostgreSQL database adapter")
+			return errx.NewWithType(ErrDatabaseConfig, "no valid PostgreSQL database adapter")
 		}
 	default:
-		return log.NewErrorWithType(ErrDatabaseConfig, "no valid DB specified")
+		return errx.NewWithType(ErrDatabaseConfig, "no valid DB specified")
 	}
-	return log.ErrorNil()
+	return nil
 }
 
-func MigrateDefaultTables(database DB) *log.Error {
+func MigrateDefaultTables(database DB) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	switch database.Kind {
 	case SQLite:
 		// TODO: do this
-		return log.NewErrorWithType(log.ErrNotImplemented, "sqlite tables not migrated")
+		return errx.NewWithType(errx.ErrNotImplemented, "sqlite tables not migrated")
 	case PostgreSQL:
 		users := []table.User{}
 		err := pgxscan.Select(ctx, database.Postgres, &users, "SELECT * FROM users")
 		if err != nil {
-			return log.NewErrorWithType(ErrDatabaseMigration, err.Error())
+			return errx.WrapWithType(ErrDatabaseMigration, err, "")
 		}
 		log.Logf(log.LevelDebug, "Users: %+v", users)
 		// TODO: read tables from db and verify they match the local struct
 		log.Log(log.LevelInfo, "Successfully migrated PostgreSQL Tables.")
 	default:
-		return log.NewErrorWithTypef(ErrDatabaseMigration, "no valid DB specified, db.DBKind(%d)", database.Kind)
+		return errx.NewWithTypef(ErrDatabaseMigration, "no valid DB specified, db.DBKind(%d)", database.Kind)
 	}
-	return log.ErrorNil()
+	return nil
 }

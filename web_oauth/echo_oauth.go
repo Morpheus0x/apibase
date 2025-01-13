@@ -69,21 +69,23 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 			role = r
 		}
 		// TODO: find a way to get org assignments from goth.User
-		user, errx := api.DB.GetOrCreateUser(table.User{
+		user, err := api.DB.GetOrCreateUser(table.User{
 			Name:          gothUser.NickName,
 			AuthProvider:  provider,
 			Email:         gothUser.Email,
 			EmailVerified: false,
 		}, role.GetTable(0, api.Config.DefaultOrgID))
-		if !errx.IsNil() {
-			errx.Log()
+		if err != nil {
+			log.Logf(log.LevelError, "unable to create oauth user db entry: %s", err.Error())
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI) // TODO: add query param or header to show error on client side
 		}
 		log.Logf(log.LevelDebug, "User logged in: %v", user)
 
-		roles, errx := api.DB.GetUserRoles(user.ID)
-		if !errx.IsNil() {
-			errx.Extendf("unable to get any roles for user (id: %d)", user.ID).Log()
+		roles, err := api.DB.GetUserRoles(user.ID)
+		if err != nil {
+			// roles should already exist or have been created by GetOrCreateUser
+			log.Logf(log.LevelError, "unable to get any roles for user (id: %d)", user.ID)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
 		}
 
 		err = web.JwtLogin(c, api, user, roles)

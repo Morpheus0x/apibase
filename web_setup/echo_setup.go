@@ -13,30 +13,31 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"gopkg.cc/apibase/db"
+	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/web"
 	"gopkg.cc/apibase/web_auth"
 	"gopkg.cc/apibase/web_oauth"
 )
 
-func SetupRest(config web.ApiConfig, database db.DB) (*web.ApiServer, *log.Error) {
-	if err := db.ValidateDB(database); !err.IsNil() {
-		return nil, err.Extend("unable to setup rest api")
+func SetupRest(config web.ApiConfig, database db.DB) (*web.ApiServer, error) {
+	if err := db.ValidateDB(database); err != nil {
+		return nil, errx.Wrap(err, "unable to setup rest api")
 	}
-	if err := db.MigrateDefaultTables(database); !err.IsNil() {
-		return nil, err.Extend("unable to migrate db tables")
+	if err := db.MigrateDefaultTables(database); err != nil {
+		return nil, errx.Wrap(err, "unable to migrate db tables")
 	}
-	tokenSecretBytes, err := base64.StdEncoding.DecodeString(config.TokenSecret)
+	tokenSecretBytes, err := base64.StdEncoding.DecodeString(config.TokenSecret.GetSecret())
 	if err != nil || len(tokenSecretBytes) < 64 {
-		return nil, log.NewError("TokenSecret must be random base64 byte string with at least 64 bytes")
+		return nil, errx.New("TokenSecret must be random base64 byte string with at least 64 bytes")
 	}
 	if !config.LocalAuth && !config.OAuthEnabled {
-		return nil, log.NewError("No Authentication method enabled, either LocalAuth, OAuthEnabled or both need to be enabled")
+		return nil, errx.New("No Authentication method enabled, either LocalAuth, OAuthEnabled or both need to be enabled")
 	}
 	if config.AppURI == "" {
-		return nil, log.NewError("No AppURI specified, this must be a fully qualified uri of the application using the api")
+		return nil, errx.New("No AppURI specified, this must be a fully qualified uri of the application using the api")
 	}
-	if err := config.ApiRoot.Validate(); !err.IsNil() {
+	if err := config.ApiRoot.Validate(); err != nil {
 		return nil, err
 	}
 	api := &web.ApiServer{
@@ -72,7 +73,7 @@ func SetupRest(config web.ApiConfig, database db.DB) (*web.ApiServer, *log.Error
 	if api.Config.OAuthEnabled {
 		web_oauth.RegisterOAuthEndpoints(api)
 	}
-	return api, log.ErrorNil()
+	return api, nil
 }
 
 func RegisterRestDefaultEndpoints(api *web.ApiServer) {
@@ -92,7 +93,8 @@ func RegisterRestDefaultEndpoints(api *web.ApiServer) {
 		url, err := url.Parse(api.Config.ApiRoot.Target)
 		if err != nil {
 			// Allowed to panic
-			log.NewErrorf("ApiRoot proxy must contain valid uri target: %s", err.Error()).Panic()
+			log.Logf(log.LevelCritical, "ApiRoot proxy must contain valid uri target: %s", err.Error())
+			panic(1)
 		}
 		api.E.Use(middleware.ProxyWithConfig(middleware.ProxyConfig{
 			Skipper: func(e echo.Context) bool {
@@ -113,7 +115,8 @@ func RegisterRestDefaultEndpoints(api *web.ApiServer) {
 		}))
 	default:
 		// Allowed to panic
-		log.NewError("ApiRoot.Kind must be local, static or proxy. This should have been verified during setup!").Panic()
+		errx.New("ApiRoot.Kind must be local, static or proxy. This should have been verified during setup!")
+		panic(1)
 	}
 
 	apiGroup := api.E.Group("/api/", web.AuthJWT(api))
@@ -124,18 +127,18 @@ func RegisterRestDefaultEndpoints(api *web.ApiServer) {
 }
 
 // start rest api server, is blocking
-func StartRestBlocking(api *web.ApiServer, bind string) *log.Error {
+func StartRestBlocking(api *web.ApiServer, bind string) error {
 	log.Logf(log.LevelNotice, "Rest API Server starting on '%s'", bind)
 
 	err := api.E.Start(bind) // blocking
 	if err != nil {
-		return log.NewErrorWithTypef(ErrWebBind, "'%s': %v", bind, err)
+		return errx.NewWithTypef(ErrWebBind, "'%s': %v", bind, err)
 	}
-	return log.ErrorNil()
+	return nil
 }
 
 // start rest api server, is non-blocking
-func StartRest(api *web.ApiServer, bind string, shutdown chan struct{}, next chan struct{}) *log.Error {
+func StartRest(api *web.ApiServer, bind string, shutdown chan struct{}, next chan struct{}) error {
 	abort := make(chan struct{})
 
 	go func() { // echo shutdown
@@ -148,7 +151,7 @@ func StartRest(api *web.ApiServer, bind string, shutdown chan struct{}, next cha
 		defer cancel()
 		err := api.E.Shutdown(ctx)
 		if err != nil {
-			log.NewErrorWithType(ErrWebShutdown, err.Error()).Log()
+			log.Logf(log.LevelError, "%s", errx.WrapWithType(ErrWebShutdown, err, "").Error())
 		} else {
 			log.Log(log.LevelNotice, "Rest API Server shutdown successful.")
 		}
@@ -163,16 +166,16 @@ func StartRest(api *web.ApiServer, bind string, shutdown chan struct{}, next cha
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond) // TODO: remove hardcoded timeout
 	defer cancel()
 	startupError := struct {
-		Chan       chan *log.Error
+		Chan       chan error
 		sync.Mutex // to protect agains a VERY edge case race-condition
-	}{Chan: make(chan *log.Error)}
+	}{Chan: make(chan error)}
 
 	go func() { // echo start
 		err := api.E.Start(bind) // blocking
 		if err != nil && err != http.ErrServerClosed {
 			startupError.Lock()
 			select {
-			case startupError.Chan <- log.NewErrorWithTypef(ErrWebBind, "'%s': %v", bind, err):
+			case startupError.Chan <- errx.NewWithTypef(ErrWebBind, "'%s': %v", bind, err):
 			default:
 			}
 			startupError.Unlock()
@@ -192,7 +195,7 @@ func StartRest(api *web.ApiServer, bind string, shutdown chan struct{}, next cha
 	startupError.Unlock()
 
 	log.Logf(log.LevelNotice, "Rest API Server started on '%s'", bind)
-	return log.ErrorNil()
+	return nil
 }
 
 // func SetupStatic(root string) *ApiServer {
@@ -204,17 +207,17 @@ func StartRest(api *web.ApiServer, bind string, shutdown chan struct{}, next cha
 // 	return api
 // }
 
-func Register(api *web.ApiServer, method web.HttpMethod, path string, handle echo.HandlerFunc) *log.Error {
+func Register(api *web.ApiServer, method web.HttpMethod, path string, handle echo.HandlerFunc) error {
 	if api.E == nil {
-		return log.NewErrorWithType(ErrWebApiNotInit, "")
+		return errx.NewWithType(ErrWebApiNotInit, "")
 	}
 	switch method {
 	case web.GET:
 		api.E.GET(path, handle) // , api.middleware...
 	default:
-		return log.NewErrorWithTypef(ErrWebUnknownMethod, "types.HttpMethod(%d)", method)
+		return errx.NewWithTypef(ErrWebUnknownMethod, "types.HttpMethod(%d)", method)
 	}
-	return log.ErrorNil()
+	return nil
 }
 
 // // Serve static folder or files in destination at provided path

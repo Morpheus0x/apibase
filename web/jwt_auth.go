@@ -23,8 +23,8 @@ func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.Use
 		log.Logf(log.LevelNotice, "unable to create refresh token for user (id: %d): %s", user.ID, err.Error())
 		return echo.ErrInternalServerError
 	}
-	errx := api.DB.CreateRefreshTokenEntry(table.RefreshToken{UserID: user.ID, TokenNonce: refreshTokenNonce, ReissueCount: 0, ExpiresAt: expiresAt})
-	if !errx.IsNil() {
+	err = api.DB.CreateRefreshTokenEntry(table.RefreshToken{UserID: user.ID, TokenNonce: refreshTokenNonce, ReissueCount: 0, ExpiresAt: expiresAt})
+	if err != nil {
 		log.Logf(log.LevelNotice, "unable to create refresh token database entry for user (id: %d): %s", user.ID, err.Error())
 		return echo.ErrInternalServerError
 	}
@@ -43,19 +43,19 @@ func JwtLogout(c echo.Context, api *ApiServer) error {
 	c.SetCookie(&http.Cookie{Name: "access_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
 	c.SetCookie(&http.Cookie{Name: "refresh_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
 
-	refreshToken, errx := parseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
-	if !errx.IsNil() {
-		errx.Extendf("user was logged out but unable to parse refresh token").Log()
+	refreshToken, err := parseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
+	if err != nil {
+		log.Logf(log.LevelError, "user was logged out but unable to parse refresh token: %s", err.Error())
 		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
 	}
 	refreshClaims, ok := refreshToken.Claims.(*jwtRefreshClaims)
 	if !ok {
-		errx.Extendf("user was logged out but unable to parse refresh claims, refresh token: %v", refreshToken).Log()
+		log.Logf(log.LevelError, "user was logged out but unable to parse refresh claims, refresh token: %v: %s", refreshToken, err.Error())
 		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
 	}
-	errx = api.DB.DeleteRefreshToken(refreshClaims.UserID, refreshClaims.Nonce)
-	if !errx.IsNil() {
-		errx.Extendf("user (id: %d) was logged out but unable to delete refresh token", refreshClaims.UserID).Log()
+	err = api.DB.DeleteRefreshToken(refreshClaims.UserID, refreshClaims.Nonce)
+	if err != nil {
+		log.Logf(log.LevelError, "user (id: %d) was logged out but unable to delete refresh token: %s", refreshClaims.UserID, err.Error())
 	}
 	// return c.JSON(http.StatusOK, map[string]string{"message": "Logged out!"})
 	// TODO: add query param with logout success msg
@@ -79,8 +79,8 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 	log.Logf(log.LevelDebug, "Request Header X-XSRF-TOKEN: %s\n", c.Request().Header.Get("X-XSRF-TOKEN")) // TODO: remove hardcoded header name
 
 	// Verify Access Token
-	accessToken, errx := parseAccessTokenCookie(c, api.Config.TokenSecretBytes())
-	if errx.IsNil() {
+	accessToken, err := parseAccessTokenCookie(c, api.Config.TokenSecretBytes())
+	if err != nil {
 		accessClaims, ok := accessToken.Claims.(*jwtAccessClaims)
 		if ok {
 			// TODO: unify the api (error) response using webtype.ApiJsonResponse
@@ -101,8 +101,8 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 	}
 
 	// Verify Refresh Token
-	refreshToken, errx := parseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
-	if !errx.IsNil() {
+	refreshToken, err := parseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
+	if err != nil {
 		// log.Logf(log.LevelDebug, "unable to parse refresh token from cookie, request: %s", c.Request().URL.String())
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid refresh token cookie")
 	}
@@ -124,9 +124,9 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 	if err != nil || refreshTokenExpire.Time.After(time.Now()) {
 		return echo.NewHTTPError(http.StatusUnauthorized, "refresh token expired")
 	}
-	valid, errx := api.DB.VerifyRefreshTokenNonce(refreshClaims.UserID, refreshClaims.Nonce)
-	if !errx.IsNil() {
-		errx.Extend("unable to verify refresh token").Severity(log.LevelDebug).Log()
+	valid, err := api.DB.VerifyRefreshTokenNonce(refreshClaims.UserID, refreshClaims.Nonce)
+	if err != nil {
+		log.Logf(log.LevelDebug, "unable to verify refresh token: %s", err.Error())
 		return echo.NewHTTPError(http.StatusUnauthorized, "internal error, please contact administrator")
 	}
 	if !valid {
@@ -134,14 +134,15 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 	}
 
 	// Create New Access Token Claims
-	user, errx := api.DB.GetUserByID(refreshClaims.UserID) // TODO: make sure that sql join contains UserRoles[0]
-	if !errx.IsNil() {
-		errx.Extend("unable to get user from refresh token user id").Log()
+	user, err := api.DB.GetUserByID(refreshClaims.UserID) // TODO: make sure that sql join contains UserRoles[0]
+	if err != nil {
+		log.Logf(log.LevelError, "unable to get user from refresh token user id: %s", err.Error())
 		return echo.NewHTTPError(http.StatusUnauthorized, "user doesn't exist")
 	}
-	roles, errx := api.DB.GetUserRoles(refreshClaims.UserID)
-	if !errx.IsNil() {
-		errx.Extendf("unable to get roles for jwt access token for user (id: %d)", refreshClaims.UserID).Log()
+	roles, err := api.DB.GetUserRoles(refreshClaims.UserID)
+	if err != nil {
+		log.Logf(log.LevelError, "unable to get roles for jwt access token for user (id: %d): %s", refreshClaims.UserID, err.Error())
+		return echo.NewHTTPError(http.StatusUnauthorized, "no roles exist for user")
 	}
 	accessClaims := &jwtAccessClaims{
 		UserID:     user.ID,
@@ -170,12 +171,11 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 		newRefreshToken, expiresAt, err := newRefreshClaims.signToken(api)
 		if err != nil {
 			log.Logf(log.LevelDebug, "unable to create new refresh token for user '%s' (id: '%d')", user.Name, user.ID)
-			// c.Logger().Errorf("unable to create new access_token")
 			return echo.NewHTTPError(http.StatusUnauthorized, "internal error, please contact administrator")
 		}
-		errx := api.DB.UpdateRefreshTokenEntry(refreshClaims.UserID, refreshClaims.Nonce, newNonce, expiresAt)
-		if !errx.IsNil() {
-			errx.Extendf("unable to update refresh token for user (id: %d)", user.ID).Severity(log.LevelDebug).Log()
+		err = api.DB.UpdateRefreshTokenEntry(refreshClaims.UserID, refreshClaims.Nonce, newNonce, expiresAt)
+		if err != nil {
+			log.Logf(log.LevelDebug, "unable to update refresh token for user (id: %d): %s", user.ID, err.Error())
 			return echo.ErrInternalServerError
 		}
 

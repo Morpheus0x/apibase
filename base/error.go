@@ -1,8 +1,8 @@
 package base
 
-import "gopkg.cc/apibase/log"
+import "gopkg.cc/apibase/errx"
 
 var (
-	ErrTomlParsing    = log.RegisterErrType("toml parsing failed")
-	ErrApiBaseCleanup = log.RegisterErrType("issue with Apibase cleanup")
+	ErrTomlParsing    = errx.NewType("toml parsing failed")
+	ErrApiBaseCleanup = errx.NewType("issue with Apibase cleanup")
 )

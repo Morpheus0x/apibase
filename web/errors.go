@@ -1,7 +1,7 @@
 package web
 
-import "gopkg.cc/apibase/log"
+import "gopkg.cc/apibase/errx"
 
 var (
-	ErrTokenValidate = log.RegisterErrType("token validation")
+	ErrTokenValidate = errx.NewType("token validation")
 )

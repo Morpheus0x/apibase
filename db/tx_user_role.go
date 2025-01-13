@@ -7,51 +7,51 @@ import (
 
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
-	"gopkg.cc/apibase/log"
+	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/table"
 )
 
-func (db DB) GetUserRoles(userID int) ([]table.UserRole, *log.Error) {
+func (db DB) GetUserRoles(userID int) ([]table.UserRole, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	roles := []table.UserRole{}
 	// err := pgxscan.Select(ctx, Database, &user, "SELECT * FROM users WHERE id = $1", id)
 	rows, err := db.Postgres.Query(ctx, "SELECT * FROM user_roles WHERE id = $1", userID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return roles, log.NewErrorWithTypef(ErrDatabaseNotFound, "no roles found for user (id: %d)", userID)
+		return roles, errx.NewWithTypef(ErrDatabaseNotFound, "no roles found for user (id: %d)", userID)
 	}
 	if err != nil {
-		return roles, log.NewErrorWithType(ErrDatabaseQuery, err.Error())
+		return roles, errx.WrapWithType(ErrDatabaseQuery, err, "")
 	}
 	err = pgxscan.ScanAll(&roles, rows)
 	if err != nil {
-		return roles, log.NewErrorWithType(ErrDatabaseScan, err.Error())
+		return roles, errx.WrapWithType(ErrDatabaseScan, err, "")
 	}
 	// err := pgxscan.NewScanner(row).Scan(&user)
-	return roles, log.ErrorNil()
+	return roles, nil
 }
 
-func (db DB) getUserRole(userID int, orgID int, tx pgx.Tx, ctx context.Context) (table.UserRole, *log.Error) {
+func (db DB) getUserRole(userID int, orgID int, tx pgx.Tx, ctx context.Context) (table.UserRole, error) {
 	role := table.UserRole{}
 	rows, err := tx.Query(ctx, "SELECT * FROM user_roles WHERE user_id = $1 AND org_id = $2", userID, orgID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return role, log.NewErrorWithTypef(ErrDatabaseNotFound, "no role found for user (id: %d) and org (id: %d)", userID, orgID)
+		return role, errx.NewWithTypef(ErrDatabaseNotFound, "no role found for user (id: %d) and org (id: %d)", userID, orgID)
 	}
 	if err != nil {
-		return role, log.NewErrorWithType(ErrDatabaseQuery, err.Error())
+		return role, errx.WrapWithType(ErrDatabaseQuery, err, "")
 	}
 	err = pgxscan.ScanOne(&role, rows)
 	if err != nil {
-		return role, log.NewErrorWithType(ErrDatabaseScan, err.Error())
+		return role, errx.WrapWithType(ErrDatabaseScan, err, "")
 	}
-	return role, log.ErrorNil()
+	return role, nil
 }
 
-func (db DB) createUserRole(role table.UserRole, tx pgx.Tx, ctx context.Context) *log.Error {
+func (db DB) createUserRole(role table.UserRole, tx pgx.Tx, ctx context.Context) error {
 	query := "INSERT INTO user_roles (user_id, org_id, org_view, org_edit, org_admin) VALUES ($1, $2, $3, $4, $5)"
 	_, err := tx.Exec(ctx, query, role.UserID, role.OrgID, role.OrgView, role.OrgEdit, role.OrgAdmin)
 	if err != nil {
-		return log.NewErrorWithTypef(ErrDatabaseInsert, "role for user (id: %d) could not be created: %s", role.UserID, err.Error())
+		return errx.WrapWithTypef(ErrDatabaseInsert, err, "role for user (id: %d) could not be created", role.UserID)
 	}
-	return log.ErrorNil()
+	return nil
 }
