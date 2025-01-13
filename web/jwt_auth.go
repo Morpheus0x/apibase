@@ -134,7 +134,7 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 	}
 
 	// Create New Access Token Claims
-	user, err := api.DB.GetUserByID(refreshClaims.UserID) // TODO: make sure that sql join contains UserRoles[0]
+	user, err := api.DB.GetUserByID(refreshClaims.UserID)
 	if err != nil {
 		log.Logf(log.LevelError, "unable to get user from refresh token user id: %s", err.Error())
 		return echo.NewHTTPError(http.StatusUnauthorized, "user doesn't exist")
