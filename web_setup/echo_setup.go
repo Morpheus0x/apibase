@@ -137,7 +137,7 @@ func StartRestBlocking(api *web.ApiServer, bind string) error {
 	return nil
 }
 
-// start rest api server, is non-blocking
+// start rest api server, is non-blocking, require shutdown and next channels for clean shutdown, these can be created using base.ApiBase[T].GetCloseStageChannels()
 func StartRest(api *web.ApiServer, bind string, shutdown chan struct{}, next chan struct{}) error {
 	abort := make(chan struct{})
 

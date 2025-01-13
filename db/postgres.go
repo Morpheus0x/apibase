@@ -12,7 +12,7 @@ import (
 	"gopkg.cc/apibase/log"
 )
 
-// require shutdown and next channels for clean shutdown, these can be created using base.ApiBase[T].GetCloseStageChannels()
+// Initialize database connection, require shutdown and next channels for clean shutdown, these can be created using base.ApiBase[T].GetCloseStageChannels()
 func PostgresInit(pgc PostgresConfig, bc BaseConfig, shutdown chan struct{}, next chan struct{}) (DB, error) {
 	db := DB{Kind: PostgreSQL}
 	abort := make(chan struct{})
