@@ -91,46 +91,20 @@ func (apiBase *ApiBase[T]) CleanupOnError() {
 	apiBase.CloseChain = nil
 }
 
-func (apiBase *ApiBase[T]) Cleanup() {
+// This shouldn't be used in most cases, WaitAndCleanup() is preferred
+func (apiBase *ApiBase[T]) Cleanup() error {
 	if len(apiBase.CloseChain) < 1 {
-		return
+		log.Log(log.LevelWarning, "no close chain found and therefore no go routines can be closed")
+		return nil
 	}
 	if len(apiBase.CloseChain) < 2 {
 		sleep := 500 * time.Millisecond // TODO: remove hardcoded timeout
 		log.Logf(log.LevelCritical, "interrupt received but only one channel found, this should not happen, closing it and waiting %s for go routine to exit", sleep.String())
 		close(apiBase.CloseChain[0])
 		time.Sleep(sleep)
-		return
-	}
-
-	close(apiBase.CloseChain[0])
-	timeout := 9 * time.Second // TODO: remove hardcoded timeout
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	// waiting for last channel in close chain to be closed
-	select {
-	case <-apiBase.CloseChain[len(apiBase.CloseChain)-1]:
-		log.Log(log.LevelInfo, "all go routines closed")
-	case <-ctx.Done():
-		log.Logf(log.LevelNotice, "timeout for close chain exceeded, not all go routines exited in defined timeout (%s)", timeout.String())
-	}
-}
-
-func (apiBase *ApiBase[T]) WaitAndCleanup() error {
-	if apiBase.Interrupt == nil {
-		return errx.NewWithType(ErrApiBaseCleanup, "interrupt channel not initialized, make sure to initialize ApiBase struct correctly")
-	}
-	if len(apiBase.CloseChain) < 1 {
-		log.Log(log.LevelWarning, "no close chain found and therefore no go routines can be closed, done")
 		return nil
 	}
-	if len(apiBase.CloseChain) < 2 {
-		return errx.NewWithType(ErrApiBaseCleanup, "only one channel in close chain, this should not happen, unable to close go routine(s)")
-	}
 
-	<-apiBase.Interrupt
-	log.Log(log.LevelNotice, "interrupt received, closing go routines")
 	close(apiBase.CloseChain[0])
 	timeout := 9 * time.Second // TODO: remove hardcoded timeout
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -144,6 +118,17 @@ func (apiBase *ApiBase[T]) WaitAndCleanup() error {
 	case <-ctx.Done():
 		return errx.NewWithTypef(ErrApiBaseCleanup, "timeout for close chain exceeded, not all go routines exited in defined timeout (%s)", timeout.String())
 	}
+}
+
+// Wait for interrupt and cleanup go routines once received (if any)
+func (apiBase *ApiBase[T]) WaitAndCleanup() error {
+	if apiBase.Interrupt == nil {
+		err := apiBase.Cleanup()
+		return errx.WrapWithType(ErrApiBaseCleanup, err, "interrupt channel not initialized, make sure to initialize ApiBase struct correctly, cleaning up")
+	}
+	<-apiBase.Interrupt
+	log.Log(log.LevelNotice, "interrupt received, closing go routines")
+	return apiBase.Cleanup()
 }
 
 func (apiBase *ApiBase[T]) LoadToml(path string) error {
