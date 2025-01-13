@@ -77,7 +77,7 @@ func (apiBase *ApiBase[T]) CleanupOnError() {
 	// close shutdown channel of previous stage
 	close(apiBase.CloseChain[1])
 	// waiting for last channel in close chain to be closed
-	timeout := 9 * time.Second // TODO: remove hardcoded timeout
+	timeout := 3 * time.Second // TODO: remove hardcoded timeout
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	select {
@@ -106,7 +106,7 @@ func (apiBase *ApiBase[T]) Cleanup() error {
 	}
 
 	close(apiBase.CloseChain[0])
-	timeout := 9 * time.Second // TODO: remove hardcoded timeout
+	timeout := 3 * time.Second // TODO: remove hardcoded timeout
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
