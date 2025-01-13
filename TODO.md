@@ -15,6 +15,10 @@
 - [ ] Store user agent in refresh_tokens db table entry
 - [ ] add captcha for local login and signup
 
+# TODO Database Integration
+Add code that verifies that the database contains the expected tables and they match with the struct that will be used to scan the result.
+https://www.phind.com/search?cache=c7pgxsam2aelbfl43gta28zd
+
 # TODO OAuth
 Look at  
 - https://github.com/markbates/goth/blob/master/examples/main.go
