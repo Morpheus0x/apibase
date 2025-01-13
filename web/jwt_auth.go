@@ -5,19 +5,19 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"gopkg.cc/apibase/helper"
+	h "gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/table"
 )
 
 func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.UserRole) error {
-	csrfValue := helper.RandomString(16) // TODO: protect login page with CSRF, completely separate it from auth jwt
+	csrfValue := h.RandomString(16) // TODO: protect login page with CSRF, completely separate it from auth jwt
 	accessToken, err := createJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin, csrfValue).signToken(api)
 	if err != nil {
 		log.Logf(log.LevelNotice, "unable to create access token for user (id: %d): %s", user.ID, err.Error())
 		return echo.ErrInternalServerError
 	}
-	refreshTokenNonce := helper.RandomString(16)
+	refreshTokenNonce := h.CreateSecretString(h.RandomString(16))
 	refreshToken, expiresAt, err := createJwtRefreshClaims(user.ID, refreshTokenNonce, csrfValue).signToken(api)
 	if err != nil {
 		log.Logf(log.LevelNotice, "unable to create refresh token for user (id: %d): %s", user.ID, err.Error())
@@ -157,8 +157,8 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 
 	// Renew Refresh Token, if valid for less than 1 week
 	if refreshTokenExpire.Time.Add(-time.Hour * 24 * 7).After(time.Now()) { // TODO: remove hardcoded timeout
-		csrfToken := helper.RandomString(16) // TODO: maybe use another random generator...
-		newNonce := helper.RandomString(16)
+		csrfToken := h.RandomString(16) // TODO: maybe use another random generator...
+		newNonce := h.CreateSecretString(h.RandomString(16))
 
 		// On refresh token renew, also change CSRF token for access token
 		accessClaims.CSRFHeader = csrfToken

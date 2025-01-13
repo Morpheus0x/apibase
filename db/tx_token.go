@@ -8,14 +8,16 @@ import (
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
 	"gopkg.cc/apibase/errx"
+	h "gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/table"
 )
 
-func (db DB) DeleteRefreshToken(userID int, nonce string) error {
+func (db DB) DeleteRefreshToken(userID int, nonce h.SecretString) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 
 	query := "DELETE FROM refresh_tokens WHERE user_id = $1 AND token_nonce = $2"
+	// TODO: test that nonce.GetSecret() isn't necessary
 	res, err := db.Postgres.Exec(ctx, query, userID, nonce)
 	if err != nil {
 		return errx.WrapWithTypef(ErrDatabaseDelete, err, "refresh token entry (rows affected: %d)", res.RowsAffected())
@@ -26,7 +28,7 @@ func (db DB) DeleteRefreshToken(userID int, nonce string) error {
 	return nil
 }
 
-func (db DB) VerifyRefreshTokenNonce(userID int, nonce string) (bool, error) {
+func (db DB) VerifyRefreshTokenNonce(userID int, nonce h.SecretString) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
@@ -49,7 +51,7 @@ func (db DB) VerifyRefreshTokenNonce(userID int, nonce string) (bool, error) {
 	return true, nil
 }
 
-func (db DB) UpdateRefreshTokenEntry(userId int, nonce string, newNonce string, expiresAt time.Time) error {
+func (db DB) UpdateRefreshTokenEntry(userId int, nonce h.SecretString, newNonce h.SecretString, expiresAt time.Time) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
@@ -88,8 +90,9 @@ func (db DB) CreateRefreshTokenEntry(token table.RefreshToken) error {
 	return nil
 }
 
-func (db DB) getTokenByUserIdAndNonce(ctx context.Context, tx pgx.Tx, userID int, nonce string) (table.RefreshToken, error) {
+func (db DB) getTokenByUserIdAndNonce(ctx context.Context, tx pgx.Tx, userID int, nonce h.SecretString) (table.RefreshToken, error) {
 	token := table.RefreshToken{}
+	// TODO: test that nonce.GetSecret() isn't necessary
 	rows, err := tx.Query(ctx, "SELECT * FROM refresh_tokens WHERE user_id = $1 AND token_nonce = $2", userID, nonce)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return token, errx.NewWithType(ErrDatabaseNotFound, "no refresh token found")
@@ -106,6 +109,7 @@ func (db DB) getTokenByUserIdAndNonce(ctx context.Context, tx pgx.Tx, userID int
 
 func (db DB) updateToken(ctx context.Context, tx pgx.Tx, token table.RefreshToken) error {
 	query := "UPDATE refresh_tokens SET (token_nonce, reissue_count, updated_at, expires_at) = ($1, $2, $3, $4) WHERE id = $5"
+	// TODO: test that token.TokenNonce.GetSecret() isn't necessary
 	_, err := tx.Exec(ctx, query, token.TokenNonce, token.ReissueCount+1, token.UpdatedAt, token.ExpiresAt, token.ID)
 	if err != nil {
 		return errx.NewWithTypef(ErrDatabaseUpdate, "unable to update refresh token")

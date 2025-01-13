@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	h "gopkg.cc/apibase/helper"
 )
 
 // Access Token
@@ -46,10 +47,10 @@ const LatestRefreshTokenRevision uint = 1
 
 // intentionally obfuscated json keys for security and bandwidth savings
 type jwtRefreshClaims struct {
-	UserID     int    `json:"a"`
-	Nonce      string `json:"b"`
-	CSRFHeader string `json:"c"` // TODO: maybe remove CSRF Token from access or refresh claim to reduce bandwidth usage
-	Revision   uint   `json:"d"`
+	UserID     int            `json:"a"`
+	Nonce      h.SecretString `json:"b"`
+	CSRFHeader string         `json:"c"` // TODO: maybe remove CSRF Token from access or refresh claim to reduce bandwidth usage
+	Revision   uint           `json:"d"`
 	jwt.RegisteredClaims
 }
 
@@ -64,7 +65,7 @@ func (claims *jwtRefreshClaims) signToken(api *ApiServer) (string, time.Time, er
 
 }
 
-func createJwtRefreshClaims(userID int, nonce string, csrfHeader string) *jwtRefreshClaims {
+func createJwtRefreshClaims(userID int, nonce h.SecretString, csrfHeader string) *jwtRefreshClaims {
 	return &jwtRefreshClaims{
 		UserID:     userID,
 		Nonce:      nonce,

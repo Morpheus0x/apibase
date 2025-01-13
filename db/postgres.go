@@ -41,7 +41,7 @@ func PostgresInit(pgc PostgresConfig, bc BaseConfig, shutdown chan struct{}, nex
 		}
 	}()
 
-	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", pgc.User, pgc.Password, pgc.Host, pgc.Port, pgc.DB) // ?ssl=%s , ssl)
+	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", pgc.User, pgc.Password.GetSecret(), pgc.Host, pgc.Port, pgc.DB) // ?ssl=%s , ssl)
 	var err error
 	for attempt := 1; attempt <= int(bc.DB_MAX_RECONNECT_ATTEMPTS); attempt++ {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout

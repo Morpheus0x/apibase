@@ -1,29 +1,33 @@
 package table
 
-import "time"
+import (
+	"time"
+
+	h "gopkg.cc/apibase/helper"
+)
 
 type User struct {
-	ID             int       `db:"id" default:"true" table:"users"`
-	Name           string    `db:"name"`
-	AuthProvider   string    `db:"auth_provider"`
-	Email          string    `db:"email"`
-	EmailVerified  bool      `db:"email_verified"`
-	PasswordHash   string    `db:"password_hash"`
-	SecretsVersion int       `db:"secrets_version"`
-	TotpSecret     string    `db:"totp_secret"`
-	SuperAdmin     bool      `db:"super_admin"`
-	CreatedAt      time.Time `db:"created_at" default:"true"`
-	UpdatedAt      time.Time `db:"updated_at" default:"true"`
+	ID             int            `db:"id" default:"true" table:"users"`
+	Name           string         `db:"name"`
+	AuthProvider   string         `db:"auth_provider"`
+	Email          string         `db:"email"`
+	EmailVerified  bool           `db:"email_verified"`
+	PasswordHash   h.SecretString `db:"password_hash"`
+	SecretsVersion int            `db:"secrets_version"`
+	TotpSecret     string         `db:"totp_secret"`
+	SuperAdmin     bool           `db:"super_admin"`
+	CreatedAt      time.Time      `db:"created_at" default:"true"`
+	UpdatedAt      time.Time      `db:"updated_at" default:"true"`
 }
 
 type RefreshToken struct {
-	ID           int       `db:"id" default:"true" table:"refresh_tokens"`
-	UserID       int       `db:"user_id"`
-	TokenNonce   string    `db:"token_nonce"`
-	ReissueCount int       `db:"reissue_count"`
-	CreatedAt    time.Time `db:"created_at" default:"true"`
-	UpdatedAt    time.Time `db:"updated_at" default:"true"`
-	ExpiresAt    time.Time `db:"expires_at"`
+	ID           int            `db:"id" default:"true" table:"refresh_tokens"`
+	UserID       int            `db:"user_id"`
+	TokenNonce   h.SecretString `db:"token_nonce"`
+	ReissueCount int            `db:"reissue_count"`
+	CreatedAt    time.Time      `db:"created_at" default:"true"`
+	UpdatedAt    time.Time      `db:"updated_at" default:"true"`
+	ExpiresAt    time.Time      `db:"expires_at"`
 }
 
 type Organization struct {

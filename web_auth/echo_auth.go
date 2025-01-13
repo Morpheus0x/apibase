@@ -8,6 +8,7 @@ import (
 	"github.com/Morpheus0x/argon2id"
 	"github.com/labstack/echo/v4"
 	"gopkg.cc/apibase/db"
+	h "gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/table"
 	"gopkg.cc/apibase/web"
@@ -34,7 +35,7 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		}
 
 		// TODO: unify the api (error) response using webtype.ApiJsonResponse
-		match, err := argon2id.ComparePasswordAndHash(password, user.PasswordHash)
+		match, err := argon2id.ComparePasswordAndHash(password, user.PasswordHash.GetSecret())
 		if err != nil {
 			log.Logf(log.LevelError, "unable to compare password with hash: %s", err.Error())
 			return echo.ErrUnauthorized // c.String(http.StatusUnauthorized, "unable to verify password")
@@ -81,7 +82,7 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 			AuthProvider:   "local",
 			Email:          email,
 			EmailVerified:  false,
-			PasswordHash:   hash,
+			PasswordHash:   h.CreateSecretString(hash),
 			SecretsVersion: 1,
 			TotpSecret:     "",
 			SuperAdmin:     false,

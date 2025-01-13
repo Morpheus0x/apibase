@@ -1,6 +1,10 @@
 package db
 
-import "time"
+import (
+	"time"
+
+	h "gopkg.cc/apibase/helper"
+)
 
 type BaseConfig struct {
 	DB_RECONNECT_TIMEOUT_SEC  uint   `toml:"db_reconnect_timeout_sec"`
@@ -20,12 +24,12 @@ func GetBaseConfigDefault() BaseConfig {
 }
 
 type PostgresConfig struct {
-	Host     string `toml:"host"`
-	Port     string `toml:"port"`
-	User     string `toml:"user"`
-	Password string `toml:"password"`
-	DB       string `toml:"db"`
-	SSLMode  bool   `toml:"ssl_enabled"`
+	Host     string         `toml:"host"`
+	Port     string         `toml:"port"`
+	User     string         `toml:"user"`
+	Password h.SecretString `toml:"password"`
+	DB       string         `toml:"db"`
+	SSLMode  bool           `toml:"ssl_enabled"`
 }
 
 type SQLiteConfig struct {

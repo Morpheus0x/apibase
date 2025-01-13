@@ -11,6 +11,7 @@ import (
 	"github.com/xhit/go-str2duration/v2"
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/errx"
+	h "gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
 )
 
@@ -27,9 +28,9 @@ type ApiServer struct {
 type ApiConfig struct {
 	CORS []string `toml:"cors"`
 
-	TokenSecret          string `toml:"token_secret"`
-	TokenAccessValidity  string `toml:"token_access_validity"`
-	TokenRefreshValidity string `toml:"token_refresh_validity"`
+	TokenSecret          h.SecretString `toml:"token_secret"`
+	TokenAccessValidity  string         `toml:"token_access_validity"`
+	TokenRefreshValidity string         `toml:"token_refresh_validity"`
 
 	LocalAuth          bool `toml:"local_auth"`
 	OAuthEnabled       bool `toml:"oauth_enabled"`
@@ -53,7 +54,7 @@ func (ac ApiConfig) TokenSecretBytes() []byte {
 	if len(ac.tokenSecretBytes) > 0 {
 		return ac.tokenSecretBytes
 	}
-	secret, err := base64.StdEncoding.DecodeString(ac.TokenSecret)
+	secret, err := base64.StdEncoding.DecodeString(ac.TokenSecret.GetSecret())
 	if err != nil {
 		// is allowed to panic, since this should't occur if TokenSecret string is parsed during ApiConfig setup
 		log.Logf(log.LevelCritical, "token secret isn't a base64 string: %s", err.Error())
