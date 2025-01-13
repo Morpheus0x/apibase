@@ -1,6 +1,9 @@
 package base
 
 import (
+	"context"
+	"time"
+
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/web"
@@ -31,7 +34,13 @@ func (apiBase *ApiBase[T]) GetCloseStageChannels() (shutdown chan struct{}, next
 func (apiBase *ApiBase[T]) PostgresInit() (db.DB, error) {
 	i := apiBase.registerCloseStage()
 
-	return db.PostgresInit(apiBase.Postgres, apiBase.BaseConfig, apiBase.CloseChain[i], apiBase.CloseChain[i+1])
+	database, err := db.PostgresInit(apiBase.Postgres, apiBase.BaseConfig, apiBase.CloseChain[i], apiBase.CloseChain[i+1])
+
+	if err != nil {
+		apiBase.startupErrorCleanup()
+		return database, err
+	}
+	return database, nil
 }
 
 // start rest api server, is non-blocking but requires cleanup
@@ -58,15 +67,29 @@ func (apiBase *ApiBase[T]) startupErrorCleanup() {
 		return
 	}
 	if ccLength == 2 {
-		// if this is the first entry in the channel close chain, close both shutdown and next channels and clear the array
-		// all channel listeners should have been cleaned up by the setup function on error
+		// if this is the first entry in the channel close chain, close both shutdown and next channels and clear the array,
+		// nothing should happen, since the errored stage shouldn't listen to this anymore
 		close(apiBase.CloseChain[0])
 		close(apiBase.CloseChain[1])
 		apiBase.CloseChain = nil
 		return
 	}
-	// ccLength > 2
-	// close and remove the last channel, therefore the new last element will be the "next" channel used to close subsequent go routines
-	close(apiBase.CloseChain[ccLength-1])
-	apiBase.CloseChain = apiBase.CloseChain[:ccLength-1]
+	// ccLength > 2:
+	// close shutdown channel of errored stage, nothing should happen, since the errored stage shouldn't listen to this anymore
+	close(apiBase.CloseChain[0])
+	// close shutdown channel of previous stage
+	close(apiBase.CloseChain[1])
+	// waiting for last channel in close chain to be closed
+	timeout := 9 * time.Second // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	select {
+	case <-apiBase.CloseChain[ccLength-1]:
+		log.Log(log.LevelInfo, "all go routines closed")
+	case <-ctx.Done():
+		log.Logf(log.LevelNotice, "timeout for close chain exceeded, not all go routines exited in defined timeout (%s)", timeout.String())
+	}
+
+	// clear CloseChain array, since all channels have been closed
+	apiBase.CloseChain = nil
 }
