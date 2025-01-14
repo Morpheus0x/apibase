@@ -80,7 +80,7 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 
 	// Verify Access Token
 	accessToken, err := parseAccessTokenCookie(c, api.Config.TokenSecretBytes())
-	if err != nil {
+	if err == nil {
 		accessClaims, ok := accessToken.Claims.(*jwtAccessClaims)
 		if ok {
 			// TODO: unify the api (error) response using webtype.ApiJsonResponse
@@ -121,7 +121,7 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "CSRF Error")
 	}
 	refreshTokenExpire, err := refreshClaims.GetExpirationTime()
-	if err != nil || refreshTokenExpire.Time.After(time.Now()) {
+	if err != nil || refreshTokenExpire.Time.Before(time.Now()) {
 		return echo.NewHTTPError(http.StatusUnauthorized, "refresh token expired")
 	}
 	valid, err := api.DB.VerifyRefreshTokenNonce(refreshClaims.UserID, refreshClaims.Nonce)
@@ -156,7 +156,7 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 	currentRequest := c.Request()
 
 	// Renew Refresh Token, if valid for less than 1 week
-	if refreshTokenExpire.Time.Add(-time.Hour * 24 * 7).After(time.Now()) { // TODO: remove hardcoded timeout
+	if refreshTokenExpire.Time.Add(-time.Hour * 24 * 7).Before(time.Now()) { // TODO: remove hardcoded timeout
 		csrfToken := h.RandomString(16) // TODO: maybe use another random generator...
 		newNonce := h.CreateSecretString(h.RandomString(16))
 
