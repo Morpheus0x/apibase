@@ -42,6 +42,7 @@ func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.Use
 func JwtLogout(c echo.Context, api *ApiServer) error {
 	c.SetCookie(&http.Cookie{Name: "access_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
 	c.SetCookie(&http.Cookie{Name: "refresh_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
+	c.SetCookie(&http.Cookie{Name: "csrf_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
 
 	refreshToken, err := parseRefreshTokenCookie(c, api.Config.TokenSecretBytes())
 	if err != nil {
@@ -179,9 +180,12 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 			return echo.ErrInternalServerError
 		}
 
-		newRefreshTokenCookie := &http.Cookie{Name: "refresh_token", Value: newRefreshToken, Path: "/", Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration())}
+		newRefreshTokenCookie := &http.Cookie{Name: "refresh_token", Value: newRefreshToken, Path: "/", Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration() * 2)}
 		currentRequest.AddCookie(newRefreshTokenCookie) // set cookie for current request
 		c.SetCookie(newRefreshTokenCookie)              // set cookie for response
+
+		// Set new CSRF Cookie, since it was changed with refresh token renew
+		c.SetCookie(&http.Cookie{Name: "csrf_token", Value: csrfToken, Path: "/", Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration() * 2)})
 
 		c.Response().Header().Add("X-XSRF-TOKEN", csrfToken) // TODO: remove hardcoded header name
 	}
@@ -194,7 +198,7 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "internal error, please contact administrator")
 	}
 
-	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(api.Config.TokenAccessValidityDuration())}
+	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(api.Config.TokenAccessValidityDuration() * 2)}
 	currentRequest.AddCookie(newAccessTokenCookie) // set cookie for current request
 	c.SetCookie(newAccessTokenCookie)              // set cookie for response
 
