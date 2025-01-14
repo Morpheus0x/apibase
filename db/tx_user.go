@@ -23,7 +23,7 @@ func (db DB) CreateUserIfNotExist(user table.User, role table.UserRole) (table.U
 	defer tx.Rollback(context.Background())
 
 	_, err = db.getUserByEmail(user.Email, tx, ctx)
-	if err == nil || (err != nil && !errors.Is(err, ErrDatabaseNotFound)) {
+	if err == nil || !errors.Is(err, ErrDatabaseNotFound) {
 		return user, errx.WrapWithType(ErrUserAlreadyExists, err, "user can't be created")
 	}
 	userFromDB, err := db.createUser(user, tx, ctx)
@@ -129,6 +129,9 @@ func (db DB) getUserByEmail(email string, tx pgx.Tx, ctx context.Context) (table
 		return user, errx.WrapWithType(ErrDatabaseQuery, err, "")
 	}
 	err = pgxscan.ScanOne(&user, rows)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return user, errx.NewWithTypef(ErrDatabaseNotFound, "no user found for email '%s'", email)
+	}
 	if err != nil {
 		return user, errx.WrapWithType(ErrDatabaseScan, err, "")
 	}
@@ -137,7 +140,7 @@ func (db DB) getUserByEmail(email string, tx pgx.Tx, ctx context.Context) (table
 
 func (db DB) createUser(user table.User, tx pgx.Tx, ctx context.Context) (table.User, error) {
 	createdUser := table.User{}
-	query := "INSERT INTO users (name, auth_provider, email, email_verified, password_hash, secrets_version, totp_secret, super_admin) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING (id, name, auth_provider, email, email_verified, password_hash, secrets_version, totp_secret, super_admin, created_at, updated_at)"
+	query := "INSERT INTO users (name, auth_provider, email, email_verified, password_hash, secrets_version, totp_secret, super_admin) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, name, auth_provider, email, email_verified, password_hash, secrets_version, totp_secret, super_admin, created_at, updated_at"
 	rows, err := tx.Query(ctx, query, user.Name, user.AuthProvider, user.Email, user.EmailVerified, user.PasswordHash, user.SecretsVersion, user.TotpSecret, user.SuperAdmin)
 	if err != nil {
 		return createdUser, errx.WrapWithTypef(ErrDatabaseInsert, err, "user (email: %s) could not be created", user.Email)
