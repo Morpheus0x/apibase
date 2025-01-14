@@ -64,22 +64,6 @@ func (e BaseError) Is(target error) bool {
 	return e.errType == isErr.errType
 }
 
-// Check all nested errors if any have type of target, depth-first
-func (e BaseError) IsAny(target error) bool {
-	if e.nested == nil {
-		return e.Is(target)
-	}
-	nested, ok := e.nested.(*BaseError)
-	if !ok {
-		return e.Is(target)
-	}
-	// traverses nested chain until nested is nil or != BaseError
-	if nested.IsAny(target) {
-		return true
-	}
-	return e.Is(target)
-}
-
 func NewType(descr string) *BaseError {
 	return &BaseError{
 		errType: descr,
