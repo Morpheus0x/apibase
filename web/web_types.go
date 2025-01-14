@@ -75,7 +75,7 @@ func (ac ApiConfig) TokenAccessValidityDuration() time.Duration {
 }
 
 func (ac ApiConfig) TokenRefreshValidityDuration() time.Duration {
-	duration, err := str2duration.ParseDuration(ac.TokenAccessValidity)
+	duration, err := str2duration.ParseDuration(ac.TokenRefreshValidity)
 	if err != nil {
 		log.Logf(log.LevelCritical, "unable to parse TokenRefreshValidity duration: %s, assuming default %s", ac.TokenRefreshValidity, TOKEN_REFRESH_VALIDITY.String())
 		return TOKEN_REFRESH_VALIDITY
