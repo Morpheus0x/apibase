@@ -19,7 +19,8 @@ func StrNoop(str string) string {
 type Level uint
 
 const (
-	LevelDebug Level = iota
+	LevelDevel Level = iota
+	LevelDebug
 	LevelInfo
 	LevelNotice
 	LevelWarning
@@ -28,7 +29,7 @@ const (
 	// LevelCritical is the highest level, do not add after this
 )
 
-const _Level_name = "DBUGINFONOTEWARNERORCRIT"
+const _Level_name = "DEVLDBUGINFONOTEWARNERORCRIT"
 
 var col = color.New()
 
@@ -54,6 +55,8 @@ func (i Level) StringColored(armoring Armoring) string {
 		levelColored = col.Cyan(armoring(i.String()))
 	case LevelDebug:
 		levelColored = col.Grey(armoring(i.String()))
+	case LevelDevel:
+		levelColored = col.Magenta(armoring(i.String()))
 	default:
 		levelColored = armoring(i.String())
 	}

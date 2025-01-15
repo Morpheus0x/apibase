@@ -2,13 +2,14 @@ package log
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/color"
 )
 
-func EchoLoggerMiddleware(level Level) echo.MiddlewareFunc {
+func EchoLoggerMiddleware(defaultLevel Level, apiRootLevel Level) echo.MiddlewareFunc {
 	loggerMutex.RLock()
 	loggerLocal := logger
 	loggerMutex.RUnlock()
@@ -21,8 +22,18 @@ func EchoLoggerMiddleware(level Level) echo.MiddlewareFunc {
 			if err = next(c); err != nil {
 				c.Error(err)
 			}
-			stop := time.Now()
 
+			level := defaultLevel
+			path := c.Path()
+			if !strings.HasPrefix(path, "/api") && !strings.HasPrefix(path, "/auth") {
+				level = apiRootLevel
+			}
+			if level < loggerLocal.Level {
+				// log message is too verbose, level is higher than set in logger, ignoring
+				return
+			}
+
+			stop := time.Now()
 			col := color.New()
 
 			statusRaw := res.Status

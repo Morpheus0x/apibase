@@ -24,19 +24,20 @@ var defaultVersionPrint = func() {
 }
 
 type Settings struct {
-	ConfigFile  string
-	ApiRoot     string
-	Verbose     bool
-	VeryVerbose bool
-	Help        bool
+	ConfigFile string
+	ApiRoot    string
+	Verbosity  int
+	Help       bool
 }
 
 func (s Settings) GetLogLevel() log.Level {
-	if s.VeryVerbose {
-		return log.LevelDebug
-	}
-	if s.Verbose {
+	switch s.Verbosity {
+	case 1:
 		return log.LevelInfo
+	case 2:
+		return log.LevelDebug
+	case 3:
+		return log.LevelDevel
 	}
 	return log.LevelNotice
 }
@@ -71,8 +72,7 @@ func Execute(root *cobra.Command) (Settings, bool) {
 
 	root.PersistentFlags().StringVarP(&appSettings.ConfigFile, "config", "c", appConfig.DefaultConfigPath, "config file")
 	root.PersistentFlags().Bool("version", false, "print version, license and additional software info")
-	root.PersistentFlags().BoolVarP(&appSettings.Verbose, "verbose", "v", false, "more detailed output, log level: info")
-	root.PersistentFlags().BoolVar(&appSettings.VeryVerbose, "very-verbose", false, "even more detailed output, log level: debug")
+	root.PersistentFlags().CountVarP(&appSettings.Verbosity, "verbose", "v", "more detailed output, log levels: info(-v or --verbose(=1) debug(-vv or --verbose=2) devel(-vvv or --verbose=3)")
 	root.PersistentFlags().StringVarP(&appSettings.ApiRoot, "root", "r", "", "set api root behaviour, overwrites config file, specify a valid path for static file serving or an uri for reverse proxy")
 
 	root.SetHelpFunc(func(cmd *cobra.Command, args []string) {

@@ -61,7 +61,7 @@ func SetupRest(config web.ApiConfig, database db.DB) (*web.ApiServer, error) {
 	}
 	api.E.HideBanner = true
 	api.E.HidePort = true
-	api.E.Use(log.EchoLoggerMiddleware(log.LevelDebug))
+	api.E.Use(log.EchoLoggerMiddleware(log.LevelDebug, log.LevelDevel))
 	api.E.Use(middleware.Recover())
 	api.E.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: api.Config.CORS,
