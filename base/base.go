@@ -2,6 +2,7 @@ package base
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"os/signal"
 	"reflect"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"gopkg.cc/apibase/cmd"
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/log"
@@ -131,14 +133,28 @@ func (apiBase *ApiBase[T]) WaitAndCleanup() error {
 	return apiBase.Cleanup()
 }
 
-func (apiBase *ApiBase[T]) LoadToml(path string) error {
-	_, err := os.Stat(path)
-	if err != nil {
+func (apiBase *ApiBase[T]) LoadToml(settings cmd.Settings) error {
+	if stat, err := os.Stat(settings.ConfigFile); err != nil || stat.IsDir() {
 		return errx.WrapWithType(ErrTomlParsing, err, "unable to read toml file")
 	}
-	_, err = toml.DecodeFile(path, apiBase)
-	if err != nil {
+	if _, err := toml.DecodeFile(settings.ConfigFile, apiBase); err != nil {
 		return errx.WrapWithType(ErrTomlParsing, err, "unable to parse toml")
+	}
+	if settings.ApiRoot != "" {
+		if u, err := url.ParseRequestURI(settings.ApiRoot); err == nil && u.Scheme != "" && u.Host != "" {
+			apiBase.ApiConfig.ApiRoot = web.RootOptions{
+				Kind:   "proxy",
+				Target: settings.ApiRoot,
+			}
+		} else {
+			if stat, err := os.Stat(settings.ApiRoot); err != nil || !stat.IsDir() {
+				return errx.WrapWithTypef(ErrApiRootParsing, err, "string doesn't contain path or uri: %s", settings.ApiRoot)
+			}
+			apiBase.ApiConfig.ApiRoot = web.RootOptions{
+				Kind:   "static",
+				Target: settings.ApiRoot,
+			}
+		}
 	}
 
 	apiBase.AddMissingDefaults()

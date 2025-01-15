@@ -25,6 +25,7 @@ var defaultVersionPrint = func() {
 
 type Settings struct {
 	ConfigFile  string
+	ApiRoot     string
 	Verbose     bool
 	VeryVerbose bool
 	Help        bool
@@ -72,6 +73,7 @@ func Execute(root *cobra.Command) (Settings, bool) {
 	root.PersistentFlags().Bool("version", false, "print version, license and additional software info")
 	root.PersistentFlags().BoolVarP(&appSettings.Verbose, "verbose", "v", false, "more detailed output, log level: info")
 	root.PersistentFlags().BoolVar(&appSettings.VeryVerbose, "very-verbose", false, "even more detailed output, log level: debug")
+	root.PersistentFlags().StringVarP(&appSettings.ApiRoot, "root", "r", "", "set api root behaviour, overwrites config file, specify a valid path for static file serving or an uri for reverse proxy")
 
 	root.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		defaultHelpFunc(cmd, args)
