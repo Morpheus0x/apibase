@@ -9,6 +9,7 @@ require (
 	github.com/Morpheus0x/argon2id v1.0.0
 	github.com/chzyer/readline v1.5.1
 	github.com/golang-jwt/jwt/v5 v5.0.0
+	github.com/jackc/pgx-gofrs-uuid v0.0.0-20230224015001-1d428863c2e2
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/labstack/gommon v0.4.2
 	github.com/lib/pq v1.10.9
@@ -19,6 +20,7 @@ require (
 )
 
 require (
+	github.com/gofrs/uuid/v5 v5.0.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect

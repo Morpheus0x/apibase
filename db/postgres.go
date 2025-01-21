@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	pgxuuid "github.com/jackc/pgx-gofrs-uuid"
 	"github.com/jackc/pgx/v5"
 	_ "github.com/lib/pq"
 
@@ -59,6 +60,9 @@ func PostgresInit(pgc PostgresConfig, bc BaseConfig, shutdown chan struct{}, nex
 			cancel()
 			continue
 		}
+
+		pgxuuid.Register(db.Postgres.TypeMap())
+
 		log.Logf(log.LevelInfo, "Postgres connection to database '%s' established.", pgc.DB)
 		cancel()
 		return db, nil
