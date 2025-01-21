@@ -53,13 +53,6 @@ func PostgresInit(pgc PostgresConfig, bc BaseConfig, shutdown chan struct{}, nex
 			cancel()
 			continue
 		}
-		err = db.Postgres.Ping(ctx)
-		if err != nil {
-			log.Logf(log.LevelInfo, "Connecting to database failed, attempt %d/%d", attempt, bc.DB_MAX_RECONNECT_ATTEMPTS)
-			time.Sleep(bc.DB_RECONNECT_TIMEOUT_DURATION())
-			cancel()
-			continue
-		}
 
 		pgxuuid.Register(db.Postgres.TypeMap())
 

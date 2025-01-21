@@ -39,6 +39,12 @@ func ValidateDB(database DB) error {
 		if database.Postgres == nil {
 			return errx.NewWithType(ErrDatabaseConfig, "no valid PostgreSQL database adapter")
 		}
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+		defer cancel()
+		err := database.Postgres.Ping(ctx)
+		if err != nil {
+			return errx.WrapWithType(ErrDatabaseConn, err, "unable to ping PostgreSQL database")
+		}
 	default:
 		return errx.NewWithType(ErrDatabaseConfig, "no valid DB specified")
 	}
