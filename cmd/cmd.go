@@ -72,7 +72,7 @@ func Execute(root *cobra.Command) (Settings, bool) {
 
 	root.PersistentFlags().StringVarP(&appSettings.ConfigFile, "config", "c", appConfig.DefaultConfigPath, "config file")
 	root.PersistentFlags().Bool("version", false, "print version, license and additional software info")
-	root.PersistentFlags().CountVarP(&appSettings.Verbosity, "verbose", "v", "more detailed output, log levels: info(-v or --verbose(=1) debug(-vv or --verbose=2) devel(-vvv or --verbose=3)")
+	root.PersistentFlags().CountVarP(&appSettings.Verbosity, "verbose", "v", "increase log level to info (debug: -vv or --verbose=2, devel: -vvv or --verbose=3)")
 	root.PersistentFlags().StringVarP(&appSettings.ApiRoot, "root", "r", "", "set api root behaviour, overwrites config file, specify a valid path for static file serving or an uri for reverse proxy")
 
 	root.SetHelpFunc(func(cmd *cobra.Command, args []string) {
