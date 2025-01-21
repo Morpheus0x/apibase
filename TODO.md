@@ -5,7 +5,7 @@
 - [x] rename all db structs to singular (remove trailing "s")
 - [x] app root static file path or forward port
 - [x] Rework log.Error to be a struct compatible with the built-in error interface
-- [ ] test full auth flow for apibase
+- [x] test full auth flow for apibase
 - [ ] all api responses should return an error code that is translated to a error string client side or on server for htmx
 - [ ] make separate CSRF middleware completely separate from jwt to also protect login form/the whole api
 - [ ] impl email signup integration
@@ -16,6 +16,11 @@
 - [ ] add captcha for local login and signup
 
 # TODO Database Integration
+use go generate to import the .sql text file database tables, then use a state machine parser to consume the sql and compare it to the actually existing database table. Also during this comparison, the table struct is checked, if all columns are also present there (tag must match with column name) If the table doesn't exist at all, create it by just running the create query. If the table and corresponding struct is changed in any way, manual table migration needs to be done. 
+https://www.startpage.com/do/dsearch?q=golang+include+textfile+in+build+process&cat=web&language=english
+https://stackoverflow.com/questions/17796043/how-to-embed-files-into-go-binaries
+
+old:
 Add code that verifies that the database contains the expected tables and they match with the struct that will be used to scan the result.
 https://www.phind.com/search?cache=c7pgxsam2aelbfl43gta28zd
 

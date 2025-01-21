@@ -28,8 +28,18 @@ Various helper functions for user interaction in the terminal
 
 
 ## Usage
-TBD
+The following is a basic example of how apibase can be used to create an api framework.
+```
+// TBD
+```
 
+### Database
+In order to add your own apibase database tables, the user must create a sql query and the corresponding struct themselves. Currently, no error-free postgres struct gen library exists that provides the desired functionality. Since this is a one off process in many cases and has horrible rammifications if done incorrectly, a rather manual process is chosen to create a struct for a table and to migrate an existing database table to conform to the updated sql/struct. However, the create sql statement and struct are compared to the current database table which verifies that they match. This is a good middleground and guarantees a stable database interface.
+
+You might be tempted to use an ORM or "advanced" scanning and valuer library, however this is greatly discouraged. It might seem to reduce complexity and therefore developer efficiency, however the added abstractions might bring it's own pitfalls. Writing raw sql and then scanning to a struct (apibase uses [this](https://pkg.go.dev/github.com/georgysavva/scany/v2/pgxscan) library) is quite elegant in it's own right. The same is true for using an orm or valuer library to directly use a struct in a create or update sql query. These might produce nasty side effects, such as updating a default value row with a "uninitialized" (default value zero) element of a struct (e.g. id = 0, created_at = unix time 0)
+
+#### Own Tables
+It is not possible to change the built-in tables (users, user_roles, refresh_tokens), however, it is very easy to add additional information to a user by using the users.id foreign key. There are some pgx scan libraries that claim to support scanning nested structs from join queries, however none of them seem to be stable. Even so, a foreign key should be used, since this is a database best practice. To achieve something similar to a join, use database transactions.
 
 ## Todo
 - [x] Write helper packages to get other projects of the ground first
