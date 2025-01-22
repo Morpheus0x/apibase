@@ -28,6 +28,12 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		email := c.FormValue("email")
 		password := c.FormValue("password")
 
+		failedHookNr, err := runPreLoginHooks(email, h.CreateSecretString(password))
+		if err != nil {
+			log.Logf(log.LevelError, "pre login hook %d failed: %s", failedHookNr, err.Error())
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
+		}
+
 		user, err := api.DB.GetUserByEmail(email)
 		if err != nil {
 			log.Logf(log.LevelDebug, "user not found: %s", err.Error())
@@ -48,6 +54,12 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			log.Logf(log.LevelError, "no roles exist for user (id: %d), unable to login", user.ID)
 			return c.JSON(http.StatusUnauthorized, map[string]string{"message": "no roles exist for user"})
+		}
+
+		failedHookNr, err = runPostLoginHooks(user, roles)
+		if err != nil {
+			log.Logf(log.LevelError, "post login hook %d failed: %s", failedHookNr, err.Error())
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
 		}
 
 		err = web.JwtLogin(c, api, user, roles)
@@ -73,6 +85,13 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 		if password != passwordConfirm {
 			return c.JSON(http.StatusUnprocessableEntity, map[string]string{"message": "password confirmation doesn't match"})
 		}
+
+		failedHookNr, err := runPreSignupHooks(username, email, h.CreateSecretString(password))
+		if err != nil {
+			log.Logf(log.LevelError, "pre signup hook %d failed: %s", failedHookNr, err.Error())
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
+		}
+
 		hash, err := argon2id.CreateHash(password, &argonParams)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
@@ -105,6 +124,11 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
 		}
 
+		failedHookNr, err = runPostSignupHooks(user, roles)
+		if err != nil {
+			log.Logf(log.LevelError, "post signup hook %d failed: %s", failedHookNr, err.Error())
+		}
+
 		if api.Config.ReqireConfirmEmail {
 			// TODO: redirect to page showing email confirmation required,
 			// have option to input code sent via email to directly redirect to where user left off
@@ -123,6 +147,10 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 
 func logout(api *web.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		failedHookNr, err := runLogoutHooks(c)
+		if err != nil {
+			log.Logf(log.LevelError, "logout hook %d failed: %s", failedHookNr, err.Error())
+		}
 		return web.JwtLogout(c, api)
 	}
 }
