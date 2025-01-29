@@ -12,6 +12,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"gopkg.cc/apibase/cmd"
 	"gopkg.cc/apibase/db"
+	"gopkg.cc/apibase/email"
 	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/web"
@@ -22,6 +23,9 @@ type ApiBase[T any] struct {
 	SQLite     db.SQLiteConfig   `toml:"sqlite"`
 	BaseConfig db.BaseConfig     `toml:"baseconfig"`
 	ApiConfig  web.ApiConfig     `toml:"apiconfig"`
+
+	Email     map[string]email.EmailConfig   `toml:"email"`
+	EmailTmpl map[string]email.EmailTemplate `toml:"email_template"`
 
 	Application T `toml:"application"`
 
@@ -156,9 +160,31 @@ func (apiBase *ApiBase[T]) LoadToml(settings cmd.Settings) error {
 			}
 		}
 	}
+	if err := apiBase.ParseEmailConfig(); err != nil {
+		return err
+	}
 
 	apiBase.AddMissingDefaults()
 
+	return nil
+}
+
+func (apiBase *ApiBase[T]) ParseEmailConfig() error {
+	for key, ec := range apiBase.Email {
+		if ec.ExchangeURI == "" && (ec.Host == "" || ec.Port == 0) {
+			return errx.NewWithType(ErrEmailParsing, "exchange_uri or host+port is required")
+		}
+		if ec.ExchangeURI != "" && (ec.Host != "" || ec.Port != 0) {
+			log.Logf(log.LevelWarning, "Parsing config: exchange_uri is set alongside host/port in [email.%s], either exchange_uri or host+port should be set, assuming email config for exchange server", key)
+		}
+		if ec.ExchangeURI != "" {
+			ec.Sender = email.Exchange
+			return errx.NewWithType(errx.ErrNotImplemented, "sending email via microsoft exchange")
+		} else {
+			ec.Sender = email.SMTP
+		}
+		apiBase.Email[key] = ec
+	}
 	return nil
 }
 
