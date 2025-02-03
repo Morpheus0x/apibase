@@ -7,6 +7,9 @@
 - [x] Rework log.Error to be a struct compatible with the built-in error interface
 - [x] test full auth flow for apibase
 - [x] all api responses should return an error code that is translated to a error string client side
+- [ ] add auth hooks to oauth
+- [ ] edit auth hooks to modify role? 
+- [ ] fix TODO "refresh JWT": web_oauth/echo_oauth.go#L48
 - [ ] make separate CSRF middleware completely separate from jwt to also protect login form/the whole api
 - [ ] impl email signup integration
 - [ ] Make sure that every function that returns an error doens't add any details not also available outside of itself (e.g. userId func param)
