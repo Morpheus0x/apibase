@@ -12,6 +12,7 @@ import (
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/table"
 	"gopkg.cc/apibase/web"
+	wr "gopkg.cc/apibase/web_response"
 )
 
 // Create default routes for oauth user flow
@@ -62,7 +63,8 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 
 		gothUser, err := gothic.CompleteUserAuth(c.Response(), request)
 		if err != nil {
-			return err
+			log.Logf(log.LevelError, "oauth callback complete user auth error: %s", err.Error())
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrOauthCallbackCompleteAuth))
 		}
 		role := web.DefaultRole
 		if r, ok := api.Config.DefaultOrgRole[strconv.Itoa(api.Config.DefaultOrgID)]; ok {
@@ -77,32 +79,39 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 		}, role.GetTable(0, api.Config.DefaultOrgID))
 		if err != nil {
 			log.Logf(log.LevelError, "unable to create oauth user db entry: %s", err.Error())
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI) // TODO: add query param or header to show error on client side
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrUserDoesNotExist))
 		}
 		log.Logf(log.LevelDebug, "User logged in: %v", user)
 
 		roles, err := api.DB.GetUserRoles(user.ID)
 		if err != nil {
 			// roles should already exist or have been created by GetOrCreateUser
-			log.Logf(log.LevelError, "unable to get any roles for user (id: %d)", user.ID)
-			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
+			log.Logf(log.LevelError, "unable to get any roles for user (id: %d): %s", user.ID, err.Error())
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrUserNoRoles))
 		}
 
 		err = web.JwtLogin(c, api, user, roles)
+		if e, ok := err.(*wr.ResponseError); ok {
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, e.GetErrorId()))
+		}
 		if err != nil {
-			return err
+			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogin during oauth callback, this should not happen!: %s", err.Error())
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrOauthCallbackUnknownError))
 		}
 
 		// Correct Redirecting
 		state := queryURL.Get("state")
 		stateBytes, err := base64.StdEncoding.DecodeString(state)
 		if err != nil {
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
+			log.Logf(log.LevelDevel, "unable to base64 decode state for redirect in oauth callback: %s", err.Error())
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogin))
 		}
 		stateReferrer := &web.StateReferrer{}
 		err = json.Unmarshal(stateBytes, stateReferrer)
 		if err != nil {
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
+			log.Logf(log.LevelDevel, "unable to unmarshal StateReferrer json for redirect in oauth callback: %s", err.Error())
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogin))
+		}
 		}
 		return c.Redirect(http.StatusTemporaryRedirect, stateReferrer.URI)
 	}
@@ -114,8 +123,15 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 		queryURL := request.URL.Query()
 		queryURL.Set("provider", c.Param("provider"))
 
-		gothic.Logout(c.Response(), request) // TODO: check if Logout correctly parses provider from request
-
-		return web.JwtLogout(c, api)
+		err := gothic.Logout(c.Response(), request) // TODO: check if Logout correctly parses provider from request
+		if err != nil {
+			log.Logf(log.LevelDevel, "error for gothic.Logout() during oauth logout: %s", err.Error())
+		}
+		err = web.JwtLogout(c, api)
+		if err != nil {
+			log.Logf(log.LevelDevel, "oauth logout error: %s", err.Error())
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrAuthLogoutUnknownError))
+		}
+		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout))
 	}
 }

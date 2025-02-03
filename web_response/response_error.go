@@ -8,6 +8,36 @@ type ResponseErrorId uint
 const (
 	RespErrNone ResponseErrorId = iota
 	RespErrUndefined
+	RespErrCsrfInvalid
+	RespErrUserDoesNotExist
+	RespErrUserNoRoles
+	RespErrMissingInput
+	RespErrJwtAccessTokenSigning
+	RespErrJwtAccessTokenParsing
+	RespErrJwtRefreshTokenCreate
+	RespErrJwtRefreshTokenSigning
+	RespErrJwtRefreshTokenUpdate
+	RespErrJwtRefreshTokenParsing
+	RespErrJwtRefreshTokenClaims
+	RespErrJwtRefreshTokenInvalid
+	RespErrJwtRefreshTokenExpired
+	RespErrJwtRefreshTokenVerifyErr
+	RespErrJwtRefreshTokenVerifyInvalid
+	RespErrOauthCallbackCompleteAuth
+	RespErrOauthCallbackUnknownError
+	RespErrAuthLoginUnknownError
+	RespErrAuthSignupUnknownError
+	RespErrAuthLogoutUnknownError
+	RespErrLoginNoUser
+	RespErrLoginComparePassword
+	RespErrLoginWrongPassword
+	RespErrSignupPasswordMismatch
+	RespErrSignupPasswordHash
+	RespErrSignupUserExists
+	RespErrSignupUserCreate
+	RespErrHookPreLogin
+	RespErrHookPostLogin
+	RespErrHookPreSignup
 	// Only append here to not break existing frontend error IDs
 )
 

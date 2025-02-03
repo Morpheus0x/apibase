@@ -7,5 +7,7 @@ type ResponseSuccessId uint
 
 const (
 	RespSccsGeneric ResponseSuccessId = iota
+	RespSccsLogin
+	RespSccsLogout
 	// Only append here to not break existing frontend success IDs
 )

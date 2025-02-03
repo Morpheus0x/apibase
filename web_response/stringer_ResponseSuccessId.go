@@ -9,11 +9,13 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[RespSccsGeneric-0]
+	_ = x[RespSccsLogin-1]
+	_ = x[RespSccsLogout-2]
 }
 
-const _ResponseSuccessId_name = "RespSccsGeneric"
+const _ResponseSuccessId_name = "RespSccsGenericRespSccsLoginRespSccsLogout"
 
-var _ResponseSuccessId_index = [...]uint8{0, 15}
+var _ResponseSuccessId_index = [...]uint8{0, 15, 28, 42}
 
 func (i ResponseSuccessId) String() string {
 	if i >= ResponseSuccessId(len(_ResponseSuccessId_index)-1) {

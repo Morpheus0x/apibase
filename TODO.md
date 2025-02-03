@@ -6,7 +6,7 @@
 - [x] app root static file path or forward port
 - [x] Rework log.Error to be a struct compatible with the built-in error interface
 - [x] test full auth flow for apibase
-- [ ] all api responses should return an error code that is translated to a error string client side or on server for htmx
+- [x] all api responses should return an error code that is translated to a error string client side
 - [ ] make separate CSRF middleware completely separate from jwt to also protect login form/the whole api
 - [ ] impl email signup integration
 - [ ] Make sure that every function that returns an error doens't add any details not also available outside of itself (e.g. userId func param)
@@ -14,6 +14,7 @@
 - [ ] Protect any referrer uri content by limiting its size to protect against dos and make sure the uri is always starting with the app uri
 - [ ] Store user agent in refresh_tokens db table entry
 - [ ] add captcha for local login and signup
+- [ ] impl htmx api responses
 
 # TODO Database Integration
 use go generate to import the .sql text file database tables, then use a state machine parser to consume the sql and compare it to the actually existing database table. Also during this comparison, the table struct is checked, if all columns are also present there (tag must match with column name) If the table doesn't exist at all, create it by just running the create query. If the table and corresponding struct is changed in any way, manual table migration needs to be done. 

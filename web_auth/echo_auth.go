@@ -12,6 +12,7 @@ import (
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/table"
 	"gopkg.cc/apibase/web"
+	wr "gopkg.cc/apibase/web_response"
 )
 
 // Create default routes for login and general user flow
@@ -28,46 +29,53 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		email := c.FormValue("email")
 		password := c.FormValue("password")
 
+		if email == "" || password == "" {
+			return c.JSON(http.StatusUnprocessableEntity, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrMissingInput})
+		}
+
 		failedHookNr, err := runPreLoginHooks(email, h.CreateSecretString(password))
 		if err != nil {
 			log.Logf(log.LevelError, "pre login hook %d failed: %s", failedHookNr, err.Error())
-			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
+			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrHookPreLogin})
 		}
 
 		user, err := api.DB.GetUserByEmail(email)
 		if err != nil {
 			log.Logf(log.LevelDebug, "user not found: %s", err.Error())
-			return c.JSON(http.StatusUnauthorized, "user doesn't exist")
+			return c.JSON(http.StatusUnauthorized, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrLoginNoUser})
 		}
 
 		// TODO: unify the api (error) response using webtype.ApiJsonResponse
 		match, err := argon2id.ComparePasswordAndHash(password, user.PasswordHash.GetSecret())
 		if err != nil {
 			log.Logf(log.LevelError, "unable to compare password with hash: %s", err.Error())
-			return echo.ErrUnauthorized // c.String(http.StatusUnauthorized, "unable to verify password")
+			return c.JSON(http.StatusUnauthorized, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrLoginComparePassword})
 		}
 		if !match {
-			return echo.ErrUnauthorized // c.String(http.StatusUnauthorized, "invalid password")
+			return c.JSON(http.StatusUnauthorized, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrLoginWrongPassword})
 		}
 
 		roles, err := api.DB.GetUserRoles(user.ID)
 		if err != nil {
 			log.Logf(log.LevelError, "no roles exist for user (id: %d), unable to login", user.ID)
-			return c.JSON(http.StatusUnauthorized, map[string]string{"message": "no roles exist for user"})
+			return c.JSON(http.StatusUnauthorized, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrUserNoRoles})
 		}
 
 		failedHookNr, err = runPostLoginHooks(user, roles)
 		if err != nil {
 			log.Logf(log.LevelError, "post login hook %d failed: %s", failedHookNr, err.Error())
-			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
+			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrHookPostLogin})
 		}
 
 		err = web.JwtLogin(c, api, user, roles)
-		if err != nil {
-			return err
+		if e, ok := err.(*wr.ResponseError); ok {
+			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: e.GetErrorId()})
 		}
-		// TODO: fix response
-		return c.JSON(http.StatusOK, map[string]string{"message": "access and refresh token set as cookie"})
+		if err != nil {
+			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogin during login, this should not happen!: %s", err.Error())
+			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrAuthLoginUnknownError})
+		}
+		return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "logged in, access and refresh token set as cookie"})
 	}
 }
 
@@ -80,21 +88,21 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 		username := c.FormValue("username")
 
 		if email == "" || password == "" || passwordConfirm == "" || username == "" {
-			return c.JSON(http.StatusUnprocessableEntity, map[string]string{"message": "missing input"})
+			return c.JSON(http.StatusUnprocessableEntity, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrMissingInput})
 		}
 		if password != passwordConfirm {
-			return c.JSON(http.StatusUnprocessableEntity, map[string]string{"message": "password confirmation doesn't match"})
+			return c.JSON(http.StatusUnprocessableEntity, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrSignupPasswordMismatch})
 		}
 
 		failedHookNr, err := runPreSignupHooks(username, email, h.CreateSecretString(password))
 		if err != nil {
 			log.Logf(log.LevelError, "pre signup hook %d failed: %s", failedHookNr, err.Error())
-			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
+			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrHookPreSignup})
 		}
 
 		hash, err := argon2id.CreateHash(password, &argonParams)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
+			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrSignupPasswordHash})
 		}
 		userToCreate := table.User{
 			Name:           username,
@@ -112,16 +120,16 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 		}
 		user, err := api.DB.CreateUserIfNotExist(userToCreate, role.GetTable(0, api.Config.DefaultOrgID))
 		if errors.Is(err, db.ErrUserAlreadyExists) {
-			return c.JSON(http.StatusConflict, map[string]string{"message": "user with that email already exists"})
+			return c.JSON(http.StatusConflict, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrSignupUserExists})
 		}
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
+			return c.JSON(http.StatusConflict, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrSignupUserCreate})
 		}
 		roles, err := api.DB.GetUserRoles(user.ID)
 		if err != nil {
 			// roles should already exist or have been created by CreateUserIfNotExist
 			log.Logf(log.LevelError, "unable to get any roles for user (id: %d)", user.ID)
-			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "internal server error"})
+			return c.JSON(http.StatusUnauthorized, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrUserNoRoles})
 		}
 
 		failedHookNr, err = runPostSignupHooks(user, roles)
@@ -137,11 +145,14 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 		}
 
 		err = web.JwtLogin(c, api, user, roles)
-		if err != nil {
-			return err
+		if e, ok := err.(*wr.ResponseError); ok {
+			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: e.GetErrorId()})
 		}
-		// TODO: fix response
-		return c.JSON(http.StatusOK, map[string]string{"message": "access and refresh token set as cookie"})
+		if err != nil {
+			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogin during signup, this should not happen!: %s", err.Error())
+			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrAuthSignupUnknownError})
+		}
+		return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "signed up, access and refresh token set as cookie"})
 	}
 }
 
@@ -151,6 +162,11 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			log.Logf(log.LevelError, "logout hook %d failed: %s", failedHookNr, err.Error())
 		}
-		return web.JwtLogout(c, api)
+		err = web.JwtLogout(c, api)
+		if err != nil {
+			log.Logf(log.LevelDevel, "logout error: %s", err.Error())
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrAuthLogoutUnknownError))
+		}
+		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout))
 	}
 }

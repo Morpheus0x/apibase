@@ -10,11 +10,41 @@ func _() {
 	var x [1]struct{}
 	_ = x[RespErrNone-0]
 	_ = x[RespErrUndefined-1]
+	_ = x[RespErrCsrfInvalid-2]
+	_ = x[RespErrUserDoesNotExist-3]
+	_ = x[RespErrUserNoRoles-4]
+	_ = x[RespErrMissingInput-5]
+	_ = x[RespErrJwtAccessTokenSigning-6]
+	_ = x[RespErrJwtAccessTokenParsing-7]
+	_ = x[RespErrJwtRefreshTokenCreate-8]
+	_ = x[RespErrJwtRefreshTokenSigning-9]
+	_ = x[RespErrJwtRefreshTokenUpdate-10]
+	_ = x[RespErrJwtRefreshTokenParsing-11]
+	_ = x[RespErrJwtRefreshTokenClaims-12]
+	_ = x[RespErrJwtRefreshTokenInvalid-13]
+	_ = x[RespErrJwtRefreshTokenExpired-14]
+	_ = x[RespErrJwtRefreshTokenVerifyErr-15]
+	_ = x[RespErrJwtRefreshTokenVerifyInvalid-16]
+	_ = x[RespErrOauthCallbackCompleteAuth-17]
+	_ = x[RespErrOauthCallbackUnknownError-18]
+	_ = x[RespErrAuthLoginUnknownError-19]
+	_ = x[RespErrAuthSignupUnknownError-20]
+	_ = x[RespErrAuthLogoutUnknownError-21]
+	_ = x[RespErrLoginNoUser-22]
+	_ = x[RespErrLoginComparePassword-23]
+	_ = x[RespErrLoginWrongPassword-24]
+	_ = x[RespErrSignupPasswordMismatch-25]
+	_ = x[RespErrSignupPasswordHash-26]
+	_ = x[RespErrSignupUserExists-27]
+	_ = x[RespErrSignupUserCreate-28]
+	_ = x[RespErrHookPreLogin-29]
+	_ = x[RespErrHookPostLogin-30]
+	_ = x[RespErrHookPreSignup-31]
 }
 
-const _ResponseErrorId_name = "RespErrNoneRespErrUndefined"
+const _ResponseErrorId_name = "RespErrNoneRespErrUndefinedRespErrCsrfInvalidRespErrUserDoesNotExistRespErrUserNoRolesRespErrMissingInputRespErrJwtAccessTokenSigningRespErrJwtAccessTokenParsingRespErrJwtRefreshTokenCreateRespErrJwtRefreshTokenSigningRespErrJwtRefreshTokenUpdateRespErrJwtRefreshTokenParsingRespErrJwtRefreshTokenClaimsRespErrJwtRefreshTokenInvalidRespErrJwtRefreshTokenExpiredRespErrJwtRefreshTokenVerifyErrRespErrJwtRefreshTokenVerifyInvalidRespErrOauthCallbackCompleteAuthRespErrOauthCallbackUnknownErrorRespErrAuthLoginUnknownErrorRespErrAuthSignupUnknownErrorRespErrAuthLogoutUnknownErrorRespErrLoginNoUserRespErrLoginComparePasswordRespErrLoginWrongPasswordRespErrSignupPasswordMismatchRespErrSignupPasswordHashRespErrSignupUserExistsRespErrSignupUserCreateRespErrHookPreLoginRespErrHookPostLoginRespErrHookPreSignup"
 
-var _ResponseErrorId_index = [...]uint8{0, 11, 27}
+var _ResponseErrorId_index = [...]uint16{0, 11, 27, 45, 68, 86, 105, 133, 161, 189, 218, 246, 275, 303, 332, 361, 392, 427, 459, 491, 519, 548, 577, 595, 622, 647, 676, 701, 724, 747, 766, 786, 806}
 
 func (i ResponseErrorId) String() string {
 	if i >= ResponseErrorId(len(_ResponseErrorId_index)-1) {
