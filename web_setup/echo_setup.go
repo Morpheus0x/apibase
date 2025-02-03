@@ -34,8 +34,8 @@ func SetupRest(config web.ApiConfig, database db.DB) (*web.ApiServer, error) {
 	if !config.LocalAuth && !config.OAuthEnabled {
 		return nil, errx.New("No Authentication method enabled, either LocalAuth, OAuthEnabled or both need to be enabled")
 	}
-	if config.AppURI == "" {
-		return nil, errx.New("No AppURI specified, this must be a fully qualified uri of the application using the api")
+	if _, err := url.ParseRequestURI(config.AppURI); err != nil {
+		return nil, errx.Newf("AppURI (from config: %s) must be valid uri with protocol and without fragment of the application using the api: %s", config.AppURI, err.Error())
 	}
 	if err := config.ApiRoot.Validate(); err != nil {
 		return nil, err

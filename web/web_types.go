@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"gopkg.cc/apibase/errx"
 	h "gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
+	wr "gopkg.cc/apibase/web_response"
 )
 
 type ApiServer struct {
@@ -63,6 +65,43 @@ func (ac ApiConfig) TokenSecretBytes() []byte {
 	}
 	ac.tokenSecretBytes = secret
 	return ac.tokenSecretBytes
+}
+
+// Get *url.URL from AppURI
+func (ac ApiConfig) AppUri() *url.URL {
+	uri, err := url.ParseRequestURI(ac.AppURI)
+	if err != nil {
+		log.Logf(log.LevelCritical, "app_uri (from config: %s) must be valid url with protocol and without fragment: %s", ac.AppURI, err.Error())
+		panic(1)
+	}
+	return uri
+}
+
+// Supports string, int, web_response.ResponseSuccessId and web_response.ResponseErrorId as value types
+func (ac ApiConfig) AppUriWithQueryParam(key string, value any) string {
+	uri, err := url.ParseRequestURI(ac.AppURI)
+	if err != nil {
+		log.Logf(log.LevelCritical, "app_uri (from config: %s) must be valid url with protocol and without fragment: %s", ac.AppURI, err.Error())
+		panic(1)
+	}
+	query := uri.Query()
+	query.Add(key, parseQueryParam(value))
+	uri.RawQuery = query.Encode()
+	return uri.String()
+}
+
+func (ac ApiConfig) AppUriWithQueryParams(params []QueryParam[any]) string {
+	uri, err := url.ParseRequestURI(ac.AppURI)
+	if err != nil {
+		log.Logf(log.LevelCritical, "app_uri (from config: %s) must be valid url with protocol and without fragment: %s", ac.AppURI, err.Error())
+		panic(1)
+	}
+	query := uri.Query()
+	for _, p := range params {
+		query.Add(p.Key, p.Value())
+	}
+	uri.RawQuery = query.Encode()
+	return uri.String()
 }
 
 func (ac ApiConfig) TokenAccessValidityDuration() time.Duration {
@@ -142,4 +181,26 @@ func (ro RootOptions) Validate() error {
 type StateReferrer struct {
 	Nonce string `json:"nonce"`
 	URI   string `json:"uri"`
+}
+
+// Supports string, int, web_response.ResponseSuccessId and web_response.ResponseErrorId as UntypedValue types
+type QueryParam[T any] struct {
+	Key          string
+	UntypedValue T
+}
+
+func (p QueryParam[T]) Value() string {
+	return parseQueryParam(p.UntypedValue)
+}
+
+// Supports string, int, web_response.ResponseSuccessId and web_response.ResponseErrorId as value types
+func parseQueryParam(value any) string {
+	switch v := any(value).(type) {
+	case string:
+		return v
+	case int, wr.ResponseSuccessId, wr.ResponseErrorId:
+		return fmt.Sprintf("%d", v)
+	default:
+		return ""
+	}
 }
