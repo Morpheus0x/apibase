@@ -83,7 +83,7 @@ func (ac ApiConfig) TokenRefreshValidityDuration() time.Duration {
 	return duration
 }
 
-//go:generate stringer -type HttpMethod -output ./stringer_httpmethod.go
+//go:generate stringer -type HttpMethod -output ./stringer_HttpMethod.go
 type HttpMethod uint
 
 const (
