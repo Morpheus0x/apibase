@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth/gothic"
@@ -29,6 +30,9 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		queryURL.Set("provider", c.Param("provider"))
 		// TODO: use other way to get referrer that also includes uri fragment (uri including # part)
 		referrer := request.Header.Get("referrer")
+		if !strings.HasPrefix(referrer, api.Config.AppURI) {
+			referrer = api.Config.AppURI
+		}
 		// TODO: referrer is a possible attack vector, if it is too large, limit str len to ...
 
 		// Correct Redirecting
@@ -112,6 +116,9 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 			log.Logf(log.LevelDevel, "unable to unmarshal StateReferrer json for redirect in oauth callback: %s", err.Error())
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogin))
 		}
+		if !strings.HasPrefix(stateReferrer.URI, api.Config.AppURI) {
+			log.Logf(log.LevelDevel, "StateReferrer URI for redirect doesn't match AppURI(%s) in oauth callback: %s", api.Config.AppURI, stateReferrer.URI)
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogin))
 		}
 		return c.Redirect(http.StatusTemporaryRedirect, stateReferrer.URI)
 	}
