@@ -7,6 +7,7 @@
 - [x] Rework log.Error to be a struct compatible with the built-in error interface
 - [x] test full auth flow for apibase
 - [x] all api responses should return an error code that is translated to a error string client side
+- [x] Add feature to save and retrieve scheduled tasks to database
 - [ ] add auth hooks to oauth
 - [ ] edit auth hooks to modify role? 
 - [ ] fix TODO "refresh JWT": web_oauth/echo_oauth.go#L48

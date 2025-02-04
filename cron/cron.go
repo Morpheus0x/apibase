@@ -7,6 +7,8 @@ import (
 
 	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/log"
+	"gopkg.cc/apibase/table"
+	"gopkg.cc/apibase/web"
 )
 
 const (
@@ -17,6 +19,14 @@ const (
 )
 
 type TaskFunc func() error
+
+type Task struct {
+	ID          string
+	Start       time.Time
+	Interval    time.Duration
+	Description string
+	Run         TaskFunc
+}
 
 type task struct {
 	start          time.Time
@@ -42,22 +52,78 @@ type tasks struct {
 
 var activeTasks tasks
 
+// Get all tasks that were saved in the database,
+// cron.StartScheduledTasks should be called after addint all corresponding cron.TaskFunc to the returned Task array
+func GetScheduledTasksFromDB(api *web.ApiServer) ([]Task, error) {
+	tasks := []Task{}
+	tasksFromDB, err := api.DB.GetScheduledTasks()
+	if err != nil {
+		return tasks, err
+	}
+	for _, t := range tasksFromDB {
+		tasks = append(tasks, Task{
+			ID:          t.TaskID,
+			Start:       t.StartDate,
+			Interval:    time.Duration(t.Interval),
+			Description: t.Description,
+			Run:         nil,
+		})
+	}
+	return tasks, nil
+}
+
+// Starts all scheduled tasks that were saved in the database,
+// assign cron.TaskFunc to all Task array entries returned by cron.GetScheduledTasksFromDB before running this function,
+// if any error occurs, any scheduled tasks will be shut down
+func StartScheduledTasks(tasks []Task) error {
+	startErrors := make(map[string]error)
+	for _, t := range tasks {
+		err := Schedule(t)
+		if err != nil {
+			startErrors[t.ID] = err
+		}
+	}
+	if len(startErrors) > 0 {
+		for id, err := range startErrors {
+			log.Logf(log.LevelError, "Unable to start scheduled task(%s): %s", id, err.Error())
+		}
+		err := Shutdown()
+		return errx.Wrap(err, "Starting scheduled tasks failed, see previous log output for detailed errors, any successfully scheduled tasks have been shut down")
+	}
+	return nil
+}
+
+// Schedule new task and save to database, thread safe.
+// interval must be at leas one minute and has some special behaviour if it has one of these specific values, it will run at the time specified in start:
+// cron.Daily, cron.Weekly (at weekday of start), cron.Monthly (at day of month of start, day of start must not be later than the 28th), cron.Yearly (at start datetime)
+func ScheduleAndSaveToDB(api *web.ApiServer, t Task) error {
+	err := Schedule(t)
+	if err != nil {
+		return err
+	}
+	err = api.DB.CreateScheduledTask(table.ScheduledTask{TaskID: t.ID, StartDate: t.Start, Interval: table.Duration(t.Interval), Description: t.Description})
+	if err != nil {
+		return errx.WrapWithType(ErrTaskDatabaseSave, err, "task successfully scheduled but not saved in database")
+	}
+	return nil
+}
+
 // Schedule new task, thread safe.
 // interval must be at leas one minute and has some special behaviour if it has one of these specific values, it will run at the time specified in start:
 // cron.Daily, cron.Weekly (at weekday of start), cron.Monthly (at day of month of start, day of start must not be later than the 28th), cron.Yearly (at start datetime)
-func Schedule(id string, start time.Time, interval time.Duration, run TaskFunc) error {
-	newTask := task{start: start, interval: interval, task: run}
+func Schedule(t Task) error {
+	newTask := task{start: t.Start, interval: t.Interval, task: t.Run}
 	newTask.chanInit()
 
 	activeTasks.Lock()
-	if _, ok := activeTasks.tasks[id]; ok {
+	if _, ok := activeTasks.tasks[t.ID]; ok {
 		activeTasks.Unlock()
 		return errx.NewWithType(ErrTaskExists, "")
 	}
-	activeTasks.tasks[id] = newTask
+	activeTasks.tasks[t.ID] = newTask
 	activeTasks.Unlock()
 
-	go worker(id, newTask)
+	go worker(t.ID, newTask)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
@@ -69,7 +135,7 @@ func Schedule(id string, start time.Time, interval time.Duration, run TaskFunc) 
 		return nil
 	case err := <-newTask.startupFailed:
 		activeTasks.Lock()
-		delete(activeTasks.tasks, id)
+		delete(activeTasks.tasks, t.ID)
 		activeTasks.Unlock()
 
 		return errx.WrapWithType(ErrTaskStartup, err, "")
@@ -77,11 +143,24 @@ func Schedule(id string, start time.Time, interval time.Duration, run TaskFunc) 
 		close(newTask.shutdown)
 
 		activeTasks.Lock()
-		delete(activeTasks.tasks, id)
+		delete(activeTasks.tasks, t.ID)
 		activeTasks.Unlock()
 
 		return errx.NewWithType(ErrTaskStartTimeout, "")
 	}
+}
+
+// Remove scheduled task and also from database, thread safe.
+func RemoveAlsoFromDB(api *web.ApiServer, id string) error {
+	err := Remove(id)
+	dbErr := api.DB.DeleteScheduledTask(id)
+	if dbErr != nil {
+		return errx.WrapWithType(ErrTaskDatabaseDelete, err, "")
+	}
+	if err != nil {
+		return errx.Wrap(err, "The scheduled task was successfully removed from database, however")
+	}
+	return nil
 }
 
 // Remove scheduled task, thread safe.
@@ -89,14 +168,14 @@ func Remove(id string) error {
 	activeTasks.Lock()
 	defer activeTasks.Unlock()
 	if _, ok := activeTasks.tasks[id]; !ok {
-		return errx.Newf("worker with id '%s' isn't currently registered", id)
+		return errx.NewWithTypef(ErrTaskRemove, "worker with id '%s' isn't currently registered", id)
 	}
 	close(activeTasks.tasks[id].shutdown)
 	delete(activeTasks.tasks, id)
 	return nil
 }
 
-// Shutdown all active tasks, thread safe
+// Shutdown all active tasks, doesn't remove scheduled tasks from database, thread safe
 func Shutdown() error {
 	timeout := 60 * time.Second // TODO: remove hardcoded timeout
 	timeoutExceededCount := 0

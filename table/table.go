@@ -44,3 +44,13 @@ type UserRole struct {
 	OrgEdit  bool `db:"org_edit"`
 	OrgAdmin bool `db:"org_admin"`
 }
+
+type ScheduledTask struct {
+	ID          int       `db:"id" default:"true" table:"scheduled_tasks"`
+	TaskID      string    `db:"task_id"`
+	StartDate   time.Time `db:"start_date"`
+	Interval    Duration  `db:"interval"`
+	Description string    `db:"description"`
+	CreatedAt   time.Time `db:"created_at" default:"true"`
+	UpdatedAt   time.Time `db:"updated_at" default:"true"`
+}
