@@ -76,6 +76,13 @@ func GetScheduledTasksFromDB(api *web.ApiServer) ([]Task, error) {
 // assign cron.TaskFunc to all Task array entries returned by cron.GetScheduledTasksFromDB before running this function,
 // if any error occurs, any scheduled tasks will be shut down
 func StartScheduledTasks(tasks []Task) error {
+	// verify that all tasks have a function to run
+	for _, t := range tasks {
+		if t.Run == nil {
+			return errx.NewWithTypef(ErrTaskNoRunFunc, "task: %s", t.ID)
+		}
+	}
+	// schedule tasks
 	startErrors := make(map[string]error)
 	for _, t := range tasks {
 		err := Schedule(t)
@@ -112,6 +119,9 @@ func ScheduleAndSaveToDB(api *web.ApiServer, t Task) error {
 // interval must be at leas one minute and has some special behaviour if it has one of these specific values, it will run at the time specified in start:
 // cron.Daily, cron.Weekly (at weekday of start), cron.Monthly (at day of month of start, day of start must not be later than the 28th), cron.Yearly (at start datetime)
 func Schedule(t Task) error {
+	if t.Run == nil {
+		return errx.NewWithType(ErrTaskNoRunFunc, "")
+	}
 	newTask := task{start: t.Start, interval: t.Interval, task: t.Run}
 	newTask.chanInit()
 
