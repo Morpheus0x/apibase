@@ -132,8 +132,9 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 		}
 
 		newRefreshTokenCookie := &http.Cookie{Name: "refresh_token", Value: newRefreshToken, Path: "/", Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration() * 2)}
-		currentRequest.AddCookie(newRefreshTokenCookie) // set cookie for current request
-		c.SetCookie(newRefreshTokenCookie)              // set cookie for response
+
+		h.OverwriteRequestCookie(currentRequest, newRefreshTokenCookie) // set cookie for current request
+		c.SetCookie(newRefreshTokenCookie)                              // set cookie for response
 
 		// Set new CSRF Cookie, since it was changed with refresh token renew
 		c.SetCookie(&http.Cookie{Name: "csrf_token", Value: csrfToken, Path: "/", Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration() * 2)})
@@ -149,8 +150,8 @@ func authJWTHandler(c echo.Context, api *ApiServer) error {
 	}
 
 	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(api.Config.TokenAccessValidityDuration() * 2)}
-	currentRequest.AddCookie(newAccessTokenCookie) // set cookie for current request
-	c.SetCookie(newAccessTokenCookie)              // set cookie for response
+	h.OverwriteRequestCookie(currentRequest, newAccessTokenCookie) // set cookie for current request
+	c.SetCookie(newAccessTokenCookie)                              // set cookie for response
 
 	c.SetRequest(currentRequest) // rewrite request with new token(s)
 	return nil
