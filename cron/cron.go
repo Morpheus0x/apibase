@@ -222,7 +222,7 @@ func GetNextRun(now time.Time, start time.Time, interval time.Duration) (time.Ti
 		return start, nil
 	}
 
-	startDiff := now.Sub(nextRun)
+	startDiff := now.Sub(start)
 	pastIntervals := startDiff / interval
 	pastFraction := startDiff % interval
 
@@ -273,7 +273,8 @@ func worker(id string, job task) {
 			now = time.Now()
 			nextRun, err = GetNextRun(now, job.start, job.interval)
 			if err != nil {
-				log.Logf(log.LevelCritical, "worker task '%s' GetNextRun returned error, this should never happen!: %s", id, err.Error())
+				log.Logf(log.LevelCritical, "worker task '%s' shut down because GetNextRun returned error, this should never happen!: %s", id, err.Error())
+				return
 			}
 			run = time.NewTimer(nextRun.Sub(now))
 			log.Logf(log.LevelDebug, "worker '%s' will run the next time at %s (in %s)", id, nextRun.String(), nextRun.Sub(now).String())
