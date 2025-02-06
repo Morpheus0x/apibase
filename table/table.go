@@ -49,6 +49,7 @@ type UserRole struct {
 type ScheduledTask struct {
 	ID          int       `db:"id" default:"true" table:"scheduled_tasks"`
 	TaskID      string    `db:"task_id"`
+	OrgID       int       `db:"org_id"`
 	StartDate   time.Time `db:"start_date"`
 	Interval    Duration  `db:"interval"`
 	Description string    `db:"description"`

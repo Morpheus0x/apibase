@@ -12,7 +12,7 @@
 - [x] Store user agent in refresh_tokens db table entry
 - [x] Create new Org for every new user created with admin perms, unless SignupDefaultRoleHook defines own role
 - [x] edit auth hooks to modify role? - Done with using an additional hook which may create roles
-- [ ] Assign a cron Task to a Role Org
+- [x] Assign a scheduled task to an org
 - [ ] add auth hooks to oauth
 - [ ] fix TODO "refresh JWT": web_oauth/echo_oauth.go#L48
 - [ ] impl email signup integration

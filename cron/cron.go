@@ -2,6 +2,7 @@ package cron
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -22,6 +23,7 @@ type TaskFunc func() error
 
 type Task struct {
 	ID          string
+	OrgID       int
 	Start       time.Time
 	Interval    time.Duration
 	Description string
@@ -52,17 +54,42 @@ type tasks struct {
 
 var activeTasks tasks
 
-// Get all tasks that were saved in the database,
-// cron.StartScheduledTasks should be called after addint all corresponding cron.TaskFunc to the returned Task array
-func GetScheduledTasksFromDB(api *web.ApiServer) ([]Task, error) {
+func GetScheduledTasksForUser(api *web.ApiServer, userId int) ([]Task, error) {
 	tasks := []Task{}
-	tasksFromDB, err := api.DB.GetScheduledTasks()
+	tasksFromDB, err := api.DB.GetScheduledTasks(userId)
+	if errors.Is(err, errx.ErrSomeMinorOccurred) {
+		log.Log(log.LevelWarning, err.Error())
+		// TODO: decide what else to do with view permission errors
+		return tasks, nil
+	}
 	if err != nil {
 		return tasks, err
 	}
 	for _, t := range tasksFromDB {
 		tasks = append(tasks, Task{
 			ID:          t.TaskID,
+			OrgID:       t.OrgID,
+			Start:       t.StartDate,
+			Interval:    time.Duration(t.Interval),
+			Description: t.Description,
+			Run:         nil,
+		})
+	}
+	return tasks, nil
+}
+
+// Get all tasks that were saved in the database,
+// cron.StartScheduledTasks should be called after addint all corresponding cron.TaskFunc to the returned Task array
+func GetScheduledTasksFromDB(api *web.ApiServer) ([]Task, error) {
+	tasks := []Task{}
+	tasksFromDB, err := api.DB.GetAllScheduledTasks()
+	if err != nil {
+		return tasks, err
+	}
+	for _, t := range tasksFromDB {
+		tasks = append(tasks, Task{
+			ID:          t.TaskID,
+			OrgID:       t.OrgID,
 			Start:       t.StartDate,
 			Interval:    time.Duration(t.Interval),
 			Description: t.Description,
@@ -108,7 +135,7 @@ func ScheduleAndSaveToDB(api *web.ApiServer, t Task) error {
 	if err != nil {
 		return err
 	}
-	err = api.DB.CreateScheduledTask(table.ScheduledTask{TaskID: t.ID, StartDate: t.Start, Interval: table.Duration(t.Interval), Description: t.Description})
+	err = api.DB.CreateScheduledTask(table.ScheduledTask{TaskID: t.ID, OrgID: t.OrgID, StartDate: t.Start, Interval: table.Duration(t.Interval), Description: t.Description})
 	if err != nil {
 		return errx.WrapWithType(ErrTaskDatabaseSave, err, "task successfully scheduled but not saved in database")
 	}
