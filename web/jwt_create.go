@@ -17,8 +17,7 @@ type jwtAccessClaims struct {
 	UserID     int      `json:"a"`
 	Roles      JwtRoles `json:"b"`
 	SuperAdmin bool     `json:"c"`
-	CSRFHeader string   `json:"d"`
-	Revision   uint     `json:"e"`
+	Revision   uint     `json:"d"`
 	jwt.RegisteredClaims
 }
 
@@ -30,12 +29,11 @@ func (claims *jwtAccessClaims) signToken(api *ApiServer) (string, error) {
 	return rawToken.SignedString(api.Config.TokenSecretBytes())
 }
 
-func createJwtAccessClaims(userID int, roles JwtRoles, superAdmin bool, csrfHeader string) *jwtAccessClaims {
+func createJwtAccessClaims(userID int, roles JwtRoles, superAdmin bool) *jwtAccessClaims {
 	return &jwtAccessClaims{
 		UserID:     userID,
 		Roles:      roles,
 		SuperAdmin: superAdmin,
-		CSRFHeader: csrfHeader,
 		Revision:   LatestAccessTokenRevision,
 	}
 }
@@ -47,10 +45,9 @@ const LatestRefreshTokenRevision uint = 1
 
 // intentionally obfuscated json keys for security and bandwidth savings
 type jwtRefreshClaims struct {
-	UserID     int            `json:"a"`
-	Nonce      h.SecretString `json:"b"`
-	CSRFHeader string         `json:"c"` // TODO: maybe remove CSRF Token from access or refresh claim to reduce bandwidth usage
-	Revision   uint           `json:"d"`
+	UserID    int            `json:"a"`
+	SessionID h.SecretString `json:"b"`
+	Revision  uint           `json:"c"`
 	jwt.RegisteredClaims
 }
 
@@ -65,11 +62,10 @@ func (claims *jwtRefreshClaims) signToken(api *ApiServer) (string, time.Time, er
 
 }
 
-func createJwtRefreshClaims(userID int, nonce h.SecretString, csrfHeader string) *jwtRefreshClaims {
+func createJwtRefreshClaims(userID int, sessionId h.SecretString) *jwtRefreshClaims {
 	return &jwtRefreshClaims{
-		UserID:     userID,
-		Nonce:      nonce,
-		CSRFHeader: csrfHeader,
-		Revision:   LatestRefreshTokenRevision,
+		UserID:    userID,
+		SessionID: sessionId,
+		Revision:  LatestRefreshTokenRevision,
 	}
 }

@@ -23,7 +23,7 @@ type User struct {
 type RefreshToken struct {
 	ID           int            `db:"id" default:"true" table:"refresh_tokens"`
 	UserID       int            `db:"user_id"`
-	TokenNonce   h.SecretString `db:"token_nonce"`
+	SessionID    h.SecretString `db:"session_id"`
 	ReissueCount int            `db:"reissue_count"`
 	CreatedAt    time.Time      `db:"created_at" default:"true"`
 	UpdatedAt    time.Time      `db:"updated_at" default:"true"`

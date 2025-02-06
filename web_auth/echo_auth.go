@@ -17,9 +17,9 @@ import (
 
 // Create default routes for login and general user flow
 func RegisterAuthEndpoints(api *web.ApiServer) {
-	api.E.POST("/auth/login", login(api))
-	api.E.POST("/auth/signup", signup(api))
-	api.E.GET("/auth/logout", logout(api), web.AuthJWT(api))
+	api.E.POST("/auth/login", login(api), web.CheckCSRF(api))
+	api.E.POST("/auth/signup", signup(api), web.CheckCSRF(api))
+	api.E.GET("/auth/logout", logout(api), web.CheckCSRF(api), web.AuthJWT(api))
 }
 
 func login(api *web.ApiServer) echo.HandlerFunc {
@@ -67,7 +67,7 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrHookPostLogin})
 		}
 
-		err = web.JwtLogin(c, api, user, roles)
+		newSessionId, err := web.JwtLogin(c, api, user, roles)
 		if err, ok := err.(*wr.ResponseError); ok {
 			if err.Unwrap() != nil {
 				log.Log(log.LevelNotice, err.Error())
@@ -78,6 +78,7 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogin during login, this should not happen!: %s", err.Error())
 			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrAuthLoginUnknownError})
 		}
+		web.UpdateCSRF(c, api, newSessionId)
 		return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "logged in, access and refresh token set as cookie"})
 	}
 }
@@ -147,7 +148,7 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
 		}
 
-		err = web.JwtLogin(c, api, user, roles)
+		newSessionId, err := web.JwtLogin(c, api, user, roles)
 		if err, ok := err.(*wr.ResponseError); ok {
 			if err.Unwrap() != nil {
 				log.Log(log.LevelNotice, err.Error())
@@ -158,6 +159,7 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogin during signup, this should not happen!: %s", err.Error())
 			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrAuthSignupUnknownError})
 		}
+		web.UpdateCSRF(c, api, newSessionId)
 		return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "signed up, access and refresh token set as cookie"})
 	}
 }
@@ -169,6 +171,7 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			log.Logf(log.LevelError, "logout hook %d failed: %s", failedHookNr, err.Error())
 		}
+		web.RemoveCSRF(c)
 		err = web.JwtLogout(c, api)
 		if err, ok := err.(*wr.ResponseError); ok {
 			if err.Unwrap() != nil {
@@ -180,6 +183,7 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogout during logout, this should not happen!: %s", err.Error())
 			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrAuthLogoutUnknownError})
 		}
+		web.UpdateCSRF(c, api, h.CreateSecretString(""))
 		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout))
 	}
 }

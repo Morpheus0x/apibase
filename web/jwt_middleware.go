@@ -32,18 +32,11 @@ func AuthJWT(api *ApiServer) echo.MiddlewareFunc {
 }
 
 func authJwtHandler(c echo.Context, api *ApiServer) error {
-	// log.Logf(log.LevelDebug, "Request Header X-XSRF-TOKEN: %s", c.Request().Header.Get("X-XSRF-TOKEN")) // TODO: remove hardcoded header name
-
 	// Verify Access Token
 	accessToken, err := parseAccessTokenCookie(c, api.Config.TokenSecretBytes())
 	if err == nil {
 		accessClaims, ok := accessToken.Claims.(*jwtAccessClaims)
 		if ok {
-			if c.Request().Header.Get("X-XSRF-TOKEN") != accessClaims.CSRFHeader { // TODO: remove hardcoded header name
-				// Invalid CSRF Header received
-				// log.Logf(log.LevelInfo, "access token CSRF invalid, user: %s, request: %s", accessClaims.Name, c.Request().URL.String())
-				return wr.NewErrorWithStatus(http.StatusForbidden, wr.RespErrCsrfInvalid, nil)
-			}
 			accessTokenExpire, err := accessClaims.GetExpirationTime()
 			if accessToken.Valid &&
 				err == nil &&
@@ -61,25 +54,16 @@ func authJwtHandler(c echo.Context, api *ApiServer) error {
 		// log.Logf(log.LevelDebug, "unable to parse refresh token from cookie, request: %s", c.Request().URL.String())
 		return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtRefreshTokenParsing, nil)
 	}
-	if !refreshToken.Valid {
-		// log.Logf(log.LevelDebug, "refresh token invalid, request: %s", c.Request().URL.String())
-		return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtRefreshTokenInvalid, nil)
-	}
 	refreshClaims, ok := refreshToken.Claims.(*jwtRefreshClaims)
 	if !ok {
 		// log.Logf(log.LevelDebug, "unable to parse refresh token claims, request: %s", c.Request().URL.String())
 		return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtRefreshTokenClaims, nil)
 	}
-	if c.Request().Header.Get("X-XSRF-TOKEN") != refreshClaims.CSRFHeader { // TODO: remove hardcoded header name
-		// Invalid CSRF Header received
-		// log.Logf(log.LevelInfo, "refresh token CSRF invalid, user: %s, request: %s", accessClaims.Name, c.Request().URL.String())
-		return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrCsrfInvalid, nil)
-	}
 	refreshTokenExpire, err := refreshClaims.GetExpirationTime()
 	if err != nil || refreshTokenExpire.Time.Before(time.Now()) {
 		return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtRefreshTokenExpired, nil)
 	}
-	valid, err := api.DB.VerifyRefreshTokenNonce(refreshClaims.UserID, refreshClaims.Nonce)
+	valid, err := api.DB.VerifyRefreshTokenSessionId(refreshClaims.UserID, refreshClaims.SessionID)
 	if err != nil {
 		log.Logf(log.LevelDebug, "unable to verify refresh token: %s", err.Error())
 		return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtRefreshTokenVerifyErr, nil)
@@ -101,7 +85,6 @@ func authJwtHandler(c echo.Context, api *ApiServer) error {
 		UserID:     user.ID,
 		Roles:      jwtRolesFromTable(roles),
 		SuperAdmin: user.SuperAdmin,
-		CSRFHeader: refreshClaims.CSRFHeader,
 		Revision:   LatestAccessTokenRevision,
 	}
 
@@ -110,23 +93,18 @@ func authJwtHandler(c echo.Context, api *ApiServer) error {
 
 	// Renew Refresh Token, if valid for less than 1 week
 	if refreshTokenExpire.Time.Add(-time.Hour * 24 * 7).Before(time.Now()) { // TODO: remove hardcoded timeout
-		csrfToken := h.RandomString(16) // TODO: maybe use another random generator...
-		newNonce := h.CreateSecretString(h.RandomString(16))
-
-		// On refresh token renew, also change CSRF token for access token
-		accessClaims.CSRFHeader = csrfToken
+		newSessionId := h.CreateSecretString(h.RandomString(16)) // TODO: maybe use another random generator...
 
 		newRefreshClaims := &jwtRefreshClaims{
-			UserID:     user.ID,
-			Nonce:      newNonce,
-			CSRFHeader: csrfToken,
+			UserID:    user.ID,
+			SessionID: newSessionId,
 		}
 		newRefreshToken, expiresAt, err := newRefreshClaims.signToken(api)
 		if err != nil {
 			log.Logf(log.LevelDebug, "unable to create new refresh token for user '%s' (id: '%d')", user.Name, user.ID)
 			return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtRefreshTokenSigning, nil)
 		}
-		err = api.DB.UpdateRefreshTokenEntry(refreshClaims.UserID, refreshClaims.Nonce, newNonce, expiresAt)
+		err = api.DB.UpdateRefreshTokenEntry(refreshClaims.UserID, refreshClaims.SessionID, newSessionId, expiresAt)
 		if err != nil {
 			log.Logf(log.LevelDebug, "unable to update refresh token for user (id: %d): %s", user.ID, err.Error())
 			return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtRefreshTokenUpdate, nil)
@@ -136,14 +114,9 @@ func authJwtHandler(c echo.Context, api *ApiServer) error {
 
 		h.OverwriteRequestCookie(currentRequest, newRefreshTokenCookie) // set cookie for current request
 		c.SetCookie(newRefreshTokenCookie)                              // set cookie for response
-
-		// Set new CSRF Cookie, since it was changed with refresh token renew
-		c.SetCookie(&http.Cookie{Name: "csrf_token", Value: csrfToken, Path: "/", Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration() * 2)})
-
-		c.Response().Header().Add("X-XSRF-TOKEN", csrfToken) // TODO: remove hardcoded header name
 	}
 
-	// Renew Access Token (after check if refresh token sould also be renewed, so that CSRF token will also be updated)
+	// Renew Access Token, since refresh token changed
 	newAccessToken, err := accessClaims.signToken(api)
 	if err != nil {
 		log.Logf(log.LevelDebug, "unable to create new access token for user '%s' (id: '%d')", user.Name, user.ID)

@@ -1,7 +1,7 @@
 CREATE TABLE refresh_tokens (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) NOT NULL,
-    token_nonce TEXT UNIQUE NOT NULL,
+    session_id TEXT UNIQUE NOT NULL,
     reissue_count INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

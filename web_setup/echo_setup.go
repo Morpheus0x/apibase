@@ -119,7 +119,8 @@ func RegisterRestDefaultEndpoints(api *web.ApiServer) {
 		panic(1)
 	}
 
-	apiGroup := api.E.Group("/api/", web.AuthJWT(api))
+	api.E.GET("/auth/csrf_token", web.GetCSRF(api))
+	apiGroup := api.E.Group("/api/", web.CheckCSRF(api), web.AuthJWT(api))
 	apiGroup.GET("", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"message": "Welcome!"})
 	})

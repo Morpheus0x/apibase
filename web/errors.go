@@ -3,5 +3,6 @@ package web
 import "gopkg.cc/apibase/errx"
 
 var (
-	ErrTokenValidate = errx.NewType("token validation")
+	ErrTokenParsing  = errx.NewType("unable to parse token")
+	ErrTokenValidate = errx.NewType("token is invalid")
 )

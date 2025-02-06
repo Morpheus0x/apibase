@@ -9,7 +9,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth/gothic"
-	"gopkg.cc/apibase/helper"
+	h "gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/table"
 	"gopkg.cc/apibase/web"
@@ -18,9 +18,9 @@ import (
 
 // Create default routes for oauth user flow
 func RegisterOAuthEndpoints(api *web.ApiServer) {
-	api.E.GET("/auth/:provider", login(api)) // login & signup
-	api.E.GET("/auth/:provider/callback", callback(api))
-	api.E.GET("/auth/logout/:provider", logout(api), web.AuthJWT(api))
+	api.E.GET("/auth/:provider", login(api), web.CheckCSRF(api)) // login & signup
+	api.E.GET("/auth/:provider/callback", callback(api), web.CheckCSRF(api))
+	api.E.GET("/auth/logout/:provider", logout(api), web.CheckCSRF(api), web.AuthJWT(api))
 }
 
 func login(api *web.ApiServer) echo.HandlerFunc {
@@ -36,7 +36,7 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		// TODO: referrer is a possible attack vector, if it is too large, limit str len to ...
 
 		// Correct Redirecting
-		stateBytes, err := json.Marshal(&web.StateReferrer{Nonce: helper.RandomString(16), URI: referrer})
+		stateBytes, err := json.Marshal(&web.StateReferrer{Nonce: h.RandomString(16), URI: referrer})
 		if err != nil {
 			c.Redirect(http.StatusInternalServerError, referrer)
 		}
@@ -94,7 +94,7 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrUserNoRoles))
 		}
 
-		err = web.JwtLogin(c, api, user, roles)
+		newSessionId, err := web.JwtLogin(c, api, user, roles)
 		if e, ok := err.(*wr.ResponseError); ok {
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, e.GetErrorId()))
 		}
@@ -102,6 +102,7 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogin during oauth callback, this should not happen!: %s", err.Error())
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrOauthCallbackUnknownError))
 		}
+		web.UpdateCSRF(c, api, newSessionId)
 
 		// Correct Redirecting
 		state := queryURL.Get("state")
@@ -135,6 +136,7 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			log.Logf(log.LevelDevel, "error for gothic.Logout() during oauth logout: %s", err.Error())
 		}
+		web.RemoveCSRF(c)
 		err = web.JwtLogout(c, api)
 		if err, ok := err.(*wr.ResponseError); ok {
 			if err.Unwrap() != nil {
@@ -146,6 +148,7 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogout during oauth logout, this should not happen!: %s", err.Error())
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrAuthLogoutUnknownError))
 		}
+		web.UpdateCSRF(c, api, h.CreateSecretString(""))
 		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout))
 	}
 }
