@@ -40,7 +40,7 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			c.Redirect(http.StatusInternalServerError, referrer)
 		}
-		state := base64.StdEncoding.EncodeToString(stateBytes)
+		state := base64.RawURLEncoding.EncodeToString(stateBytes)
 		queryURL.Set("state", state)
 
 		// Re-write Request URI w/ provider and state
@@ -106,7 +106,7 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 
 		// Correct Redirecting
 		state := queryURL.Get("state")
-		stateBytes, err := base64.StdEncoding.DecodeString(state)
+		stateBytes, err := base64.RawURLEncoding.DecodeString(state)
 		if err != nil {
 			log.Logf(log.LevelDevel, "unable to base64 decode state for redirect in oauth callback: %s", err.Error())
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogin))

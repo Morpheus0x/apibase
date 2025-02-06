@@ -17,7 +17,7 @@ func RandomString(n int) string {
 	return string(b)
 }
 
-// Create a random URL safe base64 string, n specifies amount of bytes
+// Create a random URL safe base64 string without padding, n specifies amount of bytes
 func RandomBase64(n uint) string {
 	if n == 0 {
 		return ""
@@ -27,5 +27,5 @@ func RandomBase64(n uint) string {
 	if err != nil {
 		panic(fmt.Sprintf("RandomBase64 crypto.rand.Read() has error: %v. This should never happen!", err))
 	}
-	return base64.URLEncoding.EncodeToString(token)
+	return base64.RawURLEncoding.EncodeToString(token)
 }
