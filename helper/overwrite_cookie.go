@@ -2,7 +2,7 @@ package helper
 
 import "net/http"
 
-// overwrite existing request cookie or adds it if missing
+// overwrite existing request cookie or adds it, if missing
 func OverwriteRequestCookie(request *http.Request, newCookie *http.Cookie) {
 	newCookieHeader := ""
 	existingCookieOverwritten := false

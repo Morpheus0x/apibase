@@ -19,7 +19,6 @@ func parseAccessTokenCookie(c echo.Context, secret []byte) (*jwt.Token, error) {
 		// c.Logger().Debugf("error parsing token from cookie: %v", err)
 		return &jwt.Token{}, errx.NewWithType(ErrTokenValidate, "error parsing token 'access_token'")
 	}
-	// TODO: add .Valid check for claims?
 	return token, nil
 }
 
@@ -36,11 +35,5 @@ func parseRefreshTokenCookie(c echo.Context, secret []byte) (*jwt.Token, error) 
 		// c.Logger().Debugf("error parsing token from cookie: %v", err)
 		return &jwt.Token{}, errx.NewWithType(ErrTokenValidate, "error parsing token 'refresh_token'")
 	}
-	// TODO: add .Valid check for claims?
 	return token, nil
-}
-
-func getRefreshClaimsFromCookie(c echo.Context, secret []byte) (jwtRefreshClaims, error) {
-	// TODO: this
-	return jwtRefreshClaims{}, errx.NewWithType(errx.ErrNotImplemented, "WIP")
 }
