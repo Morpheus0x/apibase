@@ -41,10 +41,12 @@ const (
 	RespErrSignupPasswordMismatch
 	RespErrSignupPasswordHash
 	RespErrSignupUserExists
+	RespErrSignupNewUserOrg
 	RespErrSignupUserCreate
 	RespErrHookPreLogin
 	RespErrHookPostLogin
 	RespErrHookPreSignup
+	RespErrHookSignupDefaultRole
 	// Only append here to not break existing frontend error IDs
 )
 

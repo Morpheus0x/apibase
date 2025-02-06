@@ -10,10 +10,10 @@
 - [x] Add feature to save and retrieve scheduled tasks to database
 - [x] make separate CSRF middleware completely separate from jwt to also protect login form/the whole api
 - [x] Store user agent in refresh_tokens db table entry
-- [ ] Create new Org for every new user created with admin perms, unless SignupDefaultRoleHook defines own role
+- [x] Create new Org for every new user created with admin perms, unless SignupDefaultRoleHook defines own role
+- [x] edit auth hooks to modify role? - Done with using an additional hook which may create roles
 - [ ] Assign a cron Task to a Role Org
 - [ ] add auth hooks to oauth
-- [ ] edit auth hooks to modify role? 
 - [ ] fix TODO "refresh JWT": web_oauth/echo_oauth.go#L48
 - [ ] impl email signup integration
 - [ ] Make sure that every function that returns an error doens't add any details not also available outside of itself (e.g. userId func param)

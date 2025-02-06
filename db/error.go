@@ -14,4 +14,6 @@ var (
 	ErrDatabaseUpdate    = errx.NewType("database update failed")
 	ErrDatabaseDelete    = errx.NewType("database delete failed")
 	ErrUserAlreadyExists = errx.NewType("user already exists")
+	ErrNoRoles           = errx.NewType("missing required roles")
+	ErrOrgCreate         = errx.NewType("organization couldn't be created")
 )

@@ -3,12 +3,13 @@ package web_oauth
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth/gothic"
+	"gopkg.cc/apibase/db"
 	h "gopkg.cc/apibase/helper"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/table"
@@ -70,17 +71,17 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 			log.Logf(log.LevelError, "oauth callback complete user auth error: %s", err.Error())
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrOauthCallbackCompleteAuth))
 		}
-		role := web.DefaultRole
-		if r, ok := api.Config.DefaultOrgRole[strconv.Itoa(api.Config.DefaultOrgID)]; ok {
-			role = r
-		}
-		// TODO: find a way to get org assignments from goth.User
-		user, err := api.DB.GetOrCreateUser(table.User{
+		userToCreate := table.User{
 			Name:          gothUser.NickName,
 			AuthProvider:  provider,
 			Email:         gothUser.Email,
 			EmailVerified: false,
-		}, role.GetTable(0, api.Config.DefaultOrgID))
+		}
+		// TODO: impl runSignupDefaultRoleHook to get org assignments from goth.User/userToCreate
+		user, err := api.DB.CreateNewUserWithOrg(userToCreate)
+		if errors.Is(err, db.ErrOrgCreate) {
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrSignupNewUserOrg))
+		}
 		if err != nil {
 			log.Logf(log.LevelError, "unable to create oauth user db entry: %s", err.Error())
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrUserDoesNotExist))

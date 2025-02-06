@@ -3,7 +3,6 @@ package web_auth
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/Morpheus0x/argon2id"
 	"github.com/labstack/echo/v4"
@@ -118,13 +117,17 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 			TotpSecret:     "",
 			SuperAdmin:     false,
 		}
-		role := web.DefaultRole
-		if r, ok := api.Config.DefaultOrgRole[strconv.Itoa(api.Config.DefaultOrgID)]; ok {
-			role = r
+		rolesToCreate, err := runSignupDefaultRoleHook(userToCreate)
+		if err != nil {
+			log.Logf(log.LevelError, "signup default hook failed: %s", err.Error())
+			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrHookSignupDefaultRole})
 		}
-		user, err := api.DB.CreateUserIfNotExist(userToCreate, role.GetTable(0, api.Config.DefaultOrgID))
+		user, err := api.DB.CreateNewUserWithOrg(userToCreate, rolesToCreate...)
 		if errors.Is(err, db.ErrUserAlreadyExists) {
 			return c.JSON(http.StatusConflict, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrSignupUserExists})
+		}
+		if errors.Is(err, db.ErrOrgCreate) {
+			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrSignupNewUserOrg})
 		}
 		if err != nil {
 			return c.JSON(http.StatusConflict, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrSignupUserCreate})

@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/georgysavva/scany/v2/pgxscan"
@@ -13,8 +14,15 @@ import (
 	"gopkg.cc/apibase/table"
 )
 
-func (db DB) CreateUserIfNotExist(user table.User, role table.UserRole) (table.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+// If no roles are provided, a new organization is created for the user with admin role for user,
+// otherwise CreateUserIfNotExist is run
+func (db DB) CreateNewUserWithOrg(user table.User, roles ...table.UserRole) (table.User, error) {
+	if len(roles) > 0 {
+		// Don't create new org for user, instead assign user defined roles
+		return db.CreateUserIfNotExist(user, roles...)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
 	if err != nil {
@@ -30,10 +38,59 @@ func (db DB) CreateUserIfNotExist(user table.User, role table.UserRole) (table.U
 	if err != nil {
 		return user, err
 	}
-	role.UserID = userFromDB.ID
+	org := table.Organization{
+		Name:        fmt.Sprintf("userorg-%s", userFromDB.Name),
+		Description: fmt.Sprintf("Default org for user '%s'", userFromDB.Name),
+	}
+	orgFromDB, err := db.createOrg(org, tx, ctx)
+	if err != nil {
+		return user, errx.WrapWithTypef(ErrOrgCreate, err, "for user (id: %d)", userFromDB.ID)
+	}
+	role := table.UserRole{
+		UserID:   userFromDB.ID,
+		OrgID:    orgFromDB.ID,
+		OrgView:  true,
+		OrgEdit:  true,
+		OrgAdmin: true,
+	}
 	err = db.createUserRole(role, tx, ctx)
 	if err != nil {
 		return userFromDB, errx.Wrapf(err, "unable to create role for user with email '%s'", user.Email)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return userFromDB, errx.WrapWithType(ErrDatabaseCommit, err, "")
+	}
+	return userFromDB, nil
+}
+
+func (db DB) CreateUserIfNotExist(user table.User, roles ...table.UserRole) (table.User, error) {
+	if len(roles) < 1 {
+		return user, errx.NewWithType(ErrNoRoles, "CreateUserIfNotExist must have at least one role for the new user")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second) // TODO: remove hardcoded timeout
+	defer cancel()
+	tx, err := db.Postgres.Begin(ctx)
+	if err != nil {
+		return user, errx.WrapWithType(ErrDatabaseQuery, err, "unable to start db transaction")
+	}
+	defer tx.Rollback(context.Background())
+
+	_, err = db.getUserByEmail(user.Email, tx, ctx)
+	if err == nil || !errors.Is(err, ErrDatabaseNotFound) {
+		return user, errx.WrapWithType(ErrUserAlreadyExists, err, "user can't be created")
+	}
+	userFromDB, err := db.createUser(user, tx, ctx)
+	if err != nil {
+		return user, err
+	}
+	for _, role := range roles {
+		role.UserID = userFromDB.ID
+		err = db.createUserRole(role, tx, ctx)
+		if err != nil {
+			return userFromDB, errx.Wrapf(err, "unable to create role for user with email '%s'", user.Email)
+		}
 	}
 
 	err = tx.Commit(ctx)

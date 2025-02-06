@@ -18,6 +18,13 @@ func runPreSignupHooks(username string, email string, password helper.SecretStri
 	return 0, nil
 }
 
+func runSignupDefaultRoleHook(user table.User) ([]table.UserRole, error) {
+	if len(hook.RegisteredHooks.SignupDefaultRole) < 1 {
+		return []table.UserRole{}, nil
+	}
+	return hook.RegisteredHooks.SignupDefaultRole[0](user)
+}
+
 func runPostSignupHooks(user table.User, roles []table.UserRole) (int, error) {
 	var err error
 	for failedHookNr, hook := range hook.RegisteredHooks.PostSignup {

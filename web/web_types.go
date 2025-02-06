@@ -39,14 +39,11 @@ type ApiConfig struct {
 	AllowRegistration  bool `toml:"allow_registration"`
 	ReqireConfirmEmail bool `toml:"require_confirmed_email"` // TODO: this // Before user is allowed to login
 
-	DefaultOrgID int `toml:"default_org_id"`
-
 	ApiBind string `toml:"api_bind"`
 	AppURI  string `toml:"app_uri"` // Used for logout redirect and when no valid oauth callback referrer
 
 	// Nested Structs
-	ApiRoot        RootOptions        `toml:"api_root"` // Configure the apibase root behaviour (local, static, (reverse) proxy)
-	DefaultOrgRole map[string]JwtRole `toml:"default_org_role"`
+	ApiRoot RootOptions `toml:"api_root"` // Configure the apibase root behaviour (local, static, (reverse) proxy)
 
 	// Internal Data
 	tokenSecretBytes []byte // decoded from TokenSecret string
