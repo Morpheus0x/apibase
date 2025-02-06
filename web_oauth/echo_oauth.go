@@ -125,6 +125,7 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 }
 
 func logout(api *web.ApiServer) echo.HandlerFunc {
+	// TODO: maybe not redirect, let that be done by the client?
 	return func(c echo.Context) error {
 		request := c.Request()
 		queryURL := request.URL.Query()
@@ -135,8 +136,14 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 			log.Logf(log.LevelDevel, "error for gothic.Logout() during oauth logout: %s", err.Error())
 		}
 		err = web.JwtLogout(c, api)
+		if err, ok := err.(*wr.ResponseError); ok {
+			if err.Unwrap() != nil {
+				log.Log(log.LevelError, err.Error())
+			}
+			return c.Redirect(http.StatusInternalServerError, api.Config.AppUriWithQueryParam(wr.QueryKeyError, err.GetErrorId()))
+		}
 		if err != nil {
-			log.Logf(log.LevelDevel, "oauth logout error: %s", err.Error())
+			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogout during oauth logout, this should not happen!: %s", err.Error())
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrAuthLogoutUnknownError))
 		}
 		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout))

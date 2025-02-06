@@ -1,5 +1,12 @@
 package web_response
 
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/labstack/echo/v4"
+)
+
 // Error ID for localized errors on frontend
 //
 //go:generate stringer -type ResponseErrorId -output ./stringer_ResponseErrorId.go
@@ -44,12 +51,16 @@ const (
 // func (respErrId ResponseErrorId) Int() int
 
 type ResponseError struct {
-	errorId ResponseErrorId
-	nested  error
+	httpStatus int
+	errorId    ResponseErrorId
+	nested     error
 }
 
 func (e ResponseError) Error() string {
 	out := e.errorId.String()
+	if e.httpStatus != 0 {
+		out += fmt.Sprintf("(HTTP Status %d)", e.httpStatus)
+	}
 	if e.nested != nil {
 		out += ": " + e.nested.Error()
 	}
@@ -74,9 +85,30 @@ func (e ResponseError) GetErrorId() ResponseErrorId {
 	return e.errorId
 }
 
-func NewResponseError(errorId ResponseErrorId, err error) error {
+func (e ResponseError) SendJson(c echo.Context) error {
+	httpStatus := http.StatusInternalServerError
+	if e.httpStatus != 0 {
+		httpStatus = e.httpStatus
+	}
+	return c.JSON(httpStatus, JsonResponse[struct{}]{ErrorID: e.errorId})
+}
+
+func (e ResponseError) SendJsonWithStatus(c echo.Context, httpStatus int) error {
+	return c.JSON(httpStatus, JsonResponse[struct{}]{ErrorID: e.errorId})
+}
+
+func NewError(errorId ResponseErrorId, err error) error {
 	return &ResponseError{
-		errorId: errorId,
-		nested:  err,
+		httpStatus: 0,
+		errorId:    errorId,
+		nested:     err,
+	}
+}
+
+func NewErrorWithStatus(status int, errorId ResponseErrorId, err error) error {
+	return &ResponseError{
+		httpStatus: status,
+		errorId:    errorId,
+		nested:     err,
 	}
 }

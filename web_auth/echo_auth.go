@@ -68,8 +68,11 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		}
 
 		err = web.JwtLogin(c, api, user, roles)
-		if e, ok := err.(*wr.ResponseError); ok {
-			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: e.GetErrorId()})
+		if err, ok := err.(*wr.ResponseError); ok {
+			if err.Unwrap() != nil {
+				log.Log(log.LevelNotice, err.Error())
+			}
+			return err.SendJsonWithStatus(c, http.StatusInternalServerError)
 		}
 		if err != nil {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogin during login, this should not happen!: %s", err.Error())
@@ -145,8 +148,11 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 		}
 
 		err = web.JwtLogin(c, api, user, roles)
-		if e, ok := err.(*wr.ResponseError); ok {
-			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: e.GetErrorId()})
+		if err, ok := err.(*wr.ResponseError); ok {
+			if err.Unwrap() != nil {
+				log.Log(log.LevelNotice, err.Error())
+			}
+			return err.SendJsonWithStatus(c, http.StatusInternalServerError)
 		}
 		if err != nil {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogin during signup, this should not happen!: %s", err.Error())
@@ -157,15 +163,22 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 }
 
 func logout(api *web.ApiServer) echo.HandlerFunc {
+	// TODO: maybe not redirect, let that be done by the client?
 	return func(c echo.Context) error {
 		failedHookNr, err := runLogoutHooks(c)
 		if err != nil {
 			log.Logf(log.LevelError, "logout hook %d failed: %s", failedHookNr, err.Error())
 		}
 		err = web.JwtLogout(c, api)
+		if err, ok := err.(*wr.ResponseError); ok {
+			if err.Unwrap() != nil {
+				log.Log(log.LevelError, err.Error())
+			}
+			return err.SendJsonWithStatus(c, http.StatusInternalServerError)
+		}
 		if err != nil {
-			log.Logf(log.LevelDevel, "logout error: %s", err.Error())
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrAuthLogoutUnknownError))
+			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogout during logout, this should not happen!: %s", err.Error())
+			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrAuthLogoutUnknownError})
 		}
 		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout))
 	}
