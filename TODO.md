@@ -9,6 +9,7 @@
 - [x] all api responses should return an error code that is translated to a error string client side
 - [x] Add feature to save and retrieve scheduled tasks to database
 - [x] make separate CSRF middleware completely separate from jwt to also protect login form/the whole api
+- [x] Store user agent in refresh_tokens db table entry
 - [ ] Create new Org for every new user created with admin perms, unless SignupDefaultRoleHook defines own role
 - [ ] Assign a cron Task to a Role Org
 - [ ] add auth hooks to oauth
@@ -18,7 +19,6 @@
 - [ ] Make sure that every function that returns an error doens't add any details not also available outside of itself (e.g. userId func param)
 - [ ] Resolve all `TODO: remove hardcoded timeout`
 - [ ] Protect any referrer uri content by limiting its size to protect against dos and make sure the uri is always starting with the app uri
-- [ ] Store user agent in refresh_tokens db table entry
 - [ ] add captcha for local login and signup
 - [ ] impl htmx api responses
 

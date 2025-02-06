@@ -104,7 +104,8 @@ func authJwtHandler(c echo.Context, api *ApiServer) error {
 			log.Logf(log.LevelDebug, "unable to create new refresh token for user '%s' (id: '%d')", user.Name, user.ID)
 			return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtRefreshTokenSigning, nil)
 		}
-		err = api.DB.UpdateRefreshTokenEntry(refreshClaims.UserID, refreshClaims.SessionID, newSessionId, expiresAt)
+		userAgent := currentRequest.Header.Get("User-Agent")
+		err = api.DB.UpdateRefreshTokenEntry(refreshClaims.UserID, refreshClaims.SessionID, newSessionId, userAgent, expiresAt)
 		if err != nil {
 			log.Logf(log.LevelDebug, "unable to update refresh token for user (id: %d): %s", user.ID, err.Error())
 			return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtRefreshTokenUpdate, nil)

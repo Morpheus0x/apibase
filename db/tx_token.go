@@ -50,7 +50,7 @@ func (db DB) VerifyRefreshTokenSessionId(userID int, sessionId h.SecretString) (
 	return true, nil
 }
 
-func (db DB) UpdateRefreshTokenEntry(userId int, sessionId h.SecretString, newSessionId h.SecretString, expiresAt time.Time) error {
+func (db DB) UpdateRefreshTokenEntry(userId int, sessionId h.SecretString, newSessionId h.SecretString, userAgent string, expiresAt time.Time) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
@@ -64,6 +64,7 @@ func (db DB) UpdateRefreshTokenEntry(userId int, sessionId h.SecretString, newSe
 		return errx.Wrap(err, "unable to get existing entry for token")
 	}
 	token.SessionID = newSessionId
+	token.UserAgent = userAgent
 	token.ExpiresAt = expiresAt
 	err = db.updateToken(ctx, tx, token)
 	if err != nil {
@@ -81,8 +82,8 @@ func (db DB) UpdateRefreshTokenEntry(userId int, sessionId h.SecretString, newSe
 func (db DB) CreateRefreshTokenEntry(token table.RefreshToken) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
 	defer cancel()
-	query := "INSERT INTO refresh_tokens (user_id, session_id, reissue_count, expires_at) VALUES ($1, $2, $3, $4)"
-	_, err := db.Postgres.Exec(ctx, query, token.UserID, token.SessionID, token.ReissueCount, token.ExpiresAt)
+	query := "INSERT INTO refresh_tokens (user_id, session_id, reissue_count, user_agent, expires_at) VALUES ($1, $2, $3, $4, $5)"
+	_, err := db.Postgres.Exec(ctx, query, token.UserID, token.SessionID, token.ReissueCount, token.UserAgent, token.ExpiresAt)
 	if err != nil {
 		return errx.WrapWithType(ErrDatabaseInsert, err, "refresh token entry for user could not be created")
 	}
@@ -106,8 +107,8 @@ func (db DB) getTokenByUserIdAndSessionId(ctx context.Context, tx pgx.Tx, userID
 }
 
 func (db DB) updateToken(ctx context.Context, tx pgx.Tx, token table.RefreshToken) error {
-	query := "UPDATE refresh_tokens SET (session_id, reissue_count, updated_at, expires_at) = ($1, $2, $3, $4) WHERE id = $5"
-	_, err := tx.Exec(ctx, query, token.SessionID, token.ReissueCount+1, token.UpdatedAt, token.ExpiresAt, token.ID)
+	query := "UPDATE refresh_tokens SET (session_id, reissue_count, user_agent, updated_at, expires_at) = ($1, $2, $3, $4, $5) WHERE id = $6"
+	_, err := tx.Exec(ctx, query, token.SessionID, token.ReissueCount+1, token.UserAgent, token.UpdatedAt, token.ExpiresAt, token.ID)
 	if err != nil {
 		return errx.NewWithTypef(ErrDatabaseUpdate, "unable to update refresh token")
 	}

@@ -23,7 +23,8 @@ func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.Use
 	if err != nil {
 		return newSessionId, wr.NewError(wr.RespErrJwtRefreshTokenParsing, errx.Wrapf(err, "unable to create refresh token for user (id: %d)", user.ID))
 	}
-	err = api.DB.CreateRefreshTokenEntry(table.RefreshToken{UserID: user.ID, SessionID: newSessionId, ReissueCount: 0, ExpiresAt: expiresAt})
+	userAgent := c.Request().Header.Get("User-Agent")
+	err = api.DB.CreateRefreshTokenEntry(table.RefreshToken{UserID: user.ID, SessionID: newSessionId, ReissueCount: 0, UserAgent: userAgent, ExpiresAt: expiresAt})
 	if err != nil {
 		return newSessionId, wr.NewError(wr.RespErrJwtRefreshTokenCreate, errx.Wrapf(err, "unable to create refresh token database entry for user (id: %d)", user.ID))
 	}
