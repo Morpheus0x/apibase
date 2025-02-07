@@ -4,12 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
 	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/sqlite"
-	"gopkg.cc/apibase/table"
 )
 
 // Generic db driver for package web
@@ -52,19 +50,19 @@ func ValidateDB(database DB) error {
 }
 
 func MigrateDefaultTables(database DB) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	// defer cancel()
 	switch database.Kind {
 	case SQLite:
 		// TODO: do this
 		return errx.NewWithType(errx.ErrNotImplemented, "sqlite tables not migrated")
 	case PostgreSQL:
-		users := []table.User{}
-		err := pgxscan.Select(ctx, database.Postgres, &users, "SELECT * FROM users")
-		if err != nil {
-			return errx.WrapWithType(ErrDatabaseMigration, err, "")
-		}
-		log.Logf(log.LevelDebug, "Users: %+v", users)
+		// users := []table.User{}
+		// err := pgxscan.Select(ctx, database.Postgres, &users, "SELECT * FROM users")
+		// if err != nil {
+		// 	return errx.WrapWithType(ErrDatabaseMigration, err, "")
+		// }
+		// log.Logf(log.LevelDebug, "Users: %+v", users)
 		// TODO: read tables from db and verify they match the local struct
 		log.Log(log.LevelInfo, "Successfully migrated PostgreSQL Tables.")
 	default:
