@@ -33,6 +33,9 @@ The following is a basic example of how apibase can be used to create an api fra
 // TBD
 ```
 
+### Application Setup
+ApiBase serves static files or forwards via reverse proxy any requests that are made, except for those that have a url path starting with `/auth` or `/api`. Other than that any path may be used by the application.
+
 ### Database
 In order to add your own apibase database tables, the user must create a sql query and the corresponding struct themselves. Currently, no error-free postgres struct gen library exists that provides the desired functionality. Since this is a one off process in many cases and has horrible rammifications if done incorrectly, a rather manual process is chosen to create a struct for a table and to migrate an existing database table to conform to the updated sql/struct. However, the create sql statement and struct are compared to the current database table which verifies that they match. This is a good middleground and guarantees a stable database interface.
 
