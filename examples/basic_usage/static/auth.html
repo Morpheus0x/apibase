@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apibase Authentication Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-md w-96">
+        <h1 class="text-2xl font-bold mb-6 text-center">Apibase Authentication Test</h1>
+        
+        <!-- Login Form -->
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label for="loginEmail" class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" id="loginEmail" name="email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <label for="loginPassword" class="block text-sm font-medium text-gray-700">Password</label>
+                <input type="password" id="loginPassword" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Login</button>
+        </form>
+
+        <!-- Signup Form -->
+        <form id="signupForm" class="space-y-4 hidden">
+            <div>
+                <label for="signupUsername" class="block text-sm font-medium text-gray-700">Username</label>
+                <input type="text" id="signupUsername" name="username" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <label for="signupEmail" class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" id="signupEmail" name="email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <label for="signupPassword" class="block text-sm font-medium text-gray-700">Password</label>
+                <input type="password" id="signupPassword" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <label for="signupPasswordConfirm" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                <input type="password" id="signupPasswordConfirm" name="password-confirm" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Sign Up</button>
+        </form>
+
+        <!-- Toggle between Login and Signup -->
+        <div class="mt-4 text-center">
+            <a href="#" id="toggleAuth" class="text-sm text-indigo-600 hover:text-indigo-500">Switch to Sign Up</a>
+        </div>
+
+        <!-- Logout Button -->
+        <button id="logoutButton" class="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Logout</button>
+
+        <!-- API Request Button -->
+        <button id="apiRequestButton" class="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Make API Request</button>
+
+        <!-- API Response Display -->
+        <div id="apiResponse" class="mt-4 p-4 bg-gray-100 rounded-md overflow-x-auto">
+            <pre id="apiResponseContent" class="text-sm"></pre>
+        </div>
+
+        <!-- Status Message -->
+        <div id="statusMessage" class="mt-4 text-center text-sm"></div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+        const toggleAuth = document.getElementById('toggleAuth');
+        const logoutButton = document.getElementById('logoutButton');
+        const apiRequestButton = document.getElementById('apiRequestButton');
+        const apiResponseContent = document.getElementById('apiResponseContent');
+        const statusMessage = document.getElementById('statusMessage');
+
+        let csrfToken = '';
+
+        // Function to get CSRF token
+        async function getCsrfToken() {
+            try {
+                const response = await fetch('/auth/csrf_token');
+                if (response.ok) {
+                    // The endpoint sets the cookie, so we need to retrieve it from the cookie
+                    const token = document.cookie
+                        .split('; ')
+                        .find(row => row.startsWith('csrf_token='))
+                        ?.split('=')[1];
+                    if (token) {
+                        csrfToken = token;
+                    } else {
+                        throw new Error('CSRF token not found in cookies');
+                    }
+                } else {
+                    throw new Error('Failed to get CSRF token');
+                }
+            } catch (error) {
+                console.error('Error getting CSRF token:', error);
+                statusMessage.textContent = 'Failed to initialize CSRF protection. Please refresh the page.';
+                statusMessage.className = 'mt-4 text-center text-sm text-red-600';
+            }
+        }
+
+        // Call getCsrfToken when the page loads
+        getCsrfToken();
+
+        // Function to make authenticated requests
+        async function makeAuthenticatedRequest(url, options = {}) {
+            await getCsrfToken(); // Always get the latest token from the cookie
+            const headers = {
+                ...options.headers,
+                'X-XSRF-TOKEN': csrfToken
+            };
+            return fetch(url, { ...options, headers });
+        }
+
+        // Function to handle API responses
+        async function handleApiResponse(response) {
+            const data = await response.json();
+            if (!response.ok) {
+                const errorId = data.err.toString().padStart(3, '0');
+                const errorMessage = data.message ? `: ${data.message}` : '';
+                const statusText = response.statusText || 'Unknown';
+                throw new Error(`${response.status}(${statusText}) E${errorId}${errorMessage}`);
+            }
+            return data;
+        }
+
+        // Function to update status message
+        function updateStatusMessage(message, isSuccess = true) {
+            statusMessage.textContent = message;
+            statusMessage.className = `mt-4 text-center text-sm ${isSuccess ? 'text-green-600' : 'text-red-600'}`;
+        }
+
+        // Function to check if an object is empty
+        function isEmptyObject(obj) {
+            return Object.keys(obj).length === 0 && obj.constructor === Object;
+        }
+
+        // Toggle between Login and Signup forms
+        toggleAuth.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginForm.classList.toggle('hidden');
+            signupForm.classList.toggle('hidden');
+            toggleAuth.textContent = toggleAuth.textContent.includes('Sign Up') ? 'Switch to Login' : 'Switch to Sign Up';
+        });
+
+        // Login form submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(loginForm);
+
+            try {
+                const response = await makeAuthenticatedRequest('/auth/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await handleApiResponse(response);
+                let statusMsg = `Login successful! ${data.msg}`;
+                if (data.data && !isEmptyObject(data.data)) {
+                    statusMsg += ` Additional info: ${JSON.stringify(data.data)}`;
+                }
+                updateStatusMessage(statusMsg);
+                loginForm.classList.add('hidden');
+                signupForm.classList.add('hidden');
+                toggleAuth.classList.add('hidden');
+            } catch (error) {
+                updateStatusMessage(`Login failed: ${error.message}`, false);
+            }
+        });
+
+        // Signup form submission
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(signupForm);
+
+            if (formData.get('password') !== formData.get('password-confirm')) {
+                updateStatusMessage('Passwords do not match.', false);
+                return;
+            }
+
+            try {
+                const response = await makeAuthenticatedRequest('/auth/signup', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await handleApiResponse(response);
+                let statusMsg = `Signup successful! ${data.msg}`;
+                if (data.data && !isEmptyObject(data.data)) {
+                    statusMsg += ` Additional info: ${JSON.stringify(data.data)}`;
+                }
+                updateStatusMessage(statusMsg);
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                toggleAuth.textContent = 'Switch to Sign Up';
+            } catch (error) {
+                updateStatusMessage(`Signup failed: ${error.message}`, false);
+            }
+        });
+
+        // Logout button click
+        logoutButton.addEventListener('click', async () => {
+            try {
+                const response = await makeAuthenticatedRequest('/auth/logout', {
+                    method: 'GET'
+                });
+                const data = await handleApiResponse(response);
+                updateStatusMessage('Logout successful!');
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                toggleAuth.classList.remove('hidden');
+                toggleAuth.textContent = 'Switch to Sign Up';
+            } catch (error) {
+                updateStatusMessage(`Logout failed: ${error.message}`, false);
+            }
+        });
+
+        // API Request button click
+        apiRequestButton.addEventListener('click', async () => {
+            try {
+                const response = await makeAuthenticatedRequest('/api/');
+                const data = await handleApiResponse(response);
+                apiResponseContent.textContent = JSON.stringify(data, null, 2);
+                apiResponseContent.parentElement.classList.remove('hidden');
+                updateStatusMessage('API request successful!');
+            } catch (error) {
+                updateStatusMessage(`API request failed: ${error.message}`, false);
+                apiResponseContent.parentElement.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Your Email - ApiBase</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #222222;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .logo {
+            display: block;
+            margin: 0 auto 20px;
+            max-height: 70px;
+            width: auto;
+            object-fit: contain;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #31B6BC;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666666;
+            text-align: center;
+        }
+        p {
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <img src="http://localhost:8989/img/app_logo.png" alt="ApiBase Logo" class="logo">
+    <h1>Confirm Your Email Address</h1>
+    <p>Hello {{ .Username }},</p>
+    <p>Thank you for signing up for ApiBase. To complete your registration and start using our services, please confirm your email address by clicking the button below:</p>
+    <div style="text-align: center;">
+        <a href="http://localhost:8989/api/auth/confirm_email?token={{ .Token }}" class="button">Confirm Email</a>
+    </div>
+    <p>If the button above doesn't work, you can also confirm your email by clicking on the following link or copying and pasting it into your browser:</p>
+    <p><a href="http://localhost:8989/api/auth/confirm_email?token={{ .Token }}">http://localhost:8989/api/auth/confirm_email?token={{ .Token }}</a></p>
+    <p>This link will expire in 24 hours. If you didn't create an account with ApiBase, please ignore this email.</p>
+    <p>Best regards,<br>The ApiBase Team</p>
+    <div class="footer">
+        <p>This email was sent by ApiBase. Please do not reply to this message.</p>
+        <p>&copy; {{ .Year }} ApiBase. All rights reserved.</p>
+    </div>
+</body>
+</html>

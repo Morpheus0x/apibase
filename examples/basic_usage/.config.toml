@@ -1,0 +1,83 @@
+[apiconfig]
+# API CORS URIs
+cors = []
+# Token Secret must be random base64 byte string with at least 64 bytes. 
+# Create this locally on your system! e.g. `openssl rand -base64 64`
+token_secret = "OwZseQ11aaP..."
+# Access & Refresh Token Validity, Recommended Defaults:
+token_access_validity = "15m"
+token_refresh_validity = "31d"
+# Enable Local Database Authentication
+local_auth = true
+# Enable OAuth Login
+oauth_enabled = false
+# Allow new users to register with local_auth
+allow_registration = false
+# Require E-Mail Confirmation before user can access the application
+require_confirmed_email = true
+# API IP:Port binding, an IP Address may be omitted to listen on 0.0.0.0
+api_bind = ":8989"
+# Final Application URI, without trailing slash!
+# For SSL, use a reverse proxy (e.g. NGINX or HAProxy) and use https as protocol here
+app_uri = "http://localhost:8989"
+
+[apiconfig.api_root]
+# Use this if apibase is behind a reverse proxy which serves all other non-api routes
+#kind = "local"
+#target = ""
+# Use this to serve static files in the specified directory
+kind = "static"
+target = "./static"
+# Use this to forward all requests other than to routes starting with /api or /auth to another webserver
+#kind = "proxy"
+#target = "http://localhost:8080"
+
+# Overwrite the following defaults, if desired
+#[baseconfig]
+#db_reconnect_timeout_sec = 1
+#db_max_reconnect_attempts = 3
+#sqlite_datetime_format = "2006-01-02 15:04:05"
+
+# Configure an email sender, multiple senders may be specified by a custom name, e.g. [email.my_sender]
+[email.default]
+from = "sender@example.com"
+username = "sender@example.com"
+password = "password"
+host = "localhost"
+port = 587
+# Sending via Exchange server might be supported in the future
+#exchange_uri = "https://outlook.office365.com/EWS/Exchange.asmx"
+
+# Add templates which can be used to format desired html for sending email
+[email_template.confirm_en]
+path = "./templates/email_confirmation_en.html"
+[email_template.confirm_de]
+path = "./templates/email_confirmation_de.html"
+
+# Configure ApiBase to use PostgreSQL
+[postgres]
+host = "127.0.0.1"
+port = "5432"
+user = "apibase"
+password = "password"
+db = "apibase"
+ssl_enabled = false
+
+# Configure ApiBase to use SQLite, this might be supported in the future
+#[sqlite]
+#file_path = "/etc/ApiBase/sqlite.db"
+#lock_file = "/tmp/apibase_sqlite.lock"
+
+# Add your own application settings here
+[application]
+max_insert_error_count = 3
+
+# Additional database connection may be configured as such
+# This must be correctly setup in your custom application settings struct
+[application.second_database]
+host = "127.0.0.1"
+port = "5432"
+user = "dbuser"
+password = "password"
+db = "my_database"
+ssl_enabled = false
