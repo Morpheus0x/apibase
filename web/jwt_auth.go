@@ -13,20 +13,20 @@ import (
 )
 
 func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.UserRole) (h.SecretString, error) {
-	newSessionId := h.CreateSecretString("")
+	noNewSession := h.CreateSecretString("")
+	newSessionId := h.CreateSecretString(h.RandomBase64(32))
 	accessToken, err := createJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin).signToken(api)
 	if err != nil {
-		return newSessionId, wr.NewError(wr.RespErrJwtAccessTokenParsing, errx.Wrapf(err, "unable to create access token for user (id: %d)", user.ID))
+		return noNewSession, wr.NewError(wr.RespErrJwtAccessTokenParsing, errx.Wrapf(err, "unable to create access token for user (id: %d)", user.ID))
 	}
-	h.RandomString(16)
 	refreshToken, expiresAt, err := createJwtRefreshClaims(user.ID, newSessionId).signToken(api)
 	if err != nil {
-		return newSessionId, wr.NewError(wr.RespErrJwtRefreshTokenParsing, errx.Wrapf(err, "unable to create refresh token for user (id: %d)", user.ID))
+		return noNewSession, wr.NewError(wr.RespErrJwtRefreshTokenParsing, errx.Wrapf(err, "unable to create refresh token for user (id: %d)", user.ID))
 	}
 	userAgent := c.Request().Header.Get("User-Agent")
 	err = api.DB.CreateRefreshTokenEntry(table.RefreshToken{UserID: user.ID, SessionID: newSessionId, ReissueCount: 0, UserAgent: userAgent, ExpiresAt: expiresAt})
 	if err != nil {
-		return newSessionId, wr.NewError(wr.RespErrJwtRefreshTokenCreate, errx.Wrapf(err, "unable to create refresh token database entry for user (id: %d)", user.ID))
+		return noNewSession, wr.NewError(wr.RespErrJwtRefreshTokenCreate, errx.Wrapf(err, "unable to create refresh token database entry for user (id: %d)", user.ID))
 	}
 
 	// TODO: set cookies to secure/https only (can be configured by ApiConfig setting)
