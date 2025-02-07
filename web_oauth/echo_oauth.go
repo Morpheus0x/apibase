@@ -26,6 +26,11 @@ func RegisterOAuthEndpoints(api *web.ApiServer) {
 
 func login(api *web.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		err := web.AuthJwtHandler(c, api)
+		if err == nil {
+			return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "already logged in"})
+		}
+
 		request := c.Request()
 		queryURL := request.URL.Query()
 		queryURL.Set("provider", c.Param("provider"))

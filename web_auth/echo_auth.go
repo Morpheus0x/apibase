@@ -25,6 +25,11 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// TODO: add fail2ban or similar/more advanced, for login endpoint
 
+		err := web.AuthJwtHandler(c, api)
+		if err == nil {
+			return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "already logged in"})
+		}
+
 		email := c.FormValue("email")
 		password := c.FormValue("password")
 

@@ -15,7 +15,7 @@ func AuthJWT(api *ApiServer) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			log.Log(log.LevelDevel, "Middlware AuthJWT executed")
-			err := authJwtHandler(c, api)
+			err := AuthJwtHandler(c, api)
 			if err, ok := err.(*wr.ResponseError); ok {
 				if err.Unwrap() != nil {
 					log.Log(log.LevelError, err.Error())
@@ -31,7 +31,7 @@ func AuthJWT(api *ApiServer) echo.MiddlewareFunc {
 	}
 }
 
-func authJwtHandler(c echo.Context, api *ApiServer) error {
+func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 	// Verify Access Token
 	accessToken, err := parseAccessTokenCookie(c, api.Config.TokenSecretBytes())
 	if err == nil {
