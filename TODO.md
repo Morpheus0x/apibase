@@ -13,12 +13,12 @@
 - [x] Create new Org for every new user created with admin perms, unless SignupDefaultRoleHook defines own role
 - [x] edit auth hooks to modify role? - Done with using an additional hook which may create roles
 - [x] Assign a scheduled task to an org
+- [x] Protect any referrer uri content by limiting its size to protect against dos and make sure the uri is always starting with the app uri
+- [x] fix TODO "refresh JWT": web_oauth/echo_oauth.go#L48
 - [ ] add auth hooks to oauth
-- [ ] fix TODO "refresh JWT": web_oauth/echo_oauth.go#L48
 - [ ] impl email signup integration
 - [ ] Make sure that every function that returns an error doens't add any details not also available outside of itself (e.g. userId func param)
 - [ ] Resolve all `TODO: remove hardcoded timeout`
-- [ ] Protect any referrer uri content by limiting its size to protect against dos and make sure the uri is always starting with the app uri
 - [ ] add captcha for local login and signup
 - [ ] impl htmx api responses
 

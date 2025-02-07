@@ -34,12 +34,10 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		request := c.Request()
 		queryURL := request.URL.Query()
 		queryURL.Set("provider", c.Param("provider"))
-		// TODO: use other way to get referrer that also includes uri fragment (uri including # part)
-		referrer := request.Header.Get("referrer")
-		if !strings.HasPrefix(referrer, api.Config.AppURI) {
+		referrer := request.Referer()
+		if !strings.HasPrefix(referrer, api.Config.AppURI) || len(referrer) > web.REFERRER_MAX_LENGTH {
 			referrer = api.Config.AppURI
 		}
-		// TODO: referrer is a possible attack vector, if it is too large, limit str len to ...
 
 		// Correct Redirecting
 		stateBytes, err := json.Marshal(&web.StateReferrer{Nonce: h.RandomString(16), URI: referrer})
@@ -54,8 +52,10 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 
 		// try to get the user without re-authenticating
 		if _, err := gothic.CompleteUserAuth(c.Response(), request); err == nil {
-			// TODO: refresh JWT
-			return c.Redirect(http.StatusTemporaryRedirect, request.Referer())
+			err := web.AuthJwtHandler(c, api)
+			if err == nil {
+				return c.Redirect(http.StatusTemporaryRedirect, referrer)
+			}
 		}
 
 		gothic.BeginAuthHandler(c.Response(), request)
