@@ -40,11 +40,14 @@ func GetCSRF(api *ApiServer) echo.HandlerFunc {
 }
 
 // update
-func UpdateCSRF(c echo.Context, api *ApiServer, csrfToken h.SecretString) {
-	if csrfToken.GetSecret() == "" {
+func UpdateCSRF(c echo.Context, api *ApiServer, sessionId h.SecretString) {
+	var csrfToken h.SecretString
+	if sessionId.GetSecret() == "" {
 		csrfToken = createCSRF(api, getSessionId(c, api.Config.TokenSecretBytes()))
+	} else {
+		csrfToken = createCSRF(api, h.CreateSecretString(""))
 	}
-	csrfCookie := &http.Cookie{Name: "csrf_token", Value: csrfToken.GetSecret(), Path: "/", Expires: time.Now().Add(api.Config.TokenAccessValidityDuration() * 2)}
+	csrfCookie := &http.Cookie{Name: "csrf_token", Value: csrfToken.GetSecret(), Path: "/", Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration() * 2)}
 	h.OverwriteRequestCookie(c.Request(), csrfCookie) // set cookie for current request
 	c.SetCookie(csrfCookie)                           // set cookie for response
 }
@@ -67,6 +70,6 @@ func getSessionId(c echo.Context, tokenSecret []byte) h.SecretString {
 	return refreshClaims.SessionID
 }
 
-func RemoveCSRF(c echo.Context) {
-	c.SetCookie(&http.Cookie{Name: "csrf_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
-}
+// func RemoveCSRF(c echo.Context) {
+// 	c.SetCookie(&http.Cookie{Name: "csrf_token", Value: "", Path: "/", Expires: time.Unix(0, 0)})
+// }

@@ -179,7 +179,7 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			log.Logf(log.LevelError, "logout hook %d failed: %s", failedHookNr, err.Error())
 		}
-		web.RemoveCSRF(c)
+		web.UpdateCSRF(c, api, h.CreateSecretString(""))
 		err = web.JwtLogout(c, api)
 		if err, ok := err.(*wr.ResponseError); ok {
 			if err.Unwrap() != nil {
@@ -191,7 +191,6 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogout during logout, this should not happen!: %s", err.Error())
 			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrAuthLogoutUnknownError})
 		}
-		web.UpdateCSRF(c, api, h.CreateSecretString(""))
 		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout))
 	}
 }
