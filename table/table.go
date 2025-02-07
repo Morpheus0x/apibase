@@ -26,9 +26,9 @@ type RefreshToken struct {
 	SessionID    h.SecretString `db:"session_id"`
 	ReissueCount int            `db:"reissue_count"`
 	UserAgent    string         `db:"user_agent"`
+	ExpiresAt    time.Time      `db:"expires_at"`
 	CreatedAt    time.Time      `db:"created_at" default:"true"`
 	UpdatedAt    time.Time      `db:"updated_at" default:"true"`
-	ExpiresAt    time.Time      `db:"expires_at"`
 }
 
 type Organization struct {
