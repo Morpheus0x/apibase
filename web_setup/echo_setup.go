@@ -18,9 +18,10 @@ import (
 	"gopkg.cc/apibase/web"
 	"gopkg.cc/apibase/web_auth"
 	"gopkg.cc/apibase/web_oauth"
+	wr "gopkg.cc/apibase/web_response"
 )
 
-func SetupRest(config web.ApiConfig, database db.DB) (*web.ApiServer, error) {
+func SetupRest(config web.ApiConfig, database db.DB, appVersion string) (*web.ApiServer, error) {
 	if err := db.ValidateDB(database); err != nil {
 		return nil, errx.Wrap(err, "unable to setup rest api")
 	}
@@ -69,7 +70,7 @@ func SetupRest(config web.ApiConfig, database db.DB) (*web.ApiServer, error) {
 	api.E.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: api.Config.CORS,
 	}))
-	RegisterRestDefaultEndpoints(api)
+	RegisterRestDefaultEndpoints(api, appVersion)
 	if api.Config.LocalAuth {
 		web_auth.RegisterAuthEndpoints(api)
 	}
@@ -79,11 +80,11 @@ func SetupRest(config web.ApiConfig, database db.DB) (*web.ApiServer, error) {
 	return api, nil
 }
 
-func RegisterRestDefaultEndpoints(api *web.ApiServer) {
+func RegisterRestDefaultEndpoints(api *web.ApiServer, appVersion string) {
 	switch api.Config.ApiRoot.Kind {
 	case "local":
 		api.E.GET("/", func(c echo.Context) error {
-			return c.JSON(http.StatusOK, map[string]string{"message": "apibase"})
+			return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: appVersion})
 		})
 		// TODO: change default local response and optionally add additional routes
 	case "static":
@@ -123,9 +124,12 @@ func RegisterRestDefaultEndpoints(api *web.ApiServer) {
 	}
 
 	api.E.GET("/auth/csrf_token", web.GetCSRF(api))
+	api.E.GET("/api/version", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: appVersion})
+	})
 	apiGroup := api.E.Group("/api/", web.CheckCSRF(api), web.AuthJWT(api))
 	apiGroup.GET("", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"message": "Welcome!"})
+		return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "Welcome!"})
 	})
 	api.Api = apiGroup
 }
