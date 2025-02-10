@@ -63,7 +63,9 @@ func SetupRest(config web.ApiConfig, database db.DB) (*web.ApiServer, error) {
 	api.E.HidePort = true
 	api.E.Use(log.EchoLoggerMiddleware(log.LevelDebug, log.LevelDevel))
 	api.E.HTTPErrorHandler = web.EchoErrorHandler
-	api.E.Use(middleware.Recover())
+	api.E.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{
+		LogErrorFunc: log.EchoLogPanicStacktrace,
+	}))
 	api.E.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: api.Config.CORS,
 	}))

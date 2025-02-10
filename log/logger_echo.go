@@ -75,3 +75,8 @@ func EchoLoggerMiddleware(defaultLevel Level, apiRootLevel Level) echo.Middlewar
 		}
 	}
 }
+
+func EchoLogPanicStacktrace(c echo.Context, err error, stack []byte) error {
+	Logf(LevelDebug, "[PANIC RECOVER] Error: %v, Stacktrace: %s", err, stack)
+	return nil
+}
