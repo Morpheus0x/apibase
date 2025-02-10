@@ -15,6 +15,7 @@ type ResponseErrorId uint
 const (
 	RespErrNone ResponseErrorId = iota
 	RespErrUndefined
+	RespErrUnknownInternal
 	RespErrCsrfInvalid
 	RespErrUserDoesNotExist
 	RespErrUserNoRoles
@@ -85,6 +86,17 @@ func (e ResponseError) Is(target error) bool {
 
 func (e ResponseError) GetErrorId() ResponseErrorId {
 	return e.errorId
+}
+
+func (e ResponseError) GetResponse() (JsonResponse[struct{}], int) {
+	httpStatus := http.StatusInternalServerError
+	if e.httpStatus != 0 {
+		httpStatus = e.httpStatus
+	}
+	return JsonResponse[struct{}]{
+		ErrorID: e.errorId,
+		Message: e.Error(),
+	}, httpStatus
 }
 
 func (e ResponseError) SendJson(c echo.Context) error {
