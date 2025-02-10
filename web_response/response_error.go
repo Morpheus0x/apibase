@@ -34,6 +34,7 @@ const (
 	RespErrOauthCallbackCompleteAuth
 	RespErrOauthCallbackUnknownError
 	RespErrAuthLoginUnknownError
+	RespErrAuthLoginNotLocal
 	RespErrAuthSignupUnknownError
 	RespErrAuthLogoutUnknownError
 	RespErrLoginNoUser

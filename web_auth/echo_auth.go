@@ -49,7 +49,10 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrLoginNoUser})
 		}
 
-		// TODO: unify the api (error) response using webtype.ApiJsonResponse
+		if user.AuthProvider != "local" {
+			return c.JSON(http.StatusMisdirectedRequest, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrAuthLoginNotLocal})
+		}
+
 		match, err := argon2id.ComparePasswordAndHash(password, user.PasswordHash.GetSecret())
 		if err != nil {
 			log.Logf(log.LevelError, "unable to compare password with hash: %s", err.Error())

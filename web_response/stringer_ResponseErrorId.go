@@ -29,25 +29,26 @@ func _() {
 	_ = x[RespErrOauthCallbackCompleteAuth-18]
 	_ = x[RespErrOauthCallbackUnknownError-19]
 	_ = x[RespErrAuthLoginUnknownError-20]
-	_ = x[RespErrAuthSignupUnknownError-21]
-	_ = x[RespErrAuthLogoutUnknownError-22]
-	_ = x[RespErrLoginNoUser-23]
-	_ = x[RespErrLoginComparePassword-24]
-	_ = x[RespErrLoginWrongPassword-25]
-	_ = x[RespErrSignupPasswordMismatch-26]
-	_ = x[RespErrSignupPasswordHash-27]
-	_ = x[RespErrSignupUserExists-28]
-	_ = x[RespErrSignupNewUserOrg-29]
-	_ = x[RespErrSignupUserCreate-30]
-	_ = x[RespErrHookPreLogin-31]
-	_ = x[RespErrHookPostLogin-32]
-	_ = x[RespErrHookPreSignup-33]
-	_ = x[RespErrHookSignupDefaultRole-34]
+	_ = x[RespErrAuthLoginNotLocal-21]
+	_ = x[RespErrAuthSignupUnknownError-22]
+	_ = x[RespErrAuthLogoutUnknownError-23]
+	_ = x[RespErrLoginNoUser-24]
+	_ = x[RespErrLoginComparePassword-25]
+	_ = x[RespErrLoginWrongPassword-26]
+	_ = x[RespErrSignupPasswordMismatch-27]
+	_ = x[RespErrSignupPasswordHash-28]
+	_ = x[RespErrSignupUserExists-29]
+	_ = x[RespErrSignupNewUserOrg-30]
+	_ = x[RespErrSignupUserCreate-31]
+	_ = x[RespErrHookPreLogin-32]
+	_ = x[RespErrHookPostLogin-33]
+	_ = x[RespErrHookPreSignup-34]
+	_ = x[RespErrHookSignupDefaultRole-35]
 }
 
-const _ResponseErrorId_name = "RespErrNoneRespErrUndefinedRespErrUnknownInternalRespErrCsrfInvalidRespErrUserDoesNotExistRespErrUserNoRolesRespErrMissingInputRespErrJwtAccessTokenSigningRespErrJwtAccessTokenParsingRespErrJwtRefreshTokenCreateRespErrJwtRefreshTokenSigningRespErrJwtRefreshTokenUpdateRespErrJwtRefreshTokenParsingRespErrJwtRefreshTokenClaimsRespErrJwtRefreshTokenInvalidRespErrJwtRefreshTokenExpiredRespErrJwtRefreshTokenVerifyErrRespErrJwtRefreshTokenVerifyInvalidRespErrOauthCallbackCompleteAuthRespErrOauthCallbackUnknownErrorRespErrAuthLoginUnknownErrorRespErrAuthSignupUnknownErrorRespErrAuthLogoutUnknownErrorRespErrLoginNoUserRespErrLoginComparePasswordRespErrLoginWrongPasswordRespErrSignupPasswordMismatchRespErrSignupPasswordHashRespErrSignupUserExistsRespErrSignupNewUserOrgRespErrSignupUserCreateRespErrHookPreLoginRespErrHookPostLoginRespErrHookPreSignupRespErrHookSignupDefaultRole"
+const _ResponseErrorId_name = "RespErrNoneRespErrUndefinedRespErrUnknownInternalRespErrCsrfInvalidRespErrUserDoesNotExistRespErrUserNoRolesRespErrMissingInputRespErrJwtAccessTokenSigningRespErrJwtAccessTokenParsingRespErrJwtRefreshTokenCreateRespErrJwtRefreshTokenSigningRespErrJwtRefreshTokenUpdateRespErrJwtRefreshTokenParsingRespErrJwtRefreshTokenClaimsRespErrJwtRefreshTokenInvalidRespErrJwtRefreshTokenExpiredRespErrJwtRefreshTokenVerifyErrRespErrJwtRefreshTokenVerifyInvalidRespErrOauthCallbackCompleteAuthRespErrOauthCallbackUnknownErrorRespErrAuthLoginUnknownErrorRespErrAuthLoginNotLocalRespErrAuthSignupUnknownErrorRespErrAuthLogoutUnknownErrorRespErrLoginNoUserRespErrLoginComparePasswordRespErrLoginWrongPasswordRespErrSignupPasswordMismatchRespErrSignupPasswordHashRespErrSignupUserExistsRespErrSignupNewUserOrgRespErrSignupUserCreateRespErrHookPreLoginRespErrHookPostLoginRespErrHookPreSignupRespErrHookSignupDefaultRole"
 
-var _ResponseErrorId_index = [...]uint16{0, 11, 27, 49, 67, 90, 108, 127, 155, 183, 211, 240, 268, 297, 325, 354, 383, 414, 449, 481, 513, 541, 570, 599, 617, 644, 669, 698, 723, 746, 769, 792, 811, 831, 851, 879}
+var _ResponseErrorId_index = [...]uint16{0, 11, 27, 49, 67, 90, 108, 127, 155, 183, 211, 240, 268, 297, 325, 354, 383, 414, 449, 481, 513, 541, 565, 594, 623, 641, 668, 693, 722, 747, 770, 793, 816, 835, 855, 875, 903}
 
 func (i ResponseErrorId) String() string {
 	if i >= ResponseErrorId(len(_ResponseErrorId_index)-1) {
