@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/xhit/go-str2duration/v2"
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/errx"
 	h "gopkg.cc/apibase/helper"
@@ -30,9 +29,10 @@ type ApiServer struct {
 type ApiConfig struct {
 	CORS []string `toml:"cors"`
 
-	TokenSecret          h.SecretString `toml:"token_secret"`
-	TokenAccessValidity  string         `toml:"token_access_validity"`
-	TokenRefreshValidity string         `toml:"token_refresh_validity"`
+	TokenSecret             h.SecretString `toml:"token_secret"`
+	TokenAccessValidity     string         `toml:"token_access_validity"`
+	TokenRefreshValidity    string         `toml:"token_refresh_validity"`
+	TokenCookieExpiryMargin string         `toml:"token_cookie_expiry_margin"`
 
 	LocalAuth          bool `toml:"local_auth"`
 	OAuthEnabled       bool `toml:"oauth_enabled"`
@@ -46,7 +46,10 @@ type ApiConfig struct {
 	ApiRoot RootOptions `toml:"api_root"` // Configure the apibase root behaviour (local, static, (reverse) proxy)
 
 	// Internal Data
-	tokenSecretBytes []byte // decoded from TokenSecret string
+	tokenSecretBytes        []byte // decoded from TokenSecret string
+	tokenAccessValidity     time.Duration
+	tokenRefreshValidity    time.Duration
+	tokenCookieExpiryMargin float32
 }
 
 func (ac ApiConfig) TokenSecretBytes() []byte {
@@ -102,21 +105,52 @@ func (ac ApiConfig) AppUriWithQueryParams(params []QueryParam[any]) string {
 }
 
 func (ac ApiConfig) TokenAccessValidityDuration() time.Duration {
-	duration, err := str2duration.ParseDuration(ac.TokenAccessValidity)
-	if err != nil {
-		log.Logf(log.LevelCritical, "unable to parse TokenAccessValidity duration: %s, assuming default %s", ac.TokenAccessValidity, TOKEN_ACCESS_VALIDITY.String())
-		return TOKEN_ACCESS_VALIDITY
+	if ac.tokenAccessValidity != 0 {
+		return ac.tokenAccessValidity
 	}
-	return duration
+	duration, err := h.StringToDuration(ac.TokenAccessValidity)
+	if err != nil {
+		log.Logf(log.LevelWarning, "unable to parse token_access_validity duration from config: '%s', assuming default '%s'", ac.TokenAccessValidity, TOKEN_ACCESS_VALIDITY.String())
+		ac.tokenAccessValidity = TOKEN_ACCESS_VALIDITY
+		return ac.tokenAccessValidity
+	}
+	ac.tokenAccessValidity = duration
+	return ac.tokenAccessValidity
 }
 
 func (ac ApiConfig) TokenRefreshValidityDuration() time.Duration {
-	duration, err := str2duration.ParseDuration(ac.TokenRefreshValidity)
-	if err != nil {
-		log.Logf(log.LevelCritical, "unable to parse TokenRefreshValidity duration: %s, assuming default %s", ac.TokenRefreshValidity, TOKEN_REFRESH_VALIDITY.String())
-		return TOKEN_REFRESH_VALIDITY
+	if ac.tokenRefreshValidity != 0 {
+		return ac.tokenRefreshValidity
 	}
-	return duration
+	duration, err := h.StringToDuration(ac.TokenRefreshValidity)
+	if err != nil {
+		log.Logf(log.LevelWarning, "unable to parse token_refresh_validity duration from config: '%s', assuming default '%s'", ac.TokenRefreshValidity, TOKEN_REFRESH_VALIDITY.String())
+		ac.tokenRefreshValidity = TOKEN_REFRESH_VALIDITY
+		return ac.tokenRefreshValidity
+	}
+	ac.tokenRefreshValidity = duration
+	return ac.tokenRefreshValidity
+}
+
+func (ac ApiConfig) TokenCookieExpiryMarginPercentage() float32 {
+	if ac.tokenCookieExpiryMargin != 0 {
+		return ac.tokenCookieExpiryMargin
+	}
+	margin, err := h.PercentageToFloat32(ac.TokenCookieExpiryMargin)
+	if err != nil {
+		log.Logf(log.LevelWarning, "unable to parse token_cookie_expiry_margin percentage from config: '%s', assuming default '%s': %v", ac.TokenCookieExpiryMargin, TOKEN_COOKIE_EXPIRY_MARGIN, err)
+		margin, err = h.PercentageToFloat32(TOKEN_COOKIE_EXPIRY_MARGIN)
+		if err != nil {
+			log.Logf(log.LevelCritical, "unable to parse web.TOKEN_COOKIE_EXPIRY_MARGIN default percentage: '%s': %v", TOKEN_COOKIE_EXPIRY_MARGIN, err)
+			panic(1)
+		}
+	}
+	ac.tokenCookieExpiryMargin = margin
+	return ac.tokenCookieExpiryMargin
+}
+
+func (ac ApiConfig) AddCookieExpiryMargin(validity time.Duration) time.Duration {
+	return time.Duration(float32(validity) * ac.TokenCookieExpiryMarginPercentage())
 }
 
 //go:generate stringer -type HttpMethod -output ./stringer_HttpMethod.go

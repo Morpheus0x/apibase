@@ -52,14 +52,12 @@ func SetupRest(config web.ApiConfig, database db.DB, appVersion string) (*web.Ap
 		log.Log(log.LevelWarning, "CORS is not set, assuming '*', this should not be used in a production environment!")
 		api.Config.CORS = []string{"*"}
 	}
-	if config.TokenAccessValidity == "" {
-		log.Logf(log.LevelWarning, "AccessTokenValidity is not set, assuming default validity of %s", web.TOKEN_ACCESS_VALIDITY.String())
-		api.Config.TokenAccessValidity = web.TOKEN_ACCESS_VALIDITY.String()
-	}
-	if config.TokenRefreshValidity == "" {
-		log.Logf(log.LevelWarning, "TokenRefreshValidity is not set, assuming default validity of %s", web.TOKEN_REFRESH_VALIDITY.String())
-		api.Config.TokenRefreshValidity = web.TOKEN_REFRESH_VALIDITY.String()
-	}
+
+	// parsing config strings into internal data
+	api.Config.TokenAccessValidityDuration()
+	api.Config.TokenRefreshValidityDuration()
+	api.Config.TokenCookieExpiryMarginPercentage()
+
 	api.E.HideBanner = true
 	api.E.HidePort = true
 	api.E.Use(log.EchoLoggerMiddleware(log.LevelDebug, log.LevelDevel))

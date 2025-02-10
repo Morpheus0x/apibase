@@ -47,7 +47,9 @@ func UpdateCSRF(c echo.Context, api *ApiServer, sessionId h.SecretString) {
 	} else {
 		csrfToken = createCSRF(api, h.CreateSecretString(""))
 	}
-	csrfCookie := &http.Cookie{Name: "csrf_token", Value: csrfToken.GetSecret(), Path: "/", Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration() * 2)}
+
+	expiresIn := api.Config.AddCookieExpiryMargin(api.Config.TokenRefreshValidityDuration())
+	csrfCookie := &http.Cookie{Name: "csrf_token", Value: csrfToken.GetSecret(), Path: "/", Expires: time.Now().Add(expiresIn)}
 	h.OverwriteRequestCookie(c.Request(), csrfCookie) // set cookie for current request
 	c.SetCookie(csrfCookie)                           // set cookie for response
 }

@@ -29,9 +29,10 @@ func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.Use
 		return noNewSession, wr.NewError(wr.RespErrJwtRefreshTokenCreate, errx.Wrapf(err, "unable to create refresh token database entry for user (id: %d)", user.ID))
 	}
 
-	// TODO: set cookies to secure/https only (can be configured by ApiConfig setting)
-	c.SetCookie(&http.Cookie{Name: "access_token", Value: accessToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(api.Config.TokenAccessValidityDuration() * 2)})
-	c.SetCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration() * 2)})
+	expiresIn := api.Config.AddCookieExpiryMargin(api.Config.TokenAccessValidityDuration())
+	c.SetCookie(&http.Cookie{Name: "access_token", Value: accessToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(expiresIn)})
+	expiresIn = api.Config.AddCookieExpiryMargin(api.Config.TokenRefreshValidityDuration())
+	c.SetCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken, Path: "/", HttpOnly: true, Expires: time.Now().Add(expiresIn)})
 
 	return newSessionId, nil
 }

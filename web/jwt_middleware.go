@@ -111,7 +111,8 @@ func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 			return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtRefreshTokenUpdate, nil)
 		}
 
-		newRefreshTokenCookie := &http.Cookie{Name: "refresh_token", Value: newRefreshToken, Path: "/", Expires: time.Now().Add(api.Config.TokenRefreshValidityDuration() * 2)}
+		expiresIn := api.Config.AddCookieExpiryMargin(api.Config.TokenRefreshValidityDuration())
+		newRefreshTokenCookie := &http.Cookie{Name: "refresh_token", Value: newRefreshToken, Path: "/", Expires: time.Now().Add(expiresIn)}
 
 		h.OverwriteRequestCookie(currentRequest, newRefreshTokenCookie) // set cookie for current request
 		c.SetCookie(newRefreshTokenCookie)                              // set cookie for response
@@ -124,7 +125,8 @@ func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 		return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtAccessTokenSigning, nil)
 	}
 
-	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(api.Config.TokenAccessValidityDuration() * 2)}
+	expiresIn := api.Config.AddCookieExpiryMargin(api.Config.TokenAccessValidityDuration())
+	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(expiresIn)}
 	h.OverwriteRequestCookie(currentRequest, newAccessTokenCookie) // set cookie for current request
 	c.SetCookie(newAccessTokenCookie)                              // set cookie for response
 
