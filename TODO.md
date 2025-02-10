@@ -20,6 +20,8 @@
 - [ ] Make sure that every function that returns an error doens't add any details not also available outside of itself (e.g. userId func param)
 - [ ] Resolve all `TODO: remove hardcoded timeout`
 - [ ] add captcha for local login and signup
+- [ ] check what happens if local auth already exists for user trying to login with same email via oauth
+- [ ] impl saml auth
 - [ ] impl htmx api responses
 
 # TODO Database Integration
