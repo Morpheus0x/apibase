@@ -102,7 +102,7 @@ func GetScheduledTasksFromDB(api *web.ApiServer) ([]Task, error) {
 // Starts all scheduled tasks that were saved in the database,
 // assign cron.TaskFunc to all Task array entries returned by cron.GetScheduledTasksFromDB before running this function,
 // if any error occurs, any scheduled tasks will be shut down
-func StartScheduledTasks(tasks []Task) error {
+func StartScheduledTasks(settings *web.ApiConfigSettings, tasks []Task) error {
 	// verify that all tasks have a function to run
 	for _, t := range tasks {
 		if t.Run == nil {
@@ -112,7 +112,7 @@ func StartScheduledTasks(tasks []Task) error {
 	// schedule tasks
 	startErrors := make(map[string]error)
 	for _, t := range tasks {
-		err := Schedule(t)
+		err := Schedule(settings, t)
 		if err != nil {
 			startErrors[t.ID] = err
 		}
@@ -121,7 +121,7 @@ func StartScheduledTasks(tasks []Task) error {
 		for id, err := range startErrors {
 			log.Logf(log.LevelError, "Unable to start scheduled task(%s): %s", id, err.Error())
 		}
-		err := Shutdown()
+		err := Shutdown(settings)
 		return errx.Wrap(err, "Starting scheduled tasks failed, see previous log output for detailed errors, any successfully scheduled tasks have been shut down")
 	}
 	return nil
@@ -131,7 +131,7 @@ func StartScheduledTasks(tasks []Task) error {
 // interval must be at leas one minute and has some special behaviour if it has one of these specific values, it will run at the time specified in start:
 // cron.Daily, cron.Weekly (at weekday of start), cron.Monthly (at day of month of start, day of start must not be later than the 28th), cron.Yearly (at start datetime)
 func ScheduleAndSaveToDB(api *web.ApiServer, t Task) error {
-	err := Schedule(t)
+	err := Schedule(api.Config.Settings, t)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func ScheduleAndSaveToDB(api *web.ApiServer, t Task) error {
 // Schedule new task, thread safe.
 // interval must be at leas one minute and has some special behaviour if it has one of these specific values, it will run at the time specified in start:
 // cron.Daily, cron.Weekly (at weekday of start), cron.Monthly (at day of month of start, day of start must not be later than the 28th), cron.Yearly (at start datetime)
-func Schedule(t Task) error {
+func Schedule(settings *web.ApiConfigSettings, t Task) error {
 	if t.Run == nil {
 		return errx.NewWithType(ErrTaskNoRunFunc, "")
 	}
@@ -162,7 +162,7 @@ func Schedule(t Task) error {
 
 	go worker(t.ID, newTask)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), settings.TimeoutScheduledTaskStartup)
 	defer cancel()
 
 	select {
@@ -189,7 +189,7 @@ func Schedule(t Task) error {
 
 // Remove scheduled task and also from database, thread safe.
 func RemoveAlsoFromDB(api *web.ApiServer, id string) error {
-	err := Remove(id)
+	err := Remove(api.Config.Settings, id)
 	dbErr := api.DB.DeleteScheduledTask(id)
 	if dbErr != nil {
 		return errx.WrapWithType(ErrTaskDatabaseDelete, err, "")
@@ -201,39 +201,46 @@ func RemoveAlsoFromDB(api *web.ApiServer, id string) error {
 }
 
 // Remove scheduled task, thread safe.
-func Remove(id string) error {
+func Remove(settings *web.ApiConfigSettings, id string) error {
 	activeTasks.Lock()
 	defer activeTasks.Unlock()
 	if _, ok := activeTasks.tasks[id]; !ok {
 		return errx.NewWithTypef(ErrTaskRemove, "worker with id '%s' isn't currently registered", id)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), settings.TimeoutScheduledTaskShutdown)
+	defer cancel()
 	close(activeTasks.tasks[id].shutdown)
+	select {
+	case <-activeTasks.tasks[id].wasShutdown:
+		// nothing to do
+	case <-ctx.Done():
+		log.Logf(log.LevelWarning, "unable to shutdown task (id: %s), timeout (%s) exceeded", id, settings.TimeoutScheduledTaskShutdown.String())
+	}
 	delete(activeTasks.tasks, id)
 	return nil
 }
 
 // Shutdown all active tasks, doesn't remove scheduled tasks from database, thread safe
-func Shutdown() error {
-	timeout := 60 * time.Second // TODO: remove hardcoded timeout
+func Shutdown(settings *web.ApiConfigSettings) error {
 	timeoutExceededCount := 0
 
 	activeTasks.Lock()
 	for id, t := range activeTasks.tasks {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), settings.TimeoutScheduledTaskShutdown)
 		close(t.shutdown)
 		select {
 		case <-t.wasShutdown:
 			// nothing to do
 		case <-ctx.Done():
 			timeoutExceededCount++
-			log.Logf(log.LevelWarning, "unable to shutdown task (id: %s), timeout (%s) exceeded", id, timeout.String())
+			log.Logf(log.LevelWarning, "unable to shutdown task (id: %s), timeout (%s) exceeded", id, settings.TimeoutScheduledTaskShutdown.String())
 		}
 		cancel()
 	}
 	activeTasks.Unlock()
 
 	if timeoutExceededCount > 0 {
-		return errx.Newf("%d scheduled tasks couldn't be shutdown within their timeout of %s each", timeoutExceededCount, timeout.String())
+		return errx.Newf("%d scheduled tasks couldn't be shutdown within their timeout of %s each", timeoutExceededCount, settings.TimeoutScheduledTaskShutdown.String())
 	}
 	return nil
 }

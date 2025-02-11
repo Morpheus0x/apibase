@@ -27,29 +27,25 @@ type ApiServer struct {
 }
 
 type ApiConfig struct {
-	CORS []string `toml:"cors"`
+	CORS    []string `toml:"cors"`
+	ApiBind string   `toml:"api_bind"`
+	AppURI  string   `toml:"app_uri"` // Used for logout redirect and when no valid oauth callback referrer
 
-	TokenSecret             h.SecretString `toml:"token_secret"`
-	TokenAccessValidity     string         `toml:"token_access_validity"`
-	TokenRefreshValidity    string         `toml:"token_refresh_validity"`
-	TokenCookieExpiryMargin string         `toml:"token_cookie_expiry_margin"`
+	// Secrets
+	TokenSecret h.SecretString `toml:"token_secret"`
 
+	// Flags
 	LocalAuth          bool `toml:"local_auth"`
 	OAuthEnabled       bool `toml:"oauth_enabled"`
 	AllowRegistration  bool `toml:"allow_registration"`
 	ReqireConfirmEmail bool `toml:"require_confirmed_email"` // TODO: this // Before user is allowed to login
 
-	ApiBind string `toml:"api_bind"`
-	AppURI  string `toml:"app_uri"` // Used for logout redirect and when no valid oauth callback referrer
-
 	// Nested Structs
-	ApiRoot RootOptions `toml:"api_root"` // Configure the apibase root behaviour (local, static, (reverse) proxy)
+	ApiRoot  RootOptions        `toml:"api_root"` // Configure the apibase root behaviour (local, static, (reverse) proxy)
+	Settings *ApiConfigSettings `toml:"settings"`
 
 	// Internal Data
-	tokenSecretBytes        []byte // decoded from TokenSecret string
-	tokenAccessValidity     time.Duration
-	tokenRefreshValidity    time.Duration
-	tokenCookieExpiryMargin float32
+	tokenSecretBytes []byte // decoded from TokenSecret string
 }
 
 func (ac ApiConfig) TokenSecretBytes() []byte {
@@ -104,53 +100,45 @@ func (ac ApiConfig) AppUriWithQueryParams(params []QueryParam[any]) string {
 	return uri.String()
 }
 
-func (ac ApiConfig) TokenAccessValidityDuration() time.Duration {
-	if ac.tokenAccessValidity != 0 {
-		return ac.tokenAccessValidity
-	}
-	duration, err := h.StringToDuration(ac.TokenAccessValidity)
-	if err != nil {
-		log.Logf(log.LevelWarning, "unable to parse token_access_validity duration from config: '%s', assuming default '%s'", ac.TokenAccessValidity, TOKEN_ACCESS_VALIDITY.String())
-		ac.tokenAccessValidity = TOKEN_ACCESS_VALIDITY
-		return ac.tokenAccessValidity
-	}
-	ac.tokenAccessValidity = duration
-	return ac.tokenAccessValidity
-}
-
-func (ac ApiConfig) TokenRefreshValidityDuration() time.Duration {
-	if ac.tokenRefreshValidity != 0 {
-		return ac.tokenRefreshValidity
-	}
-	duration, err := h.StringToDuration(ac.TokenRefreshValidity)
-	if err != nil {
-		log.Logf(log.LevelWarning, "unable to parse token_refresh_validity duration from config: '%s', assuming default '%s'", ac.TokenRefreshValidity, TOKEN_REFRESH_VALIDITY.String())
-		ac.tokenRefreshValidity = TOKEN_REFRESH_VALIDITY
-		return ac.tokenRefreshValidity
-	}
-	ac.tokenRefreshValidity = duration
-	return ac.tokenRefreshValidity
-}
-
-func (ac ApiConfig) TokenCookieExpiryMarginPercentage() float32 {
-	if ac.tokenCookieExpiryMargin != 0 {
-		return ac.tokenCookieExpiryMargin
-	}
-	margin, err := h.PercentageToFloat32(ac.TokenCookieExpiryMargin)
-	if err != nil {
-		log.Logf(log.LevelWarning, "unable to parse token_cookie_expiry_margin percentage from config: '%s', assuming default '%s': %v", ac.TokenCookieExpiryMargin, TOKEN_COOKIE_EXPIRY_MARGIN, err)
-		margin, err = h.PercentageToFloat32(TOKEN_COOKIE_EXPIRY_MARGIN)
-		if err != nil {
-			log.Logf(log.LevelCritical, "unable to parse web.TOKEN_COOKIE_EXPIRY_MARGIN default percentage: '%s': %v", TOKEN_COOKIE_EXPIRY_MARGIN, err)
-			panic(1)
-		}
-	}
-	ac.tokenCookieExpiryMargin = margin
-	return ac.tokenCookieExpiryMargin
-}
-
 func (ac ApiConfig) AddCookieExpiryMargin(validity time.Duration) time.Duration {
-	return time.Duration(float32(validity) * ac.TokenCookieExpiryMarginPercentage())
+	return time.Duration(float32(validity) * ac.Settings.TokenCookieExpiryMargin)
+}
+
+type ApiConfigSettings struct {
+	TomlTokenAccessValidity          string `toml:"token_access_validity"`
+	TomlTokenRefreshValidity         string `toml:"token_refresh_validity"`
+	TomlTokenCookieExpiryMargin      string `toml:"token_cookie_expiry_margin"`
+	TomlTokenAccessRenewMargin       string `toml:"token_access_renew_margin"`
+	TomlTokenRefreshRenewMargin      string `toml:"token_refresh_renew_margin"`
+	TomlTimeoutSubprocStartup        string `toml:"timeout_subproc_startup"`
+	TomlTimeoutSubprocShutdown       string `toml:"timeout_subproc_shutdown"`
+	TomlTimeoutScheduledTaskStartup  string `toml:"timeout_scheduled_task_startup"`
+	TomlTimeoutScheduledTaskShutdown string `toml:"timeout_scheduled_task_shutdown"`
+
+	TokenAccessValidity          time.Duration `internal:"token_access_validity"`
+	TokenRefreshValidity         time.Duration `internal:"token_refresh_validity"`
+	TokenCookieExpiryMargin      float32       `internal:"token_cookie_expiry_margin" parsetype:"percentage"`
+	TokenAccessRenewMargin       time.Duration `internal:"token_access_renew_margin"`
+	TokenRefreshRenewMargin      time.Duration `internal:"token_refresh_renew_margin"`
+	TimeoutSubprocStartup        time.Duration `internal:"timeout_subproc_startup"`
+	TimeoutSubprocShutdown       time.Duration `internal:"timeout_subproc_shutdown"`
+	TimeoutScheduledTaskStartup  time.Duration `internal:"timeout_scheduled_task_startup"`
+	TimeoutScheduledTaskShutdown time.Duration `internal:"timeout_scheduled_task_shutdown"`
+}
+
+func (settings *ApiConfigSettings) AddMissingFromDefaults() error {
+	defaults := &ApiConfigSettings{
+		TokenAccessValidity:          time.Minute * 15,
+		TokenRefreshValidity:         time.Hour * 24 * 30,
+		TokenCookieExpiryMargin:      0.2, // 20%
+		TokenAccessRenewMargin:       time.Minute,
+		TokenRefreshRenewMargin:      time.Hour * 24 * 7,
+		TimeoutSubprocStartup:        time.Second,
+		TimeoutSubprocShutdown:       time.Second * 3,
+		TimeoutScheduledTaskStartup:  time.Second,
+		TimeoutScheduledTaskShutdown: time.Second * 60,
+	}
+	return h.ParseTomlConfigAndDefaults(settings, defaults)
 }
 
 //go:generate stringer -type HttpMethod -output ./stringer_HttpMethod.go

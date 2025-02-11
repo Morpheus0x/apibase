@@ -24,7 +24,7 @@ type jwtAccessClaims struct {
 func (claims *jwtAccessClaims) signToken(api *ApiServer) (string, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
-	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.TokenAccessValidityDuration()))
+	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.Settings.TokenAccessValidity))
 	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	return rawToken.SignedString(api.Config.TokenSecretBytes())
 }
@@ -54,7 +54,7 @@ type jwtRefreshClaims struct {
 func (claims *jwtRefreshClaims) signToken(api *ApiServer) (string, time.Time, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
-	expiresAt := now.Add(api.Config.TokenRefreshValidityDuration())
+	expiresAt := now.Add(api.Config.Settings.TokenRefreshValidity)
 	claims.ExpiresAt = jwt.NewNumericDate(expiresAt)
 	rawToken := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	token, err := rawToken.SignedString(api.Config.TokenSecretBytes())

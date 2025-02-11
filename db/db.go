@@ -2,9 +2,9 @@ package db
 
 import (
 	"context"
-	"time"
 
 	"github.com/jackc/pgx/v5"
+	"gopkg.cc/apibase/baseconfig"
 	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/sqlite"
@@ -20,12 +20,16 @@ const (
 )
 
 type DB struct {
-	Kind     DBKind
-	SQLite   *sqlite.SQLite
-	Postgres *pgx.Conn
+	Kind       DBKind
+	SQLite     *sqlite.SQLite
+	Postgres   *pgx.Conn
+	BaseConfig *baseconfig.BaseConfig
 }
 
 func ValidateDB(database DB) error {
+	if database.BaseConfig == nil {
+		return errx.NewWithType(ErrMissingBaseConfig, "")
+	}
 	switch database.Kind {
 	case SQLite:
 		if database.SQLite == nil {
@@ -37,7 +41,7 @@ func ValidateDB(database DB) error {
 		if database.Postgres == nil {
 			return errx.NewWithType(ErrDatabaseConfig, "no valid PostgreSQL database adapter")
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+		ctx, cancel := context.WithTimeout(context.Background(), database.BaseConfig.TimeoutDatabaseConnect)
 		defer cancel()
 		err := database.Postgres.Ping(ctx)
 		if err != nil {
@@ -50,7 +54,7 @@ func ValidateDB(database DB) error {
 }
 
 func MigrateDefaultTables(database DB) error {
-	// ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	// ctx, cancel := context.WithTimeout(context.Background(), database.BaseConfig.TimeoutDatabaseConnect)
 	// defer cancel()
 	switch database.Kind {
 	case SQLite:

@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
@@ -18,7 +17,7 @@ func (db DB) GetScheduledTasks(userId int) ([]table.ScheduledTask, error) {
 	if err != nil {
 		return tasks, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 
 	var noViewPermsForOrg []int
@@ -60,7 +59,7 @@ func (db DB) getScheduledTasksForOrg(orgId int, ctx context.Context) ([]table.Sc
 }
 
 func (db DB) GetAllScheduledTasks() ([]table.ScheduledTask, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 	tasks := []table.ScheduledTask{}
 	rows, err := db.Postgres.Query(ctx, "SELECT * FROM scheduled_tasks")
@@ -78,7 +77,7 @@ func (db DB) GetAllScheduledTasks() ([]table.ScheduledTask, error) {
 }
 
 func (db DB) CreateScheduledTask(task table.ScheduledTask) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 	query := "INSERT INTO scheduled_tasks (task_id, org_id, start_date, interval, description) VALUES ($1, $2, $3, $4, $5)"
 	_, err := db.Postgres.Exec(ctx, query, task.TaskID, task.OrgID, task.StartDate, task.Interval, task.Description)
@@ -89,7 +88,7 @@ func (db DB) CreateScheduledTask(task table.ScheduledTask) error {
 }
 
 func (db DB) DeleteScheduledTask(taskId string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 
 	query := "DELETE FROM scheduled_tasks WHERE task_id = $1"

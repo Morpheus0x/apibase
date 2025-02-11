@@ -15,10 +15,10 @@
 - [x] Assign a scheduled task to an org
 - [x] Protect any referrer uri content by limiting its size to protect against dos and make sure the uri is always starting with the app uri
 - [x] fix TODO "refresh JWT": web_oauth/echo_oauth.go#L48
+- [x] Resolve all `TODO: remove hardcoded timeout`
 - [ ] add auth hooks to oauth
 - [ ] impl email signup integration
 - [ ] Make sure that every function that returns an error doens't add any details not also available outside of itself (e.g. userId func param)
-- [ ] Resolve all `TODO: remove hardcoded timeout`
 - [ ] add captcha for local login and signup
 - [ ] check what happens if local auth already exists for user trying to login with same email via oauth
 - [ ] impl saml auth

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
@@ -22,7 +21,7 @@ func (db DB) CreateNewUserWithOrg(user table.User, roles ...table.UserRole) (tab
 		return db.CreateUserIfNotExist(user, roles...)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
 	if err != nil {
@@ -69,7 +68,7 @@ func (db DB) CreateUserIfNotExist(user table.User, roles ...table.UserRole) (tab
 	if len(roles) < 1 {
 		return user, errx.NewWithType(ErrNoRoles, "CreateUserIfNotExist must have at least one role for the new user")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
 	if err != nil {
@@ -101,7 +100,7 @@ func (db DB) CreateUserIfNotExist(user table.User, roles ...table.UserRole) (tab
 }
 
 func (db DB) GetUserByID(id int) (table.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 	user := table.User{}
 	// err := pgxscan.Select(ctx, Database, &user, "SELECT * FROM users WHERE id = $1", id)
@@ -121,7 +120,7 @@ func (db DB) GetUserByID(id int) (table.User, error) {
 }
 
 func (db DB) GetUserByEmail(email string) (table.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
 	if err != nil {
@@ -143,7 +142,7 @@ func (db DB) GetUserByEmail(email string) (table.User, error) {
 
 // unique user is defined by user.Email, also creates the default viewer role for the specified organization
 func (db DB) GetOrCreateUser(user table.User, role table.UserRole) (table.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
 	if err != nil {

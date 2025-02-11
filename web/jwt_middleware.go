@@ -40,7 +40,7 @@ func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 			accessTokenExpire, err := accessClaims.GetExpirationTime()
 			if accessToken.Valid &&
 				err == nil &&
-				accessTokenExpire.Time.Add(-time.Minute).After(time.Now()) && // TODO: remove hardcoded timeout
+				accessTokenExpire.Time.Add(-api.Config.Settings.TokenAccessRenewMargin).After(time.Now()) &&
 				accessClaims.Revision == LatestAccessTokenRevision {
 				// Do nothing, access token is still valid for long enough
 				return nil
@@ -92,7 +92,7 @@ func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 	currentRequest := c.Request()
 
 	// Renew Refresh Token, if valid for less than 1 week
-	if refreshTokenExpire.Time.Add(-time.Hour * 24 * 7).Before(time.Now()) { // TODO: remove hardcoded timeout
+	if refreshTokenExpire.Time.Add(-api.Config.Settings.TokenRefreshRenewMargin).Before(time.Now()) {
 		newSessionId := h.CreateSecretString(h.RandomString(16)) // TODO: maybe use another random generator...
 
 		newRefreshClaims := &jwtRefreshClaims{
@@ -111,7 +111,7 @@ func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 			return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtRefreshTokenUpdate, nil)
 		}
 
-		expiresIn := api.Config.AddCookieExpiryMargin(api.Config.TokenRefreshValidityDuration())
+		expiresIn := api.Config.AddCookieExpiryMargin(api.Config.Settings.TokenRefreshValidity)
 		newRefreshTokenCookie := &http.Cookie{Name: "refresh_token", Value: newRefreshToken, Path: "/", Expires: time.Now().Add(expiresIn)}
 
 		h.OverwriteRequestCookie(currentRequest, newRefreshTokenCookie) // set cookie for current request
@@ -125,7 +125,7 @@ func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 		return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtAccessTokenSigning, nil)
 	}
 
-	expiresIn := api.Config.AddCookieExpiryMargin(api.Config.TokenAccessValidityDuration())
+	expiresIn := api.Config.AddCookieExpiryMargin(api.Config.Settings.TokenAccessValidity)
 	newAccessTokenCookie := &http.Cookie{Name: "access_token", Value: newAccessToken, Path: "/", Expires: time.Now().Add(expiresIn)}
 	h.OverwriteRequestCookie(currentRequest, newAccessTokenCookie) // set cookie for current request
 	c.SetCookie(newAccessTokenCookie)                              // set cookie for response

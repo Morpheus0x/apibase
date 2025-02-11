@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -52,11 +51,9 @@ func SetupRest(config web.ApiConfig, database db.DB, appVersion string) (*web.Ap
 		log.Log(log.LevelWarning, "CORS is not set, assuming '*', this should not be used in a production environment!")
 		api.Config.CORS = []string{"*"}
 	}
-
-	// parsing config strings into internal data
-	api.Config.TokenAccessValidityDuration()
-	api.Config.TokenRefreshValidityDuration()
-	api.Config.TokenCookieExpiryMarginPercentage()
+	if err := api.Config.Settings.AddMissingFromDefaults(); err != nil {
+		return nil, err
+	}
 
 	api.E.HideBanner = true
 	api.E.HidePort = true
@@ -153,7 +150,7 @@ func StartRest(api *web.ApiServer, bind string, shutdown chan struct{}, next cha
 		case <-abort:
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second) // TODO: remove hardcoded timeout
+		ctx, cancel := context.WithTimeout(context.Background(), api.Config.Settings.TimeoutSubprocShutdown)
 		defer cancel()
 		err := api.E.Shutdown(ctx)
 		if err != nil {
@@ -169,7 +166,7 @@ func StartRest(api *web.ApiServer, bind string, shutdown chan struct{}, next cha
 		}
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), api.Config.Settings.TimeoutSubprocStartup)
 	defer cancel()
 	startupError := struct {
 		Chan       chan error

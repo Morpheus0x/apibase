@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"gopkg.cc/apibase/baseconfig"
 	"gopkg.cc/apibase/cmd"
 	"gopkg.cc/apibase/db"
 	"gopkg.cc/apibase/email"
@@ -19,10 +20,10 @@ import (
 )
 
 type ApiBase[T any] struct {
-	Postgres   db.PostgresConfig `toml:"postgres"`
-	SQLite     db.SQLiteConfig   `toml:"sqlite"`
-	BaseConfig db.BaseConfig     `toml:"baseconfig"`
-	ApiConfig  web.ApiConfig     `toml:"apiconfig"`
+	Postgres   db.PostgresConfig      `toml:"postgres"`
+	SQLite     db.SQLiteConfig        `toml:"sqlite"`
+	BaseConfig *baseconfig.BaseConfig `toml:"baseconfig"`
+	ApiConfig  web.ApiConfig          `toml:"apiconfig"`
 
 	Email     map[string]email.EmailConfig   `toml:"email"`
 	EmailTmpl map[string]email.EmailTemplate `toml:"email_template"`
@@ -63,10 +64,9 @@ func (apiBase *ApiBase[T]) CleanupOnError() {
 		return
 	}
 	if ccLength < 2 {
-		sleep := 500 * time.Millisecond // TODO: remove hardcoded timeout
-		log.Log(log.LevelCritical, "close chain array only contains one channel, closing this channel. This should not happen!")
+		log.Logf(log.LevelCritical, "close chain array only contains one channel, this should not happen, closing it and waiting %s for go routine to exit", SLEEP_BROKEN_CLOSE_CHAIN.String())
 		close(apiBase.CloseChain[0])
-		time.Sleep(sleep)
+		time.Sleep(SLEEP_BROKEN_CLOSE_CHAIN)
 		return
 	}
 	if ccLength == 2 {
@@ -83,7 +83,7 @@ func (apiBase *ApiBase[T]) CleanupOnError() {
 	// close shutdown channel of previous stage
 	close(apiBase.CloseChain[1])
 	// waiting for last channel in close chain to be closed
-	timeout := 3 * time.Second // TODO: remove hardcoded timeout
+	timeout := apiBase.BaseConfig.TimeoutCloseChainShutdown
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	select {
@@ -104,15 +104,14 @@ func (apiBase *ApiBase[T]) Cleanup() error {
 		return nil
 	}
 	if len(apiBase.CloseChain) < 2 {
-		sleep := 500 * time.Millisecond // TODO: remove hardcoded timeout
-		log.Logf(log.LevelCritical, "interrupt received but only one channel found, this should not happen, closing it and waiting %s for go routine to exit", sleep.String())
+		log.Logf(log.LevelCritical, "interrupt received but only one channel found, this should not happen, closing it and waiting %s for go routine to exit", SLEEP_BROKEN_CLOSE_CHAIN.String())
 		close(apiBase.CloseChain[0])
-		time.Sleep(sleep)
+		time.Sleep(SLEEP_BROKEN_CLOSE_CHAIN)
 		return nil
 	}
 
 	close(apiBase.CloseChain[0])
-	timeout := 3 * time.Second // TODO: remove hardcoded timeout
+	timeout := apiBase.BaseConfig.TimeoutCloseChainShutdown
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -164,9 +163,7 @@ func (apiBase *ApiBase[T]) LoadToml(settings cmd.Settings) error {
 		return err
 	}
 
-	apiBase.AddMissingDefaults()
-
-	return nil
+	return apiBase.BaseConfig.AddMissingFromDefaults()
 }
 
 func (apiBase *ApiBase[T]) ParseEmailConfig() error {
@@ -186,18 +183,6 @@ func (apiBase *ApiBase[T]) ParseEmailConfig() error {
 		apiBase.Email[key] = ec
 	}
 	return nil
-}
-
-func (apiBase *ApiBase[T]) AddMissingDefaults() {
-	if reflect.ValueOf(apiBase.BaseConfig.DB_MAX_RECONNECT_ATTEMPTS).IsZero() {
-		apiBase.BaseConfig.DB_MAX_RECONNECT_ATTEMPTS = DB_MAX_RECONNECT_ATTEMPTS
-	}
-	if reflect.ValueOf(apiBase.BaseConfig.DB_RECONNECT_TIMEOUT_SEC).IsZero() {
-		apiBase.BaseConfig.DB_RECONNECT_TIMEOUT_SEC = DB_RECONNECT_TIMEOUT_SEC
-	}
-	if reflect.ValueOf(apiBase.BaseConfig.SQLITE_DATETIME_FORMAT).IsZero() {
-		apiBase.BaseConfig.SQLITE_DATETIME_FORMAT = SQLITE_DATETIME_FORMAT
-	}
 }
 
 func (apiBase *ApiBase[T]) GetCustomConfigType() {

@@ -1,7 +1,7 @@
 package base
 
+import "time"
+
 const (
-	DB_RECONNECT_TIMEOUT_SEC  = 1
-	DB_MAX_RECONNECT_ATTEMPTS = 3
-	SQLITE_DATETIME_FORMAT    = "2006-01-02 15:04:05"
+	SLEEP_BROKEN_CLOSE_CHAIN = time.Second
 )

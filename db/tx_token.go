@@ -13,7 +13,7 @@ import (
 )
 
 func (db DB) DeleteRefreshToken(userID int, sessionId h.SecretString) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 
 	query := "DELETE FROM refresh_tokens WHERE user_id = $1 AND session_id = $2"
@@ -28,7 +28,7 @@ func (db DB) DeleteRefreshToken(userID int, sessionId h.SecretString) error {
 }
 
 func (db DB) VerifyRefreshTokenSessionId(userID int, sessionId h.SecretString) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
 	if err != nil {
@@ -51,7 +51,7 @@ func (db DB) VerifyRefreshTokenSessionId(userID int, sessionId h.SecretString) (
 }
 
 func (db DB) UpdateRefreshTokenEntry(userId int, sessionId h.SecretString, newSessionId h.SecretString, userAgent string, expiresAt time.Time) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 	tx, err := db.Postgres.Begin(ctx)
 	if err != nil {
@@ -80,7 +80,7 @@ func (db DB) UpdateRefreshTokenEntry(userId int, sessionId h.SecretString, newSe
 }
 
 func (db DB) CreateRefreshTokenEntry(token table.RefreshToken) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 	query := "INSERT INTO refresh_tokens (user_id, session_id, reissue_count, user_agent, expires_at) VALUES ($1, $2, $3, $4, $5)"
 	_, err := db.Postgres.Exec(ctx, query, token.UserID, token.SessionID, token.ReissueCount, token.UserAgent, token.ExpiresAt)

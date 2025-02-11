@@ -9,13 +9,14 @@ import (
 	"github.com/jackc/pgx/v5"
 	_ "github.com/lib/pq"
 
+	"gopkg.cc/apibase/baseconfig"
 	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/log"
 )
 
 // Initialize database connection, require shutdown and next channels for clean shutdown, these can be created using base.ApiBase[T].GetCloseStageChannels()
-func PostgresInit(pgc PostgresConfig, bc BaseConfig, shutdown chan struct{}, next chan struct{}) (DB, error) {
-	db := DB{Kind: PostgreSQL}
+func PostgresInit(pgc PostgresConfig, bc *baseconfig.BaseConfig, shutdown chan struct{}, next chan struct{}) (DB, error) {
+	db := DB{Kind: PostgreSQL, BaseConfig: bc}
 	abort := make(chan struct{})
 
 	go func() { // pgx shutdown
@@ -24,7 +25,7 @@ func PostgresInit(pgc PostgresConfig, bc BaseConfig, shutdown chan struct{}, nex
 		case <-abort:
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second) // TODO: remove hardcoded timeout
+		ctx, cancel := context.WithTimeout(context.Background(), bc.TimeoutDatabaseShutdown)
 		defer cancel()
 		if db.Postgres != nil {
 			err := db.Postgres.Close(ctx)
@@ -44,12 +45,12 @@ func PostgresInit(pgc PostgresConfig, bc BaseConfig, shutdown chan struct{}, nex
 
 	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", pgc.User, pgc.Password.GetSecret(), pgc.Host, pgc.Port, pgc.DB) // ?ssl=%s , ssl)
 	var err error
-	for attempt := 1; attempt <= int(bc.DB_MAX_RECONNECT_ATTEMPTS); attempt++ {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // TODO: remove hardcoded timeout
+	for attempt := 1; attempt <= int(bc.DatabaseMaxReconnectAttempts); attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), bc.TimeoutDatabaseConnect)
 		db.Postgres, err = pgx.Connect(ctx, connString)
 		if err != nil {
-			log.Logf(log.LevelInfo, "Connecting to database failed, attempt %d/%d", attempt, bc.DB_MAX_RECONNECT_ATTEMPTS)
-			time.Sleep(bc.DB_RECONNECT_TIMEOUT_DURATION())
+			log.Logf(log.LevelInfo, "Connecting to database failed, attempt %d/%d", attempt, bc.DatabaseMaxReconnectAttempts)
+			time.Sleep(bc.DatabaseReconnectionTimeout)
 			cancel()
 			continue
 		}
