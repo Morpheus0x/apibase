@@ -313,6 +313,7 @@ func worker(id string, job task) {
 			run = time.NewTimer(nextRun.Sub(now))
 			log.Logf(log.LevelDebug, "worker '%s' will run the next time at %s (in %s)", id, nextRun.String(), nextRun.Sub(now).String())
 		case <-job.shutdown:
+			close(job.wasShutdown)
 			return
 		}
 	}
