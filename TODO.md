@@ -16,12 +16,16 @@
 - [x] Protect any referrer uri content by limiting its size to protect against dos and make sure the uri is always starting with the app uri
 - [x] fix TODO "refresh JWT": web_oauth/echo_oauth.go#L48
 - [x] Resolve all `TODO: remove hardcoded timeout`
+- [ ] check that at least one login type local_auth or oauth_enabled is set to true
+- [ ] honor allow_registration flag
+- [ ] add language column to users table
+- [ ] impl email signup integration, if require_confirmed_email is set, make sure a hook exists that sents the email with user defined template
 - [ ] add auth hooks to oauth
-- [ ] impl email signup integration
 - [ ] Make sure that every function that returns an error doens't add any details not also available outside of itself (e.g. userId func param)
 - [ ] add captcha for local login and signup
 - [ ] check what happens if local auth already exists for user trying to login with same email via oauth
 - [ ] impl saml auth
+- [ ] impl 2FA, add table transint_2fa used for 2fa creation and change, lookup how to encrypt 2fa secrets (must be seperate from token_secret to not invalidate 2fa on secret change)
 - [ ] impl htmx api responses
 
 # TODO Database Integration
