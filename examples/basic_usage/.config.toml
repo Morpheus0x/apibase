@@ -1,12 +1,14 @@
 [apiconfig]
 # API CORS URIs
 cors = []
+# API IP:Port binding, an IP Address may be omitted to listen on 0.0.0.0
+api_bind = ":8989"
+# Final Application URI, without trailing slash!
+# For SSL, use a reverse proxy (e.g. NGINX or HAProxy) and use https as protocol here
+app_uri = "http://localhost:8989"
 # Token Secret must be random base64 byte string with at least 64 bytes. 
 # Create this locally on your system! e.g. `openssl rand -base64 64`
 token_secret = "OwZseQ11aaP..."
-# Access & Refresh Token Validity, Recommended Defaults:
-token_access_validity = "15m"
-token_refresh_validity = "31d"
 # Enable Local Database Authentication
 local_auth = true
 # Enable OAuth Login
@@ -15,11 +17,6 @@ oauth_enabled = false
 allow_registration = false
 # Require E-Mail Confirmation before user can access the application
 require_confirmed_email = true
-# API IP:Port binding, an IP Address may be omitted to listen on 0.0.0.0
-api_bind = ":8989"
-# Final Application URI, without trailing slash!
-# For SSL, use a reverse proxy (e.g. NGINX or HAProxy) and use https as protocol here
-app_uri = "http://localhost:8989"
 
 [apiconfig.api_root]
 # Use this if apibase is behind a reverse proxy which serves all other non-api routes
@@ -32,11 +29,32 @@ target = "./static"
 #kind = "proxy"
 #target = "http://localhost:8080"
 
+#[apiconfig.settings]
+# Access & Refresh Token Validity, Recommended Defaults:
+#token_access_validity = "15m"
+#token_refresh_validity = "31d"
+# what percentage of margin should be added to the token validity for cookie expiry
+#token_cookie_expiry_margin = "20%"
+# what margin should be subtracted from token validity for them to be renewed
+#token_access_renew_margin = "1m"
+#token_refresh_renew_margin = "1w"
+# how long a subprocess may take to startup or shutdown before an error is thrown
+#timeout_subproc_startup = "1s"
+#timeout_subproc_shutdown = "3s"
+# how long a subtask may take to startup or shutdown
+#timeout_scheduled_task_startup = "1s"
+# shutdown must be at the very least larger than baseconfig.timeout_database_large_query
+#timeout_scheduled_task_shutdown = "6m"
+
 # Overwrite the following defaults, if desired
 #[baseconfig]
-#db_reconnect_timeout_sec = 1
 #db_max_reconnect_attempts = 3
 #sqlite_datetime_format = "2006-01-02 15:04:05"
+#timeout_closechain_shutdown = "30s"
+#timeout_database_connect = "3s"
+#timeout_database_shutdown = "3s"
+#timeout_database_query = "10s"
+#timeout_database_large_query = "5m"
 
 # Configure an email sender, multiple senders may be specified by a custom name, e.g. [email.my_sender]
 [email.default]
