@@ -30,6 +30,7 @@ type ApiBase[T any] struct {
 
 	Application T `toml:"application"`
 
+	// Internal Data
 	Interrupt  chan os.Signal
 	CloseChain []chan struct{}
 }
