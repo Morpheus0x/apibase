@@ -33,5 +33,5 @@ func (bc *BaseConfig) AddMissingFromDefaults() error {
 		TimeoutDatabaseQuery:      time.Second * 10,
 		TimeoutDatabaseLargeQuery: time.Minute * 5,
 	}
-	return h.ParseTomlConfigAndDefaults[BaseConfig](bc, defaults)
+	return h.ParseTomlConfigAndDefaults(bc, defaults)
 }

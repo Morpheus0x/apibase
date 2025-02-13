@@ -163,7 +163,9 @@ func (apiBase *ApiBase[T]) LoadToml(settings cmd.Settings) error {
 	if err := apiBase.ParseEmailConfig(); err != nil {
 		return err
 	}
-
+	if apiBase.BaseConfig == nil {
+		apiBase.BaseConfig = &baseconfig.BaseConfig{}
+	}
 	return apiBase.BaseConfig.AddMissingFromDefaults()
 }
 

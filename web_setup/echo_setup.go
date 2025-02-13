@@ -51,6 +51,10 @@ func SetupRest(config web.ApiConfig, database db.DB, appVersion string) (*web.Ap
 		log.Log(log.LevelWarning, "CORS is not set, assuming '*', this should not be used in a production environment!")
 		api.Config.CORS = []string{"*"}
 	}
+
+	if api.Config.Settings == nil {
+		api.Config.Settings = &web.ApiConfigSettings{}
+	}
 	if err := api.Config.Settings.AddMissingFromDefaults(); err != nil {
 		return nil, err
 	}
