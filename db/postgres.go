@@ -50,7 +50,7 @@ func PostgresInit(pgc PostgresConfig, bc *baseconfig.BaseConfig, shutdown chan s
 		db.Postgres, err = pgx.Connect(ctx, connString)
 		if err != nil {
 			log.Logf(log.LevelInfo, "Connecting to database failed, attempt %d/%d", attempt, bc.DatabaseMaxReconnectAttempts)
-			time.Sleep(bc.DatabaseReconnectionTimeout)
+			time.Sleep(SLEEP_DATABASE_RECONNECT)
 			cancel()
 			continue
 		}
