@@ -101,7 +101,7 @@ func (ac ApiConfig) AppUriWithQueryParams(params []QueryParam[any]) string {
 }
 
 func (ac ApiConfig) AddCookieExpiryMargin(validity time.Duration) time.Duration {
-	return time.Duration(float32(validity) * ac.Settings.TokenCookieExpiryMargin)
+	return validity + time.Duration(float32(validity)*ac.Settings.TokenCookieExpiryMargin)
 }
 
 type ApiConfigSettings struct {
