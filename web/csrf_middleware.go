@@ -21,7 +21,7 @@ func CheckCSRF(api *ApiServer) echo.MiddlewareFunc {
 			csrfHeader := c.Request().Header.Get("X-XSRF-TOKEN")
 			csrfCookie, err := c.Request().Cookie("csrf_token")
 			if err != nil || csrfHeader != csrfCookie.Value {
-				return c.JSON(http.StatusForbidden, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrCsrfInvalid})
+				return wr.SendJsonErrorResponse(c, http.StatusForbidden, wr.RespErrCsrfInvalid)
 			}
 			return next(c)
 		}

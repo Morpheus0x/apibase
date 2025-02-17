@@ -7,9 +7,9 @@ const (
 
 // Standardized JSON API response
 type JsonResponse[T any] struct {
-	ErrorID ResponseErrorId `json:"err"`
-	Message string          `json:"msg"`
-	Data    T               `json:"data"`
+	ResponseID ResponseId `json:"id"`
+	Message    string     `json:"msg"`
+	Data       T          `json:"data"`
 }
 
 type RedirectTarget struct {

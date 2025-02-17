@@ -28,7 +28,7 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		err := web.AuthJwtHandler(c, api)
 		if err == nil {
-			return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "already logged in"})
+			return wr.SendJsonErrorResponse(c, http.StatusOK, wr.RespSccsAlreadyLoggedIn)
 		}
 
 		request := c.Request()
@@ -148,12 +148,17 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 			if err.Unwrap() != nil {
 				log.Log(log.LevelError, err.Error())
 			}
-			return c.Redirect(http.StatusInternalServerError, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, err.GetErrorId()).String())
+			return err.SendJsonWithStatus(c, http.StatusInternalServerError)
 		}
 		if err != nil {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogout during oauth logout, this should not happen!: %s", err.Error())
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, wr.RespErrAuthLogoutUnknownError).String())
+			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrAuthLogoutUnknownError)
 		}
-		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout).String())
+		return c.JSON(http.StatusOK, wr.JsonResponse[wr.RedirectTarget]{
+			ResponseID: wr.RespSccsLogout,
+			Data: wr.RedirectTarget{
+				Target: api.Config.AppUri().AddQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout).String(),
+			},
+		})
 	}
 }

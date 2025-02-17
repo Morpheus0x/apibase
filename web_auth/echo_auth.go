@@ -27,51 +27,51 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 
 		err := web.AuthJwtHandler(c, api)
 		if err == nil {
-			return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "already logged in"})
+			return wr.SendJsonErrorResponse(c, http.StatusOK, wr.RespSccsAlreadyLoggedIn)
 		}
 
 		email := c.FormValue("email")
 		password := c.FormValue("password")
 
 		if email == "" || password == "" {
-			return c.JSON(http.StatusUnprocessableEntity, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrMissingInput})
+			return wr.SendJsonErrorResponse(c, http.StatusUnprocessableEntity, wr.RespErrMissingInput)
 		}
 
 		failedHookNr, err := runPreLoginHooks(email, h.CreateSecretString(password))
 		if err != nil {
 			log.Logf(log.LevelError, "pre login hook %d failed: %s", failedHookNr, err.Error())
-			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrHookPreLogin})
+			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrHookPreLogin)
 		}
 
 		user, err := api.DB.GetUserByEmail(email)
 		if err != nil {
 			log.Logf(log.LevelDebug, "user not found: %s", err.Error())
-			return c.JSON(http.StatusUnauthorized, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrLoginNoUser})
+			return wr.SendJsonErrorResponse(c, http.StatusUnauthorized, wr.RespErrLoginNoUser)
 		}
 
 		if user.AuthProvider != "local" {
-			return c.JSON(http.StatusMisdirectedRequest, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrAuthLoginNotLocal})
+			return wr.SendJsonErrorResponse(c, http.StatusMisdirectedRequest, wr.RespErrAuthLoginNotLocal)
 		}
 
 		match, err := argon2id.ComparePasswordAndHash(password, user.PasswordHash.GetSecret())
 		if err != nil {
 			log.Logf(log.LevelError, "unable to compare password with hash: %s", err.Error())
-			return c.JSON(http.StatusUnauthorized, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrLoginComparePassword})
+			return wr.SendJsonErrorResponse(c, http.StatusUnauthorized, wr.RespErrLoginComparePassword)
 		}
 		if !match {
-			return c.JSON(http.StatusUnauthorized, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrLoginWrongPassword})
+			return wr.SendJsonErrorResponse(c, http.StatusUnauthorized, wr.RespErrLoginWrongPassword)
 		}
 
 		roles, err := api.DB.GetUserRoles(user.ID)
 		if err != nil {
 			log.Logf(log.LevelError, "no roles exist for user (id: %d), unable to login", user.ID)
-			return c.JSON(http.StatusUnauthorized, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrUserNoRoles})
+			return wr.SendJsonErrorResponse(c, http.StatusUnauthorized, wr.RespErrUserNoRoles)
 		}
 
 		failedHookNr, err = runPostLoginHooks(user, roles)
 		if err != nil {
 			log.Logf(log.LevelError, "post login hook %d failed: %s", failedHookNr, err.Error())
-			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrHookPostLogin})
+			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrHookPostLogin)
 		}
 
 		newSessionId, err := web.JwtLogin(c, api, user, roles)
@@ -83,10 +83,10 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		}
 		if err != nil {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogin during login, this should not happen!: %s", err.Error())
-			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrAuthLoginUnknownError})
+			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrAuthLoginUnknownError)
 		}
 		web.UpdateCSRF(c, api, newSessionId)
-		return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "logged in, access and refresh token set as cookie"})
+		return wr.SendJsonErrorResponse(c, http.StatusOK, wr.RespSccsLogin)
 	}
 }
 
@@ -99,21 +99,21 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 		username := c.FormValue("username")
 
 		if email == "" || password == "" || passwordConfirm == "" || username == "" {
-			return c.JSON(http.StatusUnprocessableEntity, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrMissingInput})
+			return wr.SendJsonErrorResponse(c, http.StatusUnprocessableEntity, wr.RespErrMissingInput)
 		}
 		if password != passwordConfirm {
-			return c.JSON(http.StatusUnprocessableEntity, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrSignupPasswordMismatch})
+			return wr.SendJsonErrorResponse(c, http.StatusUnprocessableEntity, wr.RespErrSignupPasswordMismatch)
 		}
 
 		failedHookNr, err := runPreSignupHooks(username, email, h.CreateSecretString(password))
 		if err != nil {
 			log.Logf(log.LevelError, "pre signup hook %d failed: %s", failedHookNr, err.Error())
-			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrHookPreSignup})
+			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrHookPreSignup)
 		}
 
 		hash, err := argon2id.CreateHash(password, &argonParams)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrSignupPasswordHash})
+			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrSignupPasswordHash)
 		}
 		userToCreate := table.User{
 			Name:           username,
@@ -128,23 +128,23 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 		rolesToCreate, err := runSignupDefaultRoleHook(userToCreate)
 		if err != nil {
 			log.Logf(log.LevelError, "signup default hook failed: %s", err.Error())
-			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrHookSignupDefaultRole})
+			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrHookSignupDefaultRole)
 		}
 		user, err := api.DB.CreateNewUserWithOrg(userToCreate, rolesToCreate...)
 		if errors.Is(err, db.ErrUserAlreadyExists) {
-			return c.JSON(http.StatusConflict, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrSignupUserExists})
+			return wr.SendJsonErrorResponse(c, http.StatusConflict, wr.RespErrSignupUserExists)
 		}
 		if errors.Is(err, db.ErrOrgCreate) {
-			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrSignupNewUserOrg})
+			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrSignupNewUserOrg)
 		}
 		if err != nil {
-			return c.JSON(http.StatusConflict, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrSignupUserCreate})
+			return wr.SendJsonErrorResponse(c, http.StatusConflict, wr.RespErrSignupUserCreate)
 		}
 		roles, err := api.DB.GetUserRoles(user.ID)
 		if err != nil {
 			// roles should already exist or have been created by CreateUserIfNotExist
 			log.Logf(log.LevelError, "unable to get any roles for user (id: %d)", user.ID)
-			return c.JSON(http.StatusUnauthorized, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrUserNoRoles})
+			return wr.SendJsonErrorResponse(c, http.StatusUnauthorized, wr.RespErrUserNoRoles)
 		}
 
 		failedHookNr, err = runPostSignupHooks(user, roles)
@@ -154,9 +154,20 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 
 		if api.Config.ReqireConfirmEmail {
 			// TODO: redirect to page showing email confirmation required,
-			// have option to input code sent via email to directly redirect to where user left off
-			// for this to work the redirect target must be passed to that page via ... header?
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppURI)
+			// this site as option to input code sent via email,
+			// alternatively the user is sent a link containing "id" and "confirmation" query params
+
+			// TODO: Create new email_confirmations table entry with this new id (and secret which will be sent via email as url query)
+
+			confirmId := h.RandomBase64(16)
+			return c.JSON(http.StatusOK, wr.JsonResponse[wr.RedirectTarget]{
+				ResponseID: wr.RespScssSignupEmailConfirm,
+				Data: wr.RedirectTarget{
+					// TODO: maybe use another way to get the real referer from the frontend login request
+					Referrer: c.Request().Referer(), // TODO: this referer must be used on client side redirect after email code was confirmed (maybe add this also as base64 query param below)
+					Target:   api.Config.AppUri().JoinPath("/confirm_email").AddQueryParam("id", confirmId).String(),
+				},
+			})
 		}
 
 		newSessionId, err := web.JwtLogin(c, api, user, roles)
@@ -168,15 +179,14 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 		}
 		if err != nil {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogin during signup, this should not happen!: %s", err.Error())
-			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrAuthSignupUnknownError})
+			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrAuthSignupUnknownError)
 		}
 		web.UpdateCSRF(c, api, newSessionId)
-		return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "signed up, access and refresh token set as cookie"})
+		return wr.SendJsonErrorResponse(c, http.StatusOK, wr.RespSccsSignup)
 	}
 }
 
 func logout(api *web.ApiServer) echo.HandlerFunc {
-	// TODO: maybe not redirect, let that be done by the client?
 	return func(c echo.Context) error {
 		failedHookNr, err := runLogoutHooks(c)
 		if err != nil {
@@ -192,8 +202,13 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 		}
 		if err != nil {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogout during logout, this should not happen!: %s", err.Error())
-			return c.JSON(http.StatusInternalServerError, wr.JsonResponse[struct{}]{ErrorID: wr.RespErrAuthLogoutUnknownError})
+			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrAuthLogoutUnknownError)
 		}
-		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout).String())
+		return c.JSON(http.StatusOK, wr.JsonResponse[wr.RedirectTarget]{
+			ResponseID: wr.RespSccsLogout,
+			Data: wr.RedirectTarget{
+				Target: api.Config.AppUri().AddQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout).String(),
+			},
+		})
 	}
 }

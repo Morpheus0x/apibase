@@ -42,7 +42,7 @@ func (app *CustomURI) JoinPath(path string) *CustomURI {
 	return app
 }
 
-// Supports string, int, web_response.ResponseSuccessId and web_response.ResponseErrorId as value types
+// Supports string, int and web_response.ResponseId as value types
 func (app *CustomURI) AddQueryParam(key string, value any) *CustomURI {
 	query := app.uri.Query()
 	if query.Has(key) {
@@ -53,7 +53,7 @@ func (app *CustomURI) AddQueryParam(key string, value any) *CustomURI {
 	return app
 }
 
-// Supports string, int, web_response.ResponseSuccessId and web_response.ResponseErrorId as value types
+// Supports string, int and web_response.ResponseId as value types
 func (app *CustomURI) AddQueryParams(params []QueryParam[any]) *CustomURI {
 	query := app.uri.Query()
 	for _, p := range params {
@@ -232,7 +232,7 @@ type StateReferrer struct {
 	URI   string `json:"uri"`
 }
 
-// Supports string, int, web_response.ResponseSuccessId and web_response.ResponseErrorId as UntypedValue types
+// Supports string, int and web_response.ResponseId as UntypedValue types
 type QueryParam[T any] struct {
 	Key          string
 	UntypedValue T
@@ -242,12 +242,12 @@ func (p QueryParam[T]) Value() string {
 	return parseQueryParam(p.UntypedValue)
 }
 
-// Supports string, int, web_response.ResponseSuccessId and web_response.ResponseErrorId as value types
+// Supports string, int and web_response.ResponseId as value types
 func parseQueryParam(value any) string {
 	switch v := any(value).(type) {
 	case string:
 		return v
-	case int, wr.ResponseSuccessId, wr.ResponseErrorId:
+	case int, wr.ResponseId:
 		return fmt.Sprintf("%d", v)
 	default:
 		return ""

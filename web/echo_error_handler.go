@@ -37,9 +37,7 @@ func EchoErrorHandler(err error, c echo.Context) {
 		body, status = re.GetResponse()
 	} else {
 		log.Logf(log.LevelWarning, "Unknown error for request '%s %s' (%s): %s", c.Request().Method, c.Request().URL.Path, wr.RespErrUnknownInternal.String(), err.Error())
-		body = wr.JsonResponse[struct{}]{
-			ErrorID: wr.RespErrUnknownInternal,
-		}
+		body = wr.JsonResponse[struct{}]{ResponseID: wr.RespErrUnknownInternal}
 	}
 
 	// Send response
