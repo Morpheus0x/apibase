@@ -28,7 +28,7 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		err := web.AuthJwtHandler(c, api)
 		if err == nil {
-			return wr.SendJsonErrorResponse(c, http.StatusOK, wr.RespSccsAlreadyLoggedIn)
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeySuccess, wr.RespSccsAlreadyLoggedIn).String())
 		}
 
 		request := c.Request()
@@ -37,12 +37,17 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		referrer := request.Referer()
 		if !strings.HasPrefix(referrer, api.Config.AppURI) || len(referrer) > web.REFERRER_MAX_LENGTH {
 			referrer = api.Config.AppURI
+			request.Header.Set("Referer", referrer)
+		}
+		referrerUri, err := web.NewCustomUriFromString(referrer)
+		if err != nil {
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, wr.RespErrOauthReferrerParsing).String())
 		}
 
 		// Correct Redirecting
 		stateBytes, err := json.Marshal(&web.StateReferrer{Nonce: h.RandomString(16), URI: referrer})
 		if err != nil {
-			c.Redirect(http.StatusInternalServerError, referrer)
+			return c.Redirect(http.StatusTemporaryRedirect, referrerUri.AddQueryParam(wr.QueryKeyError, wr.RespErrOauthMarshalReferrer).String())
 		}
 		state := base64.RawURLEncoding.EncodeToString(stateBytes)
 		queryURL.Set("state", state)
@@ -54,7 +59,7 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		if _, err := gothic.CompleteUserAuth(c.Response(), request); err == nil {
 			err := web.AuthJwtHandler(c, api)
 			if err == nil {
-				return c.Redirect(http.StatusTemporaryRedirect, referrer)
+				return c.Redirect(http.StatusTemporaryRedirect, referrerUri.AddQueryParam(wr.QueryKeySuccess, wr.RespSccsAlreadyLoggedIn).String())
 			}
 		}
 
