@@ -20,28 +20,30 @@ type CustomURI struct {
 	uri *url.URL
 }
 
-func NewCustomUri(uri *url.URL) CustomURI {
-	return CustomURI{uri: uri}
+// Clones the specified *url.URL struct into *CustomURI
+func NewCustomUri(uri *url.URL) *CustomURI {
+	return &CustomURI{uri: h.CloneURL(uri)}
 }
 
-func NewCustomUriFromString(uri string) (CustomURI, error) {
-	url, err := url.Parse(uri)
+func NewCustomUriFromString(uri string) (*CustomURI, error) {
+	parsedUri, err := url.Parse(uri)
 	if err != nil {
-		return CustomURI{}, errx.Wrap(err, "Unable to create new CustomURI")
+		return &CustomURI{}, errx.Wrap(err, "Unable to create new CustomURI")
 	}
-	return NewCustomUri(url), nil
+	return &CustomURI{uri: parsedUri}, nil
 }
 
 func (app CustomURI) String() string {
 	return app.uri.String()
 }
 
-func (app CustomURI) SetPath(path string) CustomURI {
-	return CustomURI{uri: app.uri.JoinPath(path)}
+func (app *CustomURI) JoinPath(path string) *CustomURI {
+	app.uri.Path = app.uri.JoinPath(path).Path
+	return app
 }
 
 // Supports string, int, web_response.ResponseSuccessId and web_response.ResponseErrorId as value types
-func (app CustomURI) AddQueryParam(key string, value any) CustomURI {
+func (app *CustomURI) AddQueryParam(key string, value any) *CustomURI {
 	query := app.uri.Query()
 	if query.Has(key) {
 		query.Del(key)
@@ -52,7 +54,7 @@ func (app CustomURI) AddQueryParam(key string, value any) CustomURI {
 }
 
 // Supports string, int, web_response.ResponseSuccessId and web_response.ResponseErrorId as value types
-func (app CustomURI) AddQueryParams(params []QueryParam[any]) CustomURI {
+func (app *CustomURI) AddQueryParams(params []QueryParam[any]) *CustomURI {
 	query := app.uri.Query()
 	for _, p := range params {
 		if query.Has(p.Key) {
@@ -94,7 +96,7 @@ type ApiConfig struct {
 
 	// Internal Data
 	tokenSecretBytes []byte // decoded from TokenSecret string
-	appURI           CustomURI
+	appURI           *CustomURI
 }
 
 func (ac ApiConfig) TokenSecretBytes() []byte {
@@ -113,11 +115,9 @@ func (ac ApiConfig) TokenSecretBytes() []byte {
 }
 
 // Get *url.URL from AppURI, panics if ApiConfig.AppURI couldn't be parsed
-func (ac *ApiConfig) AppUri() CustomURI {
-	if ac.appURI.uri != nil {
-		// Clone uri to prevent it from changing in ApiConfig
-		uriClone := *ac.appURI.uri
-		return CustomURI{uri: &uriClone}
+func (ac *ApiConfig) AppUri() *CustomURI {
+	if ac.appURI != nil && ac.appURI.uri != nil {
+		return NewCustomUri(ac.appURI.uri)
 	}
 
 	uri, err := url.ParseRequestURI(ac.AppURI)
@@ -125,11 +125,9 @@ func (ac *ApiConfig) AppUri() CustomURI {
 		log.Logf(log.LevelCritical, "app_uri (from config: %s) must be valid url with protocol and without fragment of the application using the api: %s", ac.AppURI, err.Error())
 		panic(1)
 	}
-	ac.appURI = CustomURI{uri: uri}
+	ac.appURI = NewCustomUri(uri)
 
-	// Clone uri to prevent it from changing in ApiConfig
-	uriClone := *ac.appURI.uri
-	return CustomURI{uri: &uriClone}
+	return NewCustomUri(ac.appURI.uri)
 }
 
 func (ac ApiConfig) AddCookieExpiryMargin(validity time.Duration) time.Duration {
