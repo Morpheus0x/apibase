@@ -12,6 +12,11 @@ type JsonResponse[T any] struct {
 	Data    T               `json:"data"`
 }
 
+type RedirectTarget struct {
+	Referrer string `json:"ref"`
+	Target   string `json:"target"`
+}
+
 // type HtmxResponse[T any] struct {
 // 	HtmlTemplate string
 // 	Data         T

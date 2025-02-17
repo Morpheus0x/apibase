@@ -16,6 +16,54 @@ import (
 	wr "gopkg.cc/apibase/web_response"
 )
 
+type CustomURI struct {
+	uri *url.URL
+}
+
+func NewCustomUri(uri *url.URL) CustomURI {
+	return CustomURI{uri: uri}
+}
+
+func NewCustomUriFromString(uri string) (CustomURI, error) {
+	url, err := url.Parse(uri)
+	if err != nil {
+		return CustomURI{}, errx.Wrap(err, "Unable to create new CustomURI")
+	}
+	return NewCustomUri(url), nil
+}
+
+func (app CustomURI) String() string {
+	return app.uri.String()
+}
+
+func (app CustomURI) SetPath(path string) CustomURI {
+	return CustomURI{uri: app.uri.JoinPath(path)}
+}
+
+// Supports string, int, web_response.ResponseSuccessId and web_response.ResponseErrorId as value types
+func (app CustomURI) AddQueryParam(key string, value any) CustomURI {
+	query := app.uri.Query()
+	if query.Has(key) {
+		query.Del(key)
+	}
+	query.Add(key, parseQueryParam(value))
+	app.uri.RawQuery = query.Encode()
+	return app
+}
+
+// Supports string, int, web_response.ResponseSuccessId and web_response.ResponseErrorId as value types
+func (app CustomURI) AddQueryParams(params []QueryParam[any]) CustomURI {
+	query := app.uri.Query()
+	for _, p := range params {
+		if query.Has(p.Key) {
+			query.Del(p.Key)
+		}
+		query.Add(p.Key, p.Value())
+	}
+	app.uri.RawQuery = query.Encode()
+	return app
+}
+
 type ApiServer struct {
 	E      *echo.Echo  // Direct access to the echo webserver instance
 	Api    *echo.Group // Used to register API endpoints, leading slash already present (/api/<route>)
@@ -46,6 +94,7 @@ type ApiConfig struct {
 
 	// Internal Data
 	tokenSecretBytes []byte // decoded from TokenSecret string
+	appURI           CustomURI
 }
 
 func (ac ApiConfig) TokenSecretBytes() []byte {
@@ -63,41 +112,24 @@ func (ac ApiConfig) TokenSecretBytes() []byte {
 	return ac.tokenSecretBytes
 }
 
-// Get *url.URL from AppURI
-func (ac ApiConfig) AppUri() *url.URL {
-	uri, err := url.ParseRequestURI(ac.AppURI)
-	if err != nil {
-		log.Logf(log.LevelCritical, "app_uri (from config: %s) must be valid url with protocol and without fragment: %s", ac.AppURI, err.Error())
-		panic(1)
+// Get *url.URL from AppURI, panics if ApiConfig.AppURI couldn't be parsed
+func (ac *ApiConfig) AppUri() CustomURI {
+	if ac.appURI.uri != nil {
+		// Clone uri to prevent it from changing in ApiConfig
+		uriClone := *ac.appURI.uri
+		return CustomURI{uri: &uriClone}
 	}
-	return uri
-}
 
-// Supports string, int, web_response.ResponseSuccessId and web_response.ResponseErrorId as value types
-func (ac ApiConfig) AppUriWithQueryParam(key string, value any) string {
 	uri, err := url.ParseRequestURI(ac.AppURI)
 	if err != nil {
-		log.Logf(log.LevelCritical, "app_uri (from config: %s) must be valid url with protocol and without fragment: %s", ac.AppURI, err.Error())
+		log.Logf(log.LevelCritical, "app_uri (from config: %s) must be valid url with protocol and without fragment of the application using the api: %s", ac.AppURI, err.Error())
 		panic(1)
 	}
-	query := uri.Query()
-	query.Add(key, parseQueryParam(value))
-	uri.RawQuery = query.Encode()
-	return uri.String()
-}
+	ac.appURI = CustomURI{uri: uri}
 
-func (ac ApiConfig) AppUriWithQueryParams(params []QueryParam[any]) string {
-	uri, err := url.ParseRequestURI(ac.AppURI)
-	if err != nil {
-		log.Logf(log.LevelCritical, "app_uri (from config: %s) must be valid url with protocol and without fragment: %s", ac.AppURI, err.Error())
-		panic(1)
-	}
-	query := uri.Query()
-	for _, p := range params {
-		query.Add(p.Key, p.Value())
-	}
-	uri.RawQuery = query.Encode()
-	return uri.String()
+	// Clone uri to prevent it from changing in ApiConfig
+	uriClone := *ac.appURI.uri
+	return CustomURI{uri: &uriClone}
 }
 
 func (ac ApiConfig) AddCookieExpiryMargin(validity time.Duration) time.Duration {

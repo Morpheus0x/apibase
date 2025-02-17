@@ -74,7 +74,7 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 		gothUser, err := gothic.CompleteUserAuth(c.Response(), request)
 		if err != nil {
 			log.Logf(log.LevelError, "oauth callback complete user auth error: %s", err.Error())
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrOauthCallbackCompleteAuth))
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, wr.RespErrOauthCallbackCompleteAuth).String())
 		}
 		userToCreate := table.User{
 			Name:          gothUser.NickName,
@@ -85,11 +85,11 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 		// TODO: impl runSignupDefaultRoleHook to get org assignments from goth.User/userToCreate
 		user, err := api.DB.CreateNewUserWithOrg(userToCreate)
 		if errors.Is(err, db.ErrOrgCreate) {
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrSignupNewUserOrg))
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, wr.RespErrSignupNewUserOrg).String())
 		}
 		if err != nil {
 			log.Logf(log.LevelError, "unable to create oauth user db entry: %s", err.Error())
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrUserDoesNotExist))
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, wr.RespErrUserDoesNotExist).String())
 		}
 		log.Logf(log.LevelDebug, "User logged in: %v", user)
 
@@ -97,16 +97,16 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 		if err != nil {
 			// roles should already exist or have been created by GetOrCreateUser
 			log.Logf(log.LevelError, "unable to get any roles for user (id: %d): %s", user.ID, err.Error())
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrUserNoRoles))
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, wr.RespErrUserNoRoles).String())
 		}
 
 		newSessionId, err := web.JwtLogin(c, api, user, roles)
 		if e, ok := err.(*wr.ResponseError); ok {
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, e.GetErrorId()))
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, e.GetErrorId()).String())
 		}
 		if err != nil {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogin during oauth callback, this should not happen!: %s", err.Error())
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrOauthCallbackUnknownError))
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, wr.RespErrOauthCallbackUnknownError).String())
 		}
 		web.UpdateCSRF(c, api, newSessionId)
 
@@ -115,17 +115,17 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 		stateBytes, err := base64.RawURLEncoding.DecodeString(state)
 		if err != nil {
 			log.Logf(log.LevelDevel, "unable to base64 decode state for redirect in oauth callback: %s", err.Error())
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogin))
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeySuccess, wr.RespSccsLogin).String())
 		}
 		stateReferrer := &web.StateReferrer{}
 		err = json.Unmarshal(stateBytes, stateReferrer)
 		if err != nil {
 			log.Logf(log.LevelDevel, "unable to unmarshal StateReferrer json for redirect in oauth callback: %s", err.Error())
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogin))
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeySuccess, wr.RespSccsLogin).String())
 		}
 		if !strings.HasPrefix(stateReferrer.URI, api.Config.AppURI) {
 			log.Logf(log.LevelDevel, "StateReferrer URI for redirect doesn't match AppURI(%s) in oauth callback: %s", api.Config.AppURI, stateReferrer.URI)
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogin))
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeySuccess, wr.RespSccsLogin).String())
 		}
 		return c.Redirect(http.StatusTemporaryRedirect, stateReferrer.URI)
 	}
@@ -148,12 +148,12 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 			if err.Unwrap() != nil {
 				log.Log(log.LevelError, err.Error())
 			}
-			return c.Redirect(http.StatusInternalServerError, api.Config.AppUriWithQueryParam(wr.QueryKeyError, err.GetErrorId()))
+			return c.Redirect(http.StatusInternalServerError, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, err.GetErrorId()).String())
 		}
 		if err != nil {
 			log.Logf(log.LevelCritical, "error other than web_response.ResponseError from JwtLogout during oauth logout, this should not happen!: %s", err.Error())
-			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeyError, wr.RespErrAuthLogoutUnknownError))
+			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, wr.RespErrAuthLogoutUnknownError).String())
 		}
-		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUriWithQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout))
+		return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout).String())
 	}
 }
