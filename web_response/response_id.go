@@ -57,7 +57,7 @@ const (
 	RespErrHookPreSignup
 	RespErrHookSignupDefaultRole
 	RespErrOauthReferrerParsing
-	RespErrOauthMarshalReferrer
+	RespErrOauthMarshalState
 	// Only append here to not break existing frontend error IDs
 )
 

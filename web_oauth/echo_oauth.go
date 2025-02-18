@@ -47,7 +47,7 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 		// Correct Redirecting
 		stateBytes, err := json.Marshal(&web.StateReferrer{Nonce: h.RandomString(16), URI: referrer})
 		if err != nil {
-			return c.Redirect(http.StatusTemporaryRedirect, referrerUri.AddQueryParam(wr.QueryKeyError, wr.RespErrOauthMarshalReferrer).String())
+			return c.Redirect(http.StatusTemporaryRedirect, referrerUri.AddQueryParam(wr.QueryKeyError, wr.RespErrOauthMarshalState).String())
 		}
 		state := base64.RawURLEncoding.EncodeToString(stateBytes)
 		queryURL.Set("state", state)

@@ -50,12 +50,12 @@ func _() {
 	_ = x[RespErrHookPreSignup-39]
 	_ = x[RespErrHookSignupDefaultRole-40]
 	_ = x[RespErrOauthReferrerParsing-41]
-	_ = x[RespErrOauthMarshalReferrer-42]
+	_ = x[RespErrOauthMarshalState-42]
 }
 
-const _ResponseId_name = "RespSccsGenericRespSccsLoginRespSccsLogoutRespSccsSignupRespScssSignupEmailConfirmRespSccsAlreadyLoggedInRespErrUndefinedRespErrUnknownInternalRespErrCsrfInvalidRespErrUserDoesNotExistRespErrUserNoRolesRespErrMissingInputRespErrJwtAccessTokenSigningRespErrJwtAccessTokenParsingRespErrJwtRefreshTokenCreateRespErrJwtRefreshTokenSigningRespErrJwtRefreshTokenUpdateRespErrJwtRefreshTokenParsingRespErrJwtRefreshTokenClaimsRespErrJwtRefreshTokenInvalidRespErrJwtRefreshTokenExpiredRespErrJwtRefreshTokenVerifyErrRespErrJwtRefreshTokenVerifyInvalidRespErrOauthCallbackCompleteAuthRespErrOauthCallbackUnknownErrorRespErrAuthLoginUnknownErrorRespErrAuthLoginNotLocalRespErrAuthSignupUnknownErrorRespErrAuthLogoutUnknownErrorRespErrLoginNoUserRespErrLoginComparePasswordRespErrLoginWrongPasswordRespErrSignupPasswordMismatchRespErrSignupPasswordHashRespErrSignupUserExistsRespErrSignupNewUserOrgRespErrSignupUserCreateRespErrHookPreLoginRespErrHookPostLoginRespErrHookPreSignupRespErrHookSignupDefaultRoleRespErrOauthReferrerParsingRespErrOauthMarshalReferrer"
+const _ResponseId_name = "RespSccsGenericRespSccsLoginRespSccsLogoutRespSccsSignupRespScssSignupEmailConfirmRespSccsAlreadyLoggedInRespErrUndefinedRespErrUnknownInternalRespErrCsrfInvalidRespErrUserDoesNotExistRespErrUserNoRolesRespErrMissingInputRespErrJwtAccessTokenSigningRespErrJwtAccessTokenParsingRespErrJwtRefreshTokenCreateRespErrJwtRefreshTokenSigningRespErrJwtRefreshTokenUpdateRespErrJwtRefreshTokenParsingRespErrJwtRefreshTokenClaimsRespErrJwtRefreshTokenInvalidRespErrJwtRefreshTokenExpiredRespErrJwtRefreshTokenVerifyErrRespErrJwtRefreshTokenVerifyInvalidRespErrOauthCallbackCompleteAuthRespErrOauthCallbackUnknownErrorRespErrAuthLoginUnknownErrorRespErrAuthLoginNotLocalRespErrAuthSignupUnknownErrorRespErrAuthLogoutUnknownErrorRespErrLoginNoUserRespErrLoginComparePasswordRespErrLoginWrongPasswordRespErrSignupPasswordMismatchRespErrSignupPasswordHashRespErrSignupUserExistsRespErrSignupNewUserOrgRespErrSignupUserCreateRespErrHookPreLoginRespErrHookPostLoginRespErrHookPreSignupRespErrHookSignupDefaultRoleRespErrOauthReferrerParsingRespErrOauthMarshalState"
 
-var _ResponseId_index = [...]uint16{0, 15, 28, 42, 56, 82, 105, 121, 143, 161, 184, 202, 221, 249, 277, 305, 334, 362, 391, 419, 448, 477, 508, 543, 575, 607, 635, 659, 688, 717, 735, 762, 787, 816, 841, 864, 887, 910, 929, 949, 969, 997, 1024, 1051}
+var _ResponseId_index = [...]uint16{0, 15, 28, 42, 56, 82, 105, 121, 143, 161, 184, 202, 221, 249, 277, 305, 334, 362, 391, 419, 448, 477, 508, 543, 575, 607, 635, 659, 688, 717, 735, 762, 787, 816, 841, 864, 887, 910, 929, 949, 969, 997, 1024, 1048}
 
 func (i ResponseId) String() string {
 	if i >= ResponseId(len(_ResponseId_index)-1) {
