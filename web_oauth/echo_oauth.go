@@ -162,7 +162,8 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 		return c.JSON(http.StatusOK, wr.JsonResponse[wr.RedirectTarget]{
 			ResponseID: wr.RespSccsLogout,
 			Data: wr.RedirectTarget{
-				Target: api.Config.AppUri().AddQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout).String(),
+				Referrer: "none",
+				Target:   api.Config.AppUri().AddQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout).String(),
 			},
 		})
 	}
