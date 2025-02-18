@@ -130,6 +130,9 @@ func RegisterRestDefaultEndpoints(api *web.ApiServer, appVersion string) {
 	apiGroup.GET("", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "Welcome!"})
 	})
+	apiGroup.GET("check_login", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{ResponseID: wr.RespSccsGeneric})
+	})
 	api.Api = apiGroup
 }
 
