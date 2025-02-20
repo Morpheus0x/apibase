@@ -79,8 +79,8 @@ func (db DB) GetAllScheduledTasks() ([]table.ScheduledTask, error) {
 func (db DB) CreateScheduledTask(task table.ScheduledTask) error {
 	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
-	query := "INSERT INTO scheduled_tasks (task_id, org_id, start_date, interval, description) VALUES ($1, $2, $3, $4, $5)"
-	_, err := db.Postgres.Exec(ctx, query, task.TaskID, task.OrgID, task.StartDate, task.Interval, task.Description)
+	query := "INSERT INTO scheduled_tasks (task_id, org_id, start_date, interval, task_type, task_data) VALUES ($1, $2, $3, $4, $5, $6)"
+	_, err := db.Postgres.Exec(ctx, query, task.TaskID, task.OrgID, task.StartDate, task.Interval, task.TaskType, task.TaskData)
 	if err != nil {
 		return errx.WrapWithType(ErrDatabaseInsert, err, "scheduled task entry could not be created")
 	}

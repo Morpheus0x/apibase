@@ -19,20 +19,22 @@ const (
 	Yearly  = 365 * Daily
 )
 
-type TaskFunc func() error
+type TaskFunc func(data string) error
 
 type Task struct {
-	ID          string
-	OrgID       int
-	Start       time.Time
-	Interval    time.Duration
-	Description string
-	Run         TaskFunc
+	ID       string
+	OrgID    int
+	Start    time.Time
+	Interval time.Duration
+	TaskType string
+	TaskData string
+	Run      TaskFunc
 }
 
 type task struct {
 	start          time.Time
 	interval       time.Duration
+	data           string
 	task           TaskFunc
 	startupSuccess chan struct{}
 	startupFailed  chan error
@@ -67,19 +69,20 @@ func GetScheduledTasksForUser(api *web.ApiServer, userId int) ([]Task, error) {
 	}
 	for _, t := range tasksFromDB {
 		tasks = append(tasks, Task{
-			ID:          t.TaskID,
-			OrgID:       t.OrgID,
-			Start:       t.StartDate,
-			Interval:    time.Duration(t.Interval),
-			Description: t.Description,
-			Run:         nil,
+			ID:       t.TaskID,
+			OrgID:    t.OrgID,
+			Start:    t.StartDate,
+			Interval: time.Duration(t.Interval),
+			TaskType: t.TaskType,
+			TaskData: t.TaskData,
+			Run:      nil,
 		})
 	}
 	return tasks, nil
 }
 
 // Get all tasks that were saved in the database,
-// cron.StartScheduledTasks should be called after addint all corresponding cron.TaskFunc to the returned Task array
+// cron.StartScheduledTasks should be called after adding all corresponding cron.TaskFunc to the returned Task array
 func GetScheduledTasksFromDB(api *web.ApiServer) ([]Task, error) {
 	tasks := []Task{}
 	tasksFromDB, err := api.DB.GetAllScheduledTasks()
@@ -88,12 +91,13 @@ func GetScheduledTasksFromDB(api *web.ApiServer) ([]Task, error) {
 	}
 	for _, t := range tasksFromDB {
 		tasks = append(tasks, Task{
-			ID:          t.TaskID,
-			OrgID:       t.OrgID,
-			Start:       t.StartDate,
-			Interval:    time.Duration(t.Interval),
-			Description: t.Description,
-			Run:         nil,
+			ID:       t.TaskID,
+			OrgID:    t.OrgID,
+			Start:    t.StartDate,
+			Interval: time.Duration(t.Interval),
+			TaskType: t.TaskType,
+			TaskData: t.TaskData,
+			Run:      nil,
 		})
 	}
 	return tasks, nil
@@ -135,7 +139,14 @@ func ScheduleAndSaveToDB(api *web.ApiServer, t Task) error {
 	if err != nil {
 		return err
 	}
-	err = api.DB.CreateScheduledTask(table.ScheduledTask{TaskID: t.ID, OrgID: t.OrgID, StartDate: t.Start, Interval: table.Duration(t.Interval), Description: t.Description})
+	err = api.DB.CreateScheduledTask(table.ScheduledTask{
+		TaskID:    t.ID,
+		OrgID:     t.OrgID,
+		StartDate: t.Start,
+		Interval:  table.Duration(t.Interval),
+		TaskType:  t.TaskType,
+		TaskData:  t.TaskData,
+	})
 	if err != nil {
 		return errx.WrapWithType(ErrTaskDatabaseSave, err, "task successfully scheduled but not saved in database")
 	}
@@ -149,7 +160,7 @@ func Schedule(settings *web.ApiConfigSettings, t Task) error {
 	if t.Run == nil {
 		return errx.NewWithType(ErrTaskNoRunFunc, "")
 	}
-	newTask := task{start: t.Start, interval: t.Interval, task: t.Run}
+	newTask := task{start: t.Start, interval: t.Interval, data: t.TaskData, task: t.Run}
 	newTask.chanInit()
 
 	activeTasks.Lock()
@@ -300,7 +311,7 @@ func worker(id string, job task) {
 	for {
 		select {
 		case <-run.C:
-			err := job.task()
+			err := job.task(job.data)
 			if err != nil {
 				log.Logf(log.LevelError, "worker task '%s' returned error: %s", id, err.Error())
 			}

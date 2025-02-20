@@ -47,12 +47,13 @@ type UserRole struct {
 }
 
 type ScheduledTask struct {
-	ID          int       `db:"id" default:"true" table:"scheduled_tasks"`
-	TaskID      string    `db:"task_id"`
-	OrgID       int       `db:"org_id"`
-	StartDate   time.Time `db:"start_date"`
-	Interval    Duration  `db:"interval"`
-	Description string    `db:"description"`
-	CreatedAt   time.Time `db:"created_at" default:"true"`
-	UpdatedAt   time.Time `db:"updated_at" default:"true"`
+	ID        int       `db:"id" default:"true" table:"scheduled_tasks"`
+	TaskID    string    `db:"task_id"`
+	OrgID     int       `db:"org_id"`
+	StartDate time.Time `db:"start_date"`
+	Interval  Duration  `db:"interval"`
+	TaskType  string    `db:"task_type"`
+	TaskData  string    `db:"task_data"`
+	CreatedAt time.Time `db:"created_at" default:"true"`
+	UpdatedAt time.Time `db:"updated_at" default:"true"`
 }
