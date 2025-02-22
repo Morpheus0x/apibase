@@ -28,11 +28,12 @@ func (s Select) Get() ([]bool, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Reset terminal back to default
+	defer term.Restore(int(os.Stdin.Fd()), oldState)
+
 	// Hide Cursor
 	fmt.Print("\033[?25l")
 	defer fmt.Print("\033[?25h")
-	// Reset terminal back to default
-	defer term.Restore(int(os.Stdin.Fd()), oldState)
 
 	optionsLen := len(s.Options)
 	defaultsLen := len(s.Defaults)
@@ -50,6 +51,7 @@ func (s Select) Get() ([]bool, error) {
 	cursor := 0
 	infoLine := ""
 	drawOptions(true, s, selected, cursor, infoLine)
+	defer fmt.Print("\n\r") // prevent last option from being overwritten on return
 	for {
 		switch readInput() {
 		case inputExit:
