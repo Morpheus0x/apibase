@@ -6,13 +6,17 @@ import (
 	"gopkg.cc/apibase/errx"
 )
 
-func parseAccessTokenCookie(c echo.Context, secret []byte) (*jwt.Token, error) {
+func parseAccessTokenCookie[T any](c echo.Context, secret []byte, data *T) (*jwt.Token, error) {
 	tokenRaw, err := c.Cookie("access_token")
 	if err != nil {
 		// c.Logger().Debugf("no cookie 'access_token' in request (%s): %v", c.Request().RequestURI, err)
 		return &jwt.Token{}, errx.NewWithType(ErrTokenValidate, "no cookie 'access_token' present in request")
 	}
-	token, err := jwt.ParseWithClaims(tokenRaw.Value, new(jwtAccessClaims), func(t *jwt.Token) (interface{}, error) {
+	// this is required in order for Data to be initilized (since new(jwtAccessClaims[T]) doesn't do that)
+	accessClaims := &jwtAccessClaims[T]{
+		Data: data,
+	}
+	token, err := jwt.ParseWithClaims(tokenRaw.Value, accessClaims, func(t *jwt.Token) (interface{}, error) {
 		return secret, nil
 	})
 	if err != nil {

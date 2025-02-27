@@ -33,9 +33,9 @@ func AuthJWT(api *ApiServer) echo.MiddlewareFunc {
 
 func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 	// Verify Access Token
-	accessToken, err := parseAccessTokenCookie(c, api.Config.TokenSecretBytes())
+	accessToken, err := parseAccessTokenCookie(c, api.Config.TokenSecretBytes(), api.GetAccessClaimDataType())
 	if err == nil {
-		accessClaims, ok := accessToken.Claims.(*jwtAccessClaims)
+		accessClaims, ok := accessToken.Claims.(*jwtAccessClaims[any])
 		if ok {
 			accessTokenExpire, err := accessClaims.GetExpirationTime()
 			if accessToken.Valid &&
@@ -81,7 +81,7 @@ func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 	if err != nil {
 		return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrUserNoRoles, errx.Wrapf(err, "unable to get roles for jwt access token for user (id: %d)", refreshClaims.UserID))
 	}
-	accessClaims := createJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin)
+	accessClaims := createJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin, api.GetAccessClaimData(user.ID))
 
 	// Get http request to modify it with the new JWTs
 	currentRequest := c.Request()

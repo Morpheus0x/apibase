@@ -74,7 +74,7 @@ func login(api *web.ApiServer) echo.HandlerFunc {
 			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrHookPostLogin)
 		}
 
-		newSessionId, err := web.JwtLogin(c, api, user, roles)
+		newSessionId, err := web.JwtLogin(c, api, user, roles, api.GetAccessClaimData(user.ID))
 		if err, ok := err.(*wr.ResponseError); ok {
 			if err.Unwrap() != nil {
 				log.Log(log.LevelNotice, err.Error())
@@ -170,7 +170,7 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 			})
 		}
 
-		newSessionId, err := web.JwtLogin(c, api, user, roles)
+		newSessionId, err := web.JwtLogin(c, api, user, roles, api.GetAccessClaimData(user.ID))
 		if err, ok := err.(*wr.ResponseError); ok {
 			if err.Unwrap() != nil {
 				log.Log(log.LevelNotice, err.Error())

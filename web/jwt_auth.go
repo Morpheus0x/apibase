@@ -12,10 +12,10 @@ import (
 	wr "gopkg.cc/apibase/web_response"
 )
 
-func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.UserRole) (h.SecretString, error) {
+func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.UserRole, accessClaimData *any) (h.SecretString, error) {
 	noNewSession := h.CreateSecretString("")
 	newSessionId := h.CreateSecretString(h.RandomBase64(32))
-	accessToken, err := createJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin).signToken(api)
+	accessToken, err := createJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin, accessClaimData).signToken(api)
 	if err != nil {
 		return noNewSession, wr.NewError(wr.RespErrJwtAccessTokenParsing, errx.Wrapf(err, "unable to create access token for user (id: %d)", user.ID))
 	}

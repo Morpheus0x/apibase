@@ -13,15 +13,16 @@ import (
 const LatestAccessTokenRevision uint = 1
 
 // intentionally obfuscated json keys for security and bandwidth savings
-type jwtAccessClaims struct {
+type jwtAccessClaims[T any] struct {
 	UserID     int      `json:"a"`
 	Roles      JwtRoles `json:"b"`
 	SuperAdmin bool     `json:"c"`
-	Revision   uint     `json:"d"`
+	Data       *T       `json:"d"`
+	Revision   uint     `json:"e"`
 	jwt.RegisteredClaims
 }
 
-func (claims *jwtAccessClaims) signToken(api *ApiServer) (string, error) {
+func (claims *jwtAccessClaims[any]) signToken(api *ApiServer) (string, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
 	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.Settings.TokenAccessValidity))
@@ -29,11 +30,12 @@ func (claims *jwtAccessClaims) signToken(api *ApiServer) (string, error) {
 	return rawToken.SignedString(api.Config.TokenSecretBytes())
 }
 
-func createJwtAccessClaims(userID int, roles JwtRoles, superAdmin bool) *jwtAccessClaims {
-	return &jwtAccessClaims{
+func createJwtAccessClaims[T any](userID int, roles JwtRoles, superAdmin bool, data *T) *jwtAccessClaims[T] {
+	return &jwtAccessClaims[T]{
 		UserID:     userID,
 		Roles:      roles,
 		SuperAdmin: superAdmin,
+		Data:       data,
 		Revision:   LatestAccessTokenRevision,
 	}
 }

@@ -105,7 +105,7 @@ func callback(api *web.ApiServer) echo.HandlerFunc {
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, wr.RespErrUserNoRoles).String())
 		}
 
-		newSessionId, err := web.JwtLogin(c, api, user, roles)
+		newSessionId, err := web.JwtLogin(c, api, user, roles, api.GetAccessClaimData(user.ID))
 		if e, ok := err.(*wr.ResponseError); ok {
 			return c.Redirect(http.StatusTemporaryRedirect, api.Config.AppUri().AddQueryParam(wr.QueryKeyError, e.GetErrorId()).String())
 		}

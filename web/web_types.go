@@ -66,6 +66,12 @@ func (app *CustomURI) AddQueryParams(params []QueryParam[any]) *CustomURI {
 	return app
 }
 
+// Should return pointer to struct containing custom access claim data.
+// The struct must have json tags and you are encouraged to obfuscate the tags e.g. using a, b, c, ...
+// If bool variable is true, return only an initialized empty struct of the desired type, this must always return without an error.
+// Errors will be logged and access claim data will be nil in jwt.
+type AccessClaimDataFunc func(int, bool) (*any, error)
+
 type ApiServer struct {
 	E      *echo.Echo  // Direct access to the echo webserver instance
 	Api    *echo.Group // Used to register API endpoints, leading slash already present (/api/<route>)
@@ -73,7 +79,34 @@ type ApiServer struct {
 	Config ApiConfig   // API config used to initialize ApiServer
 	DB     db.DB       // Database connection for this ApiServer
 
+	accessClaimData AccessClaimDataFunc // Custom Access Claims for User
 	// middleware []echo.MiddlewareFunc
+}
+
+// Use this to add your own access token claim data, see web.AccessClaimDataFunc for further details
+func (api *ApiServer) RegisterAccessClaimDataFunc(accessClaimDataFunc AccessClaimDataFunc) {
+	api.accessClaimData = accessClaimDataFunc
+}
+
+func (api ApiServer) GetAccessClaimData(userId int) *any {
+	if api.accessClaimData == nil {
+		return nil
+	}
+	data, err := api.accessClaimData(userId, false)
+	if err != nil {
+		log.Logf(log.LevelError, "Unable to get custom access claim data for user (id: %d): %s", userId, err.Error())
+		return nil
+	}
+	return data
+}
+
+// This is required for parsing access token, since it requires memory to be already allocated for the claims
+func (api ApiServer) GetAccessClaimDataType() *any {
+	if api.accessClaimData == nil {
+		return nil
+	}
+	data, _ := api.accessClaimData(0, true)
+	return data
 }
 
 type ApiConfig struct {
