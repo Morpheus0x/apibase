@@ -81,12 +81,7 @@ func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 	if err != nil {
 		return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrUserNoRoles, errx.Wrapf(err, "unable to get roles for jwt access token for user (id: %d)", refreshClaims.UserID))
 	}
-	accessClaims := &jwtAccessClaims{
-		UserID:     user.ID,
-		Roles:      jwtRolesFromTable(roles),
-		SuperAdmin: user.SuperAdmin,
-		Revision:   LatestAccessTokenRevision,
-	}
+	accessClaims := createJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin)
 
 	// Get http request to modify it with the new JWTs
 	currentRequest := c.Request()
@@ -95,10 +90,8 @@ func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 	if refreshTokenExpire.Time.Add(-api.Config.Settings.TokenRefreshRenewMargin).Before(time.Now()) {
 		newSessionId := h.CreateSecretString(h.RandomString(16)) // TODO: maybe use another random generator...
 
-		newRefreshClaims := &jwtRefreshClaims{
-			UserID:    user.ID,
-			SessionID: newSessionId,
-		}
+		newRefreshClaims := createJwtRefreshClaims(user.ID, newSessionId)
+
 		newRefreshToken, expiresAt, err := newRefreshClaims.signToken(api)
 		if err != nil {
 			log.Logf(log.LevelDebug, "unable to create new refresh token for user '%s' (id: '%d')", user.Name, user.ID)
