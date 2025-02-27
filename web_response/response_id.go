@@ -58,6 +58,7 @@ const (
 	RespErrHookSignupDefaultRole
 	RespErrOauthReferrerParsing
 	RespErrOauthMarshalState
+	RespErrGetAccessClaims
 	// Only append here to not break existing frontend error IDs
 )
 
