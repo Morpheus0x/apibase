@@ -82,7 +82,7 @@ func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 	if err != nil {
 		return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrUserNoRoles, errx.Wrapf(err, "unable to get roles for jwt access token for user (id: %d)", refreshClaims.UserID))
 	}
-	var accessClaimData *any
+	var accessClaimData any
 	if oldAccessClaims != nil {
 		// re-use access claim data of valid but expired access token to reduce server load
 		accessClaimData = oldAccessClaims.Data

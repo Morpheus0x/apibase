@@ -6,7 +6,7 @@ import (
 	"gopkg.cc/apibase/errx"
 )
 
-func parseAccessTokenCookie[T any](c echo.Context, secret []byte, data *T) (*jwt.Token, error) {
+func parseAccessTokenCookie[T any](c echo.Context, secret []byte, data T) (*jwt.Token, error) {
 	tokenRaw, err := c.Cookie("access_token")
 	if err != nil {
 		// c.Logger().Debugf("no cookie 'access_token' in request (%s): %v", c.Request().RequestURI, err)

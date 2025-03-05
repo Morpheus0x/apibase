@@ -12,7 +12,7 @@ import (
 	wr "gopkg.cc/apibase/web_response"
 )
 
-func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.UserRole, accessClaimData *any) (h.SecretString, error) {
+func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.UserRole, accessClaimData any) (h.SecretString, error) {
 	noNewSession := h.CreateSecretString("")
 	newSessionId := h.CreateSecretString(h.RandomBase64(32))
 	accessToken, err := createJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin, accessClaimData).signToken(api)

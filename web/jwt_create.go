@@ -17,7 +17,7 @@ type jwtAccessClaims[T any] struct {
 	UserID     int      `json:"a"`
 	Roles      JwtRoles `json:"b"`
 	SuperAdmin bool     `json:"c"`
-	Data       *T       `json:"d"`
+	Data       T        `json:"d"`
 	Revision   uint     `json:"e"`
 	jwt.RegisteredClaims
 }
@@ -30,7 +30,7 @@ func (claims *jwtAccessClaims[any]) signToken(api *ApiServer) (string, error) {
 	return rawToken.SignedString(api.Config.TokenSecretBytes())
 }
 
-func createJwtAccessClaims[T any](userID int, roles JwtRoles, superAdmin bool, data *T) *jwtAccessClaims[T] {
+func createJwtAccessClaims[T any](userID int, roles JwtRoles, superAdmin bool, data T) *jwtAccessClaims[T] {
 	return &jwtAccessClaims[T]{
 		UserID:     userID,
 		Roles:      roles,
