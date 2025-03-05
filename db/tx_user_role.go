@@ -15,7 +15,7 @@ func (db DB) GetUserRoles(userID int) ([]table.UserRole, error) {
 	defer cancel()
 	roles := []table.UserRole{}
 	// err := pgxscan.Select(ctx, Database, &user, "SELECT * FROM users WHERE id = $1", id)
-	rows, err := db.Postgres.Query(ctx, "SELECT * FROM user_roles WHERE id = $1", userID)
+	rows, err := db.Postgres.Query(ctx, "SELECT * FROM user_roles WHERE user_id = $1", userID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return roles, errx.NewWithTypef(ErrDatabaseNotFound, "no roles found for user (id: %d)", userID)
 	}
