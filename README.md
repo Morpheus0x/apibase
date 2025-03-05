@@ -36,6 +36,9 @@ The following is a basic example of how apibase can be used to create an api fra
 ### Application Setup
 ApiBase serves static files or forwards via reverse proxy any requests that are made, except for those that have a url path starting with `/auth` or `/api`. Other than that any path may be used by the application.
 
+### Authentication
+ApiBase provides full user authentication using local auth and/or OAuth (github.com/markbates/goth). In both cases JWT Refresh and Access Tokens are set as http only cookies. Custom access token claim data may be registered by using the `(*web.ApiServer).RegisterAccessClaimDataFunc()` function. In your own api routes, these can be retrieved using the `web.GetAccessClaims()` generic function where data argument is required to be an initialized empty struct of the desired custom claim data.
+
 ### Database
 In order to add your own apibase database tables, the user must create a sql query and the corresponding struct themselves. Currently, no error-free postgres struct gen library exists that provides the desired functionality. Since this is a one off process in many cases and has horrible rammifications if done incorrectly, a rather manual process is chosen to create a struct for a table and to migrate an existing database table to conform to the updated sql/struct. However, the create sql statement and struct are compared to the current database table which verifies that they match. This is a good middleground and guarantees a stable database interface.
 

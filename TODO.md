@@ -16,9 +16,10 @@
 - [x] Protect any referrer uri content by limiting its size to protect against dos and make sure the uri is always starting with the app uri
 - [x] fix TODO "refresh JWT": web_oauth/echo_oauth.go#L48
 - [x] Resolve all `TODO: remove hardcoded timeout`
+- [ ] Refactor all database IDs to be UUIDs
 - [ ] check that at least one login type local_auth or oauth_enabled is set to true
 - [ ] honor allow_registration flag
-- [ ] add language column to users table
+- [ ] add language column to users table (maybe not do this!)
 - [ ] impl email signup integration, if require_confirmed_email is set, make sure a hook exists that sents the email with user defined template
 - [ ] impl email reset api endpoint, add table transient_pw used to store password reset id and expiry time
 - [ ] add auth hooks to oauth
