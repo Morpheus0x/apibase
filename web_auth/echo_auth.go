@@ -127,9 +127,10 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 		}
 		rolesToCreate, err := runSignupDefaultRoleHook(userToCreate)
 		if err != nil {
-			log.Logf(log.LevelError, "signup default hook failed: %s", err.Error())
+			log.Logf(log.LevelError, "signup default role hook failed: %s", err.Error())
 			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrHookSignupDefaultRole)
 		}
+		log.Logf(log.LevelDebug, "Signup Default Role Hook determined the following roles for the new user '%s': %+v", userToCreate.Email, rolesToCreate)
 		user, err := api.DB.CreateNewUserWithOrg(userToCreate, rolesToCreate...)
 		if errors.Is(err, db.ErrUserAlreadyExists) {
 			return wr.SendJsonErrorResponse(c, http.StatusConflict, wr.RespErrSignupUserExists)
@@ -138,6 +139,7 @@ func signup(api *web.ApiServer) echo.HandlerFunc {
 			return wr.SendJsonErrorResponse(c, http.StatusInternalServerError, wr.RespErrSignupNewUserOrg)
 		}
 		if err != nil {
+			log.Logf(log.LevelError, "unknown error occurred while signup of new user '%s': %s", userToCreate.Email, err.Error())
 			return wr.SendJsonErrorResponse(c, http.StatusConflict, wr.RespErrSignupUserCreate)
 		}
 		roles, err := api.DB.GetUserRoles(user.ID)
@@ -208,7 +210,7 @@ func logout(api *web.ApiServer) echo.HandlerFunc {
 			ResponseID: wr.RespSccsLogout,
 			Data: wr.RedirectTarget{
 				Referrer: "none",
-				Target:   api.Config.AppUri().AddQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout).String(),
+				Target:   api.Config.AppUri().JoinPath("/login").AddQueryParam(wr.QueryKeySuccess, wr.RespSccsLogout).String(),
 			},
 		})
 	}
