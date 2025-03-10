@@ -89,7 +89,7 @@ func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 	} else {
 		accessClaimData = api.GetAccessClaimData(user.ID)
 	}
-	accessClaims := createJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin, accessClaimData)
+	accessClaims := CreateJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin, accessClaimData)
 
 	// Get http request to modify it with the new JWTs
 	currentRequest := c.Request()
@@ -120,7 +120,7 @@ func AuthJwtHandler(c echo.Context, api *ApiServer) error {
 	}
 
 	// Renew Access Token, since refresh token changed
-	newAccessToken, err := accessClaims.signToken(api)
+	newAccessToken, err := accessClaims.SignToken(api)
 	if err != nil {
 		log.Logf(log.LevelDebug, "unable to create new access token for user '%s' (id: '%d')", user.Name, user.ID)
 		return wr.NewErrorWithStatus(http.StatusUnauthorized, wr.RespErrJwtAccessTokenSigning, nil)

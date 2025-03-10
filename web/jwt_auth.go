@@ -15,7 +15,7 @@ import (
 func JwtLogin(c echo.Context, api *ApiServer, user table.User, roles []table.UserRole, accessClaimData any) (h.SecretString, error) {
 	noNewSession := h.CreateSecretString("")
 	newSessionId := h.CreateSecretString(h.RandomBase64(32))
-	accessToken, err := createJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin, accessClaimData).signToken(api)
+	accessToken, err := CreateJwtAccessClaims(user.ID, jwtRolesFromTable(roles), user.SuperAdmin, accessClaimData).SignToken(api)
 	if err != nil {
 		return noNewSession, wr.NewError(wr.RespErrJwtAccessTokenParsing, errx.Wrapf(err, "unable to create access token for user (id: %d)", user.ID))
 	}

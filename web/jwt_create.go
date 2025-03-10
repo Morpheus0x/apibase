@@ -22,7 +22,7 @@ type jwtAccessClaims[T any] struct {
 	jwt.RegisteredClaims
 }
 
-func (claims *jwtAccessClaims[any]) signToken(api *ApiServer) (string, error) {
+func (claims *jwtAccessClaims[any]) SignToken(api *ApiServer) (string, error) {
 	now := time.Now()
 	claims.IssuedAt = jwt.NewNumericDate(now)
 	claims.ExpiresAt = jwt.NewNumericDate(now.Add(api.Config.Settings.TokenAccessValidity))
@@ -30,7 +30,7 @@ func (claims *jwtAccessClaims[any]) signToken(api *ApiServer) (string, error) {
 	return rawToken.SignedString(api.Config.TokenSecretBytes())
 }
 
-func createJwtAccessClaims[T any](userID int, roles JwtRoles, superAdmin bool, data T) *jwtAccessClaims[T] {
+func CreateJwtAccessClaims[T any](userID int, roles JwtRoles, superAdmin bool, data T) *jwtAccessClaims[T] {
 	return &jwtAccessClaims[T]{
 		UserID:     userID,
 		Roles:      roles,
