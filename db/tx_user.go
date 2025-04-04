@@ -105,13 +105,13 @@ func (db DB) GetUserByID(id int) (table.User, error) {
 	user := table.User{}
 	// err := pgxscan.Select(ctx, Database, &user, "SELECT * FROM users WHERE id = $1", id)
 	rows, err := db.Postgres.Query(ctx, "SELECT * FROM users WHERE id = $1", id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return user, errx.NewWithTypef(ErrDatabaseNotFound, "no user found for id '%d'", id)
-	}
 	if err != nil {
 		return user, errx.WrapWithType(ErrDatabaseQuery, err, "")
 	}
 	err = pgxscan.ScanOne(&user, rows)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return user, errx.NewWithTypef(ErrDatabaseNotFound, "no user found for id '%d'", id)
+	}
 	if err != nil {
 		return user, errx.WrapWithType(ErrDatabaseScan, err, "")
 	}
@@ -178,9 +178,6 @@ func (db DB) GetOrCreateUser(user table.User, role table.UserRole) (table.User, 
 func (db DB) getUserByEmail(email string, tx pgx.Tx, ctx context.Context) (table.User, error) {
 	user := table.User{}
 	rows, err := tx.Query(ctx, "SELECT * FROM users WHERE email = $1", email)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return user, errx.NewWithTypef(ErrDatabaseNotFound, "no user found for email '%s'", email)
-	}
 	if err != nil {
 		return user, errx.WrapWithType(ErrDatabaseQuery, err, "")
 	}

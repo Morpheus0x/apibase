@@ -93,13 +93,13 @@ func (db DB) CreateRefreshTokenEntry(token table.RefreshToken) error {
 func (db DB) getTokenByUserIdAndSessionId(ctx context.Context, tx pgx.Tx, userID int, sessionId h.SecretString) (table.RefreshToken, error) {
 	token := table.RefreshToken{}
 	rows, err := tx.Query(ctx, "SELECT * FROM refresh_tokens WHERE user_id = $1 AND session_id = $2", userID, sessionId)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return token, errx.NewWithType(ErrDatabaseNotFound, "no refresh token found")
-	}
 	if err != nil {
 		return token, errx.WrapWithType(ErrDatabaseQuery, err, "")
 	}
 	err = pgxscan.ScanOne(&token, rows)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return token, errx.NewWithType(ErrDatabaseNotFound, "no refresh token found")
+	}
 	if err != nil {
 		return token, errx.WrapWithType(ErrDatabaseScan, err, "")
 	}

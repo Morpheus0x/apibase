@@ -2,10 +2,8 @@ package db
 
 import (
 	"context"
-	"errors"
 
 	"github.com/georgysavva/scany/v2/pgxscan"
-	"github.com/jackc/pgx/v5"
 	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/table"
@@ -44,10 +42,6 @@ func (db DB) getScheduledTasksForOrg(orgId int, ctx context.Context) ([]table.Sc
 	tasks := []table.ScheduledTask{}
 	query := "SELECT * FROM scheduled_tasks WHERE org_id = $1"
 	rows, err := db.Postgres.Query(ctx, query, orgId)
-	if errors.Is(err, pgx.ErrNoRows) {
-		// if no tasks are found, just return empty array
-		return tasks, nil
-	}
 	if err != nil {
 		return tasks, errx.WrapWithTypef(ErrDatabaseQuery, err, "")
 	}
@@ -55,6 +49,7 @@ func (db DB) getScheduledTasksForOrg(orgId int, ctx context.Context) ([]table.Sc
 	if err != nil {
 		return tasks, errx.WrapWithTypef(ErrDatabaseScan, err, "")
 	}
+	// if no tasks are found, the empty array is returned
 	return tasks, nil
 }
 
@@ -63,15 +58,15 @@ func (db DB) GetAllScheduledTasks() ([]table.ScheduledTask, error) {
 	defer cancel()
 	tasks := []table.ScheduledTask{}
 	rows, err := db.Postgres.Query(ctx, "SELECT * FROM scheduled_tasks")
-	if errors.Is(err, pgx.ErrNoRows) {
-		return tasks, errx.NewWithType(ErrDatabaseNotFound, "no tasks found")
-	}
 	if err != nil {
 		return tasks, errx.WrapWithType(ErrDatabaseQuery, err, "")
 	}
 	err = pgxscan.ScanAll(&tasks, rows)
 	if err != nil {
 		return tasks, errx.WrapWithType(ErrDatabaseScan, err, "")
+	}
+	if len(tasks) < 1 {
+		return tasks, errx.NewWithType(ErrDatabaseNotFound, "no tasks found")
 	}
 	return tasks, nil
 }

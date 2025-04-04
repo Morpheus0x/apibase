@@ -16,15 +16,15 @@ func (db DB) GetUserRoles(userID int) ([]table.UserRole, error) {
 	roles := []table.UserRole{}
 	// err := pgxscan.Select(ctx, Database, &user, "SELECT * FROM users WHERE id = $1", id)
 	rows, err := db.Postgres.Query(ctx, "SELECT * FROM user_roles WHERE user_id = $1", userID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return roles, errx.NewWithTypef(ErrDatabaseNotFound, "no roles found for user (id: %d)", userID)
-	}
 	if err != nil {
 		return roles, errx.WrapWithType(ErrDatabaseQuery, err, "")
 	}
 	err = pgxscan.ScanAll(&roles, rows)
 	if err != nil {
 		return roles, errx.WrapWithType(ErrDatabaseScan, err, "")
+	}
+	if len(roles) < 1 {
+		return roles, errx.NewWithTypef(ErrDatabaseNotFound, "no roles found for user (id: %d)", userID)
 	}
 	// err := pgxscan.NewScanner(row).Scan(&user)
 	return roles, nil
@@ -33,13 +33,13 @@ func (db DB) GetUserRoles(userID int) ([]table.UserRole, error) {
 func (db DB) getUserRole(userID int, orgID int, tx pgx.Tx, ctx context.Context) (table.UserRole, error) {
 	role := table.UserRole{}
 	rows, err := tx.Query(ctx, "SELECT * FROM user_roles WHERE user_id = $1 AND org_id = $2", userID, orgID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return role, errx.NewWithTypef(ErrDatabaseNotFound, "no role found for user (id: %d) and org (id: %d)", userID, orgID)
-	}
 	if err != nil {
 		return role, errx.WrapWithType(ErrDatabaseQuery, err, "")
 	}
 	err = pgxscan.ScanOne(&role, rows)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return role, errx.NewWithTypef(ErrDatabaseNotFound, "no role found for user (id: %d) and org (id: %d)", userID, orgID)
+	}
 	if err != nil {
 		return role, errx.WrapWithType(ErrDatabaseScan, err, "")
 	}
