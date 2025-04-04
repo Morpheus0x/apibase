@@ -59,6 +59,7 @@ const (
 	RespErrOauthReferrerParsing
 	RespErrOauthMarshalState
 	RespErrGetAccessClaims
+	RespErrForbidden
 	// Only append here to not break existing frontend error IDs
 )
 
