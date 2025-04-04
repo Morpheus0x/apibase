@@ -1,5 +1,5 @@
 
-# TODO Now
+# TODO
 - [x] get jwt token from claims by method on the claims struct pointer
 - [x] impl local signup
 - [x] rename all db structs to singular (remove trailing "s")
@@ -17,22 +17,25 @@
 - [x] fix TODO "refresh JWT": web_oauth/echo_oauth.go#L48
 - [x] Resolve all `TODO: remove hardcoded timeout`
 - [ ] Refactor all database IDs to be UUIDs
+- [ ] Refactor organizations table to to tenants and add "tenant_type" and additional filed for custom "id" for that type
+- [ ] Refactor all database tables to impl soft delete, add a deleted column or duplicate all tabels with _deleted suffix (issue with delted column: change all db queries to filter on only not deleted records, what do do with UNIQUE constraints?)
 - [ ] check that at least one login type local_auth or oauth_enabled is set to true
 - [ ] honor allow_registration flag
 - [ ] add language column to users table (maybe not do this!)
-- [ ] impl email signup integration, if require_confirmed_email is set, make sure a hook exists that sents the email with user defined template
+- [ ] impl email signup integration, if require_confirmed_email is set, make sure a hook exists that sends the email with user defined template
 - [ ] impl email reset api endpoint, add table transient_pw used to store password reset id and expiry time
 - [ ] add auth hooks to oauth
 - [ ] Make sure that every function that returns an error doens't add any details not also available outside of itself (e.g. userId func param)
 - [ ] add captcha for local login and signup
 - [ ] check what happens if local auth already exists for user trying to login with same email via oauth
 - [ ] impl saml auth
-- [ ] impl 2FA, add table transint_2fa used for 2fa creation and change, lookup how to encrypt 2fa secrets (must be seperate from token_secret to not invalidate 2fa on secret change)
+- [ ] impl 2FA, add table 2fa_transient used for 2fa creation and change, lookup how to encrypt 2fa secrets (must be seperate from token_secret to not invalidate 2fa on secret change, DEK & KEK - see [owasp](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html) for details)
 - [ ] add parsing on signup username to contain only valid chars and password to not contain spaces (better to have a list of allowed chars)
-- [ ] maybe impl soft delete (just set deleted column to true, change all db queries to filter on only not deleted records), rename all unique strings to not conflict with
 - [ ] impl htmx api responses
 
-# TODO Database Integration
+# Old TODOs
+
+## TODO Database Integration
 use go generate to import the .sql text file database tables, then use a state machine parser to consume the sql and compare it to the actually existing database table. Also during this comparison, the table struct is checked, if all columns are also present there (tag must match with column name) If the table doesn't exist at all, create it by just running the create query. If the table and corresponding struct is changed in any way, manual table migration needs to be done. 
 https://www.startpage.com/do/dsearch?q=golang+include+textfile+in+build+process&cat=web&language=english
 https://stackoverflow.com/questions/17796043/how-to-embed-files-into-go-binaries
@@ -41,7 +44,7 @@ old:
 Add code that verifies that the database contains the expected tables and they match with the struct that will be used to scan the result.
 https://www.phind.com/search?cache=c7pgxsam2aelbfl43gta28zd
 
-# TODO OAuth
+## TODO OAuth
 Look at  
 - https://github.com/markbates/goth/blob/master/examples/main.go
 - https://www.reddit.com/r/golang/comments/1cf8mji/is_there_a_clear_example_for_using_goth_with_echo/
@@ -54,7 +57,7 @@ After goth returns the user object:
 - still generate the jwt with my custom claims
 Make sure that if the user uses a different oauth provider which returns an email address that already exists in the db, associate that provider with the user (does this even need to be stored in the db, other than "local" or "oauth"?). What if the user later uses the same email returned by oauth to login normally?
 
-# TODO Important
+## TODO Important
 - [x] make sure that the client is always returned to the page from where they clicked login, use the oauth state query param (https://auth0.com/docs/secure/attack-protection/state-parameters)
 - [x] have package specific errors always defined in errors.go file inside said package, with an Init() func register those errors with the log package. This is needed if apibase is used with an external program that has their own errors that need to be compareable, maybe by passing the error type to the ErrorNew func, e.g. func ErrorNew\[T myerrtype\](err T, format string, a ...any)
 - [x] User [BuntDB](https://github.com/tidwall/buntdb) to store invalidated jwt login tokens
@@ -62,14 +65,14 @@ Make sure that if the user uses a different oauth provider which returns an emai
 - [ ] Add Support for Secret Key Rotation https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#272-rotation
 - [ ] Add Support for 2FA w/ encrypted via DEK and KEK https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html#encrypting-stored-keys
 
-# TODO
+## TODO
 - [ ] Every database function is a wrapper that catches errors, if that error is due to db timeout, run reconnect function and the re-run db query
 - [x] Rebase go.mod and force push to git by using fixed module name
 - [x] Use GoogleCloudPlatform/govanityurls instead of direct github
 - [ ] Add API version wrapper function for every endpoint, incrementing the version can have multiple effects: add new endpoint, change implementation, mark as deprecated, remove endpoint. When breaking changes are decided, the apibase api will get a new major or minor version (v1 -> v1.1 or v2 ...). The default behavior is to just use implementation of the previous version. Think about a way to mark an endpoint as deprecated, removed or changed.
 - [ ] The apibase api should be either gRPC with created SwaggerUI or OpenAPI definition with example implementation from SwaggerUI, smth like that
 
-# Ideas
+## Ideas
 - [ ] Registration workflow will create a registration cookie which is valid for 14 days or until the email address is confirmed. After registration and if the email wasn't confirmed the user will always be presented with the registration welcome page. That page gives the option to resend the confirmation email and to change the user email, if the user made a mistake
 - [ ] Changing the user email will show buttons to resend the confirmation email and a button to cancel the email change which will invalidate the token sent via email
 - [ ] Both operations above will create a one time token which have a defined validity duration and will only be processed if the user clicks on the page and the local javascript sends the tokens from the url query params to the actual api endpoint, showing a loading circle which changes into a green checkmark or red x inside depending on success 
