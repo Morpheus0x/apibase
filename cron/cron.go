@@ -200,6 +200,31 @@ func Schedule(settings *web.ApiConfigSettings, t Task) error {
 	}
 }
 
+// Update already scheduled task, thread safe.
+// Requires t.Run to be set to valid cron.TaskFunc
+func Update(api *web.ApiServer, settings *web.ApiConfigSettings, t Task) error {
+	err := Remove(settings, t.ID)
+	if err != nil {
+		return errx.Wrap(err, "Unable to update task")
+	}
+	err = api.DB.UpdateScheduledTask(table.ScheduledTask{
+		TaskID:    t.ID,
+		OrgID:     t.OrgID,
+		StartDate: t.Start,
+		Interval:  table.Duration(t.Interval),
+		TaskType:  t.TaskType,
+		TaskData:  t.TaskData,
+	})
+	if err != nil {
+		return errx.Wrap(err, "Unable to update task")
+	}
+	err = Schedule(settings, t)
+	if err != nil {
+		return errx.Wrap(err, "Unable to start updated task")
+	}
+	return nil
+}
+
 // Remove scheduled task and also from database, thread safe.
 func RemoveAlsoFromDB(api *web.ApiServer, id string) error {
 	err := Remove(api.Config.Settings, id)

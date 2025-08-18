@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"gopkg.cc/apibase/errx"
@@ -93,6 +94,17 @@ func (db DB) DeleteScheduledTask(taskId string) error {
 	}
 	if res.RowsAffected() != 1 {
 		return errx.NewWithTypef(ErrDatabaseDelete, "scheduled task rows affected != 1 (instead got %d)", res.RowsAffected())
+	}
+	return nil
+}
+
+func (db DB) UpdateScheduledTask(task table.ScheduledTask) error {
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
+	defer cancel()
+	query := "UPDATE scheduled_tasks SET (org_id, start_date, interval, task_type, task_data, updated_at) = ($1, $2, $3, $4, $5, $6) WHERE task_id = $7"
+	_, err := db.Postgres.Exec(ctx, query, task.OrgID, task.StartDate, task.Interval, task.TaskType, task.TaskData, time.Now(), task.TaskID)
+	if err != nil {
+		return errx.WrapWithType(ErrDatabaseUpdate, err, "scheduled task could not be updated")
 	}
 	return nil
 }
