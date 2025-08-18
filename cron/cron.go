@@ -19,16 +19,16 @@ const (
 	Yearly  = 365 * Daily
 )
 
-type TaskFunc func(data string) error
+type TaskFunc func(currentTime time.Time, interval time.Duration, data string) error
 
 type Task struct {
-	ID       string
-	OrgID    int
-	Start    time.Time
-	Interval time.Duration
-	TaskType string
-	TaskData string
-	Run      TaskFunc
+	ID       string        `json:"id"`
+	OrgID    int           `json:"org_id"`
+	Start    time.Time     `json:"start"`
+	Interval time.Duration `json:"interval"`
+	TaskType string        `json:"task_type"`
+	TaskData string        `json:"task_data"`
+	Run      TaskFunc      `json:"-"`
 }
 
 type task struct {
@@ -103,8 +103,8 @@ func GetScheduledTasksFromDB(api *web.ApiServer) ([]Task, error) {
 	return tasks, nil
 }
 
-// Starts all scheduled tasks that were saved in the database,
-// assign cron.TaskFunc to all Task array entries returned by cron.GetScheduledTasksFromDB before running this function,
+// Starts all scheduled tasks that were saved in the database.
+// Assign cron.TaskFunc to all Task array entries returned by cron.GetScheduledTasksFromDB before running this function,
 // if any error occurs, any scheduled tasks will be shut down
 func StartScheduledTasks(settings *web.ApiConfigSettings, tasks []Task) error {
 	// verify that all tasks have a function to run
@@ -132,7 +132,8 @@ func StartScheduledTasks(settings *web.ApiConfigSettings, tasks []Task) error {
 }
 
 // Schedule new task and save to database, thread safe.
-// interval must be at leas one minute and has some special behaviour if it has one of these specific values, it will run at the time specified in start:
+// Requires t.Run to be set to valid cron.TaskFunc.
+// interval must be at least one minute and has some special behaviour if it has one of these specific values, it will run at the time specified in start:
 // cron.Daily, cron.Weekly (at weekday of start), cron.Monthly (at day of month of start, day of start must not be later than the 28th), cron.Yearly (at start datetime)
 func ScheduleAndSaveToDB(api *web.ApiServer, t Task) error {
 	err := Schedule(api.Config.Settings, t)
@@ -154,7 +155,8 @@ func ScheduleAndSaveToDB(api *web.ApiServer, t Task) error {
 }
 
 // Schedule new task, thread safe.
-// interval must be at leas one minute and has some special behaviour if it has one of these specific values, it will run at the time specified in start:
+// Requires t.Run to be set to valid cron.TaskFunc.
+// interval must be at least one minute and has some special behaviour if it has one of these specific values, it will run at the time specified in start:
 // cron.Daily, cron.Weekly (at weekday of start), cron.Monthly (at day of month of start, day of start must not be later than the 28th), cron.Yearly (at start datetime)
 func Schedule(settings *web.ApiConfigSettings, t Task) error {
 	if t.Run == nil {
@@ -310,8 +312,8 @@ func worker(id string, job task) {
 	close(job.startupSuccess)
 	for {
 		select {
-		case <-run.C:
-			err := job.task(job.data)
+		case currentTime := <-run.C:
+			err := job.task(currentTime, job.interval, job.data)
 			if err != nil {
 				log.Logf(log.LevelError, "worker task '%s' returned error: %s", id, err.Error())
 			}
