@@ -12,7 +12,7 @@ import (
 	"gopkg.cc/apibase/table"
 )
 
-func (db DB) GetScheduledTask(taskId int) (table.ScheduledTask, error) {
+func (db DB) GetScheduledTask(taskId string) (table.ScheduledTask, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
 	defer cancel()
 	task := table.ScheduledTask{}
@@ -22,7 +22,7 @@ func (db DB) GetScheduledTask(taskId int) (table.ScheduledTask, error) {
 	}
 	err = pgxscan.ScanOne(&task, rows)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return task, errx.NewWithTypef(ErrDatabaseNotFound, "no task found with id '%d'", taskId)
+		return task, errx.NewWithTypef(ErrDatabaseNotFound, "no task found with id '%s'", taskId)
 	}
 	if err != nil {
 		return task, errx.WrapWithType(ErrDatabaseScan, err, "")
