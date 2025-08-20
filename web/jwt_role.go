@@ -9,7 +9,7 @@ type JwtRole struct {
 	OrgAdmin bool `json:"c" toml:"org_admin"`
 }
 
-type JwtRoles map[int]JwtRole
+type JwtRoles map[int]JwtRole // map[orgID]Permissions
 
 func jwtRolesFromTable(roles []table.UserRole) JwtRoles {
 	jwtRoles := JwtRoles{}
