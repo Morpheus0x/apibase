@@ -2,13 +2,33 @@ package db
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/georgysavva/scany/v2/pgxscan"
+	"github.com/jackc/pgx/v5"
 	"gopkg.cc/apibase/errx"
 	"gopkg.cc/apibase/log"
 	"gopkg.cc/apibase/table"
 )
+
+func (db DB) GetScheduledTask(taskId int) (table.ScheduledTask, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), db.BaseConfig.TimeoutDatabaseQuery)
+	defer cancel()
+	task := table.ScheduledTask{}
+	rows, err := db.Postgres.Query(ctx, "SELECT * FROM scheduled_tasks WHERE task_id = $1", taskId)
+	if err != nil {
+		return task, errx.WrapWithType(ErrDatabaseQuery, err, "")
+	}
+	err = pgxscan.ScanOne(&task, rows)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return task, errx.NewWithTypef(ErrDatabaseNotFound, "no task found with id '%d'", taskId)
+	}
+	if err != nil {
+		return task, errx.WrapWithType(ErrDatabaseScan, err, "")
+	}
+	return task, nil
+}
 
 func (db DB) GetScheduledTasks(userId int) ([]table.ScheduledTask, error) {
 	tasks := []table.ScheduledTask{}
