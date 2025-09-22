@@ -56,6 +56,10 @@ type tasks struct {
 
 var activeTasks tasks
 
+func init() {
+	activeTasks.tasks = make(map[string]task)
+}
+
 func GetScheduledTasksForUser(api *web.ApiServer, userId int) ([]Task, error) {
 	tasks := []Task{}
 	tasksFromDB, err := api.DB.GetScheduledTasks(userId)
@@ -204,8 +208,8 @@ func Schedule(settings *web.ApiConfigSettings, t Task) error {
 // Requires t.Run to be set to valid cron.TaskFunc
 func Update(api *web.ApiServer, settings *web.ApiConfigSettings, t Task) error {
 	err := Remove(settings, t.ID)
-	if err != nil {
-		return errx.Wrap(err, "Unable to update task")
+	if err != nil && errors.Is(err, ErrTaskRemove) {
+		log.Logf(log.LevelWarning, "task updated, which isn't scheduled: %s", err.Error())
 	}
 	err = api.DB.UpdateScheduledTask(table.ScheduledTask{
 		TaskID:    t.ID,
