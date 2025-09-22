@@ -5,7 +5,7 @@ CREATE TABLE scheduled_tasks (
     start_date TIMESTAMPTZ NOT NULL,
     interval BIGINT NOT NULL,
     task_type VARCHAR(255) NOT NULL,
-    task_data JSONB DEFAULT '',
+    task_data JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
