@@ -34,7 +34,7 @@ func SetupRest(config web.ApiConfig, database db.DB, appVersion string) (*web.Ap
 	if !config.LocalAuth && !config.OAuthEnabled {
 		return nil, errx.New("No Authentication method enabled, either LocalAuth, OAuthEnabled or both need to be enabled")
 	}
-	if err := config.ApiRoot.Validate(); err != nil {
+	if err := config.ValidateApiRoot(); err != nil {
 		return nil, err
 	}
 	// Verify AppURI can be parsed to *url.URL, this panics if can't be parsed
@@ -81,18 +81,18 @@ func SetupRest(config web.ApiConfig, database db.DB, appVersion string) (*web.Ap
 
 func RegisterRestDefaultEndpoints(api *web.ApiServer, appVersion string) {
 	switch api.Config.ApiRoot.Kind {
-	case "local":
+	case web.FsLocal:
 		api.E.GET("/", func(c echo.Context) error {
 			return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: appVersion})
 		})
 		// TODO: change default local response and optionally add additional routes
-	case "static":
+	case web.FsStatic:
 		api.E.Use(middleware.StaticWithConfig(middleware.StaticConfig{
 			Root:   api.Config.ApiRoot.Target,
 			Index:  "index.html",
 			Browse: false,
 		}))
-	case "proxy":
+	case web.FsProxy:
 		url, err := url.Parse(api.Config.ApiRoot.Target)
 		if err != nil {
 			// Allowed to panic
@@ -116,9 +116,12 @@ func RegisterRestDefaultEndpoints(api *web.ApiServer, appVersion string) {
 				return err
 			},
 		}))
+	case web.FsEmbed:
+		// echo.MustSubFS should always succeed, since Target sub path has been valdiate by ApiConfig.ValidateApiRoot()
+		api.E.StaticFS("/", echo.MustSubFS(api.Config.GetEmbedFS(), api.Config.ApiRoot.Target))
 	default:
 		// Allowed to panic
-		errx.New("ApiRoot.Kind must be local, static or proxy. This should have been verified during setup!")
+		errx.New("ApiRoot.Kind must be local, static, proxy or embedfs. This should have been verified during setup!")
 		panic(1)
 	}
 

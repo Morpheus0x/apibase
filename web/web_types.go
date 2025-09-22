@@ -1,6 +1,7 @@
 package web
 
 import (
+	"embed"
 	"encoding/base64"
 	"fmt"
 	"net/url"
@@ -125,12 +126,13 @@ type ApiConfig struct {
 	ReqireConfirmEmail bool `toml:"require_confirmed_email"` // TODO: this // Before user is allowed to login
 
 	// Nested Structs
-	ApiRoot  RootOptions        `toml:"api_root"` // Configure the apibase root behaviour (local, static, (reverse) proxy)
+	ApiRoot  RootOptions        `toml:"api_root"` // Configure the apibase root behaviour (local, static, (reverse) proxy, or embedfs)
 	Settings *ApiConfigSettings `toml:"settings"`
 
 	// Internal Data
-	tokenSecretBytes []byte // decoded from TokenSecret string
-	appURI           *CustomURI
+	tokenSecretBytes []byte     // decoded from TokenSecret string
+	appURI           *CustomURI // will be parsed from ApiConfig.AppURI
+	embedFS          embed.FS   // if configured in ApiRoot, must be registered with ApiConfig.RegisterEmbedFS()
 }
 
 func (ac ApiConfig) TokenSecretBytes() []byte {
@@ -162,6 +164,19 @@ func (ac *ApiConfig) AppUri() *CustomURI {
 	ac.appURI = NewCustomUri(uri)
 
 	return NewCustomUri(ac.appURI.uri)
+}
+
+func (ac *ApiConfig) RegisterEmbedFS(embedFS embed.FS) error {
+	if ac.ApiRoot.Kind != FsEmbed {
+		return errx.NewWithType(ErrFsKindNotEmbed, "unable to register EmbedFS")
+	}
+	ac.embedFS = embedFS
+	return nil
+}
+
+// used to protect internal embedFS ApiConfig member, only use this if ApiRoot Kind embedfs is configured
+func (ac *ApiConfig) GetEmbedFS() embed.FS {
+	return ac.embedFS
 }
 
 func (ac ApiConfig) AddCookieExpiryMargin(validity time.Duration) time.Duration {
@@ -227,17 +242,26 @@ const (
 	HTMX
 )
 
+type FileSystemKind string
+
+const (
+	FsLocal  FileSystemKind = "local"
+	FsStatic FileSystemKind = "static"
+	FsProxy  FileSystemKind = "proxy"
+	FsEmbed  FileSystemKind = "embedfs"
+)
+
 type RootOptions struct {
-	Kind   string `toml:"kind"`
-	Target string `toml:"target"`
+	Kind   FileSystemKind `toml:"kind"`
+	Target string         `toml:"target"` // If Kind is FsEmbed, Target must start with the embedded folder name (without leading ./)
 }
 
-func (ro RootOptions) Validate() error {
-	switch ro.Kind {
-	case "local":
+func (ac *ApiConfig) ValidateApiRoot() error {
+	switch ac.ApiRoot.Kind {
+	case FsLocal:
 		return nil
-	case "static":
-		path, err := filepath.Abs(ro.Target)
+	case FsStatic:
+		path, err := filepath.Abs(ac.ApiRoot.Target)
 		if err != nil {
 			return errx.Wrapf(err, "unable to validate RootOptions static")
 		}
@@ -245,8 +269,8 @@ func (ro RootOptions) Validate() error {
 			return errx.Wrap(err, "unable to validate RootOptions static")
 		}
 		return nil
-	case "proxy":
-		url, err := url.Parse(ro.Target)
+	case FsProxy:
+		url, err := url.Parse(ac.ApiRoot.Target)
 		if err != nil {
 			return errx.Wrap(err, "unable to validate RootOptions proxy")
 		}
@@ -255,8 +279,17 @@ func (ro RootOptions) Validate() error {
 		}
 		// TODO: maybe add additional validation for url
 		return nil
+	case FsEmbed:
+		rootDir, err := ac.embedFS.ReadDir(ac.ApiRoot.Target)
+		if err != nil {
+			return errx.Wrap(err, "unable to validate RootOptions embedfs")
+		}
+		if len(rootDir) < 1 {
+			return errx.Newf("unable to validate RootOptions embedfs: embedded folder '%s' is empty", ac.ApiRoot.Target)
+		}
+		return nil
 	default:
-		return errx.New("no RootOptions Kind specified, must be local, static or proxy")
+		return errx.New("no RootOptions Kind specified, must be local, static, proxy or embedfs")
 	}
 }
 
