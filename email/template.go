@@ -2,6 +2,7 @@ package email
 
 import (
 	"bytes"
+	"embed"
 	"html/template"
 	"os"
 
@@ -28,9 +29,27 @@ func (c EmailConfig) SendTemplateFrom(from string, to []string, tmpl EmailTempla
 	if err != nil {
 		return errx.WrapWithTypef(ErrInvalidTemplate, err, "unable to parse template from file '%s'", tmpl.FilePath)
 	}
+	return c.executeAndSend(t, from, to, data)
+}
 
+func (c EmailConfig) SendTemplateEmbedFs(embedFS embed.FS, to []string, tmpl EmailTemplate, data any) error {
+	if c.From == "" {
+		return errx.NewWithType(ErrInvalidConfig, "from email address not specified in config")
+	}
+	return c.SendTemplateEmbedFsFrom(embedFS, c.From, to, tmpl, data)
+}
+
+func (c EmailConfig) SendTemplateEmbedFsFrom(embedFS embed.FS, from string, to []string, tmpl EmailTemplate, data any) error {
+	t, err := template.ParseFS(embedFS, tmpl.FilePath)
+	if err != nil {
+		return errx.WrapWithType(ErrTemplateNoFileInEmbedFS, err, "")
+	}
+	return c.executeAndSend(t, from, to, data)
+}
+
+func (c EmailConfig) executeAndSend(t *template.Template, from string, to []string, data any) error {
 	var msg bytes.Buffer
-	err = t.Execute(&msg, data)
+	err := t.Execute(&msg, data)
 	if err != nil {
 		return errx.WrapWithType(ErrTemplateExec, err, "")
 	}
