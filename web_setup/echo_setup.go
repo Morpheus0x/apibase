@@ -133,10 +133,22 @@ func RegisterRestDefaultEndpoints(api *web.ApiServer, appVersion string) {
 	apiGroup.GET("", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{Message: "Welcome!"})
 	})
-	apiGroup.GET("check_login", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, wr.JsonResponse[struct{}]{ResponseID: wr.RespSccsGeneric})
-	})
+	apiGroup.GET("check_login", CheckLogin(api))
 	api.Api = apiGroup
+}
+
+func CheckLogin(api *web.ApiServer) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		accessClaims, err := web.GetAccessClaims(c, api, struct{}{})
+		if err != nil {
+			log.Logf(log.LevelError, "unable to get access claims for login check: %s", err.Error())
+			return wr.SendJsonErrorResponse(c, http.StatusBadRequest, wr.RespErrGetAccessClaims)
+		}
+		return c.JSON(http.StatusOK, wr.JsonResponse[wr.FrontendSettings]{
+			ResponseID: wr.RespSccsGeneric,
+			Data:       wr.FrontendSettings{SuperAdmin: accessClaims.SuperAdmin},
+		})
+	}
 }
 
 // start rest api server, is blocking

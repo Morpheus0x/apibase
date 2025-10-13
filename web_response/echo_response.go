@@ -17,6 +17,10 @@ type RedirectTarget struct {
 	Target   string `json:"target"`
 }
 
+type FrontendSettings struct {
+	SuperAdmin bool `json:"super_admin"`
+}
+
 // type HtmxResponse[T any] struct {
 // 	HtmlTemplate string
 // 	Data         T
