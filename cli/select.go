@@ -18,6 +18,28 @@ type Select struct {
 	Prompt   string
 }
 
+func (s Select) GetOne() (string, error) {
+	if s.Multiple {
+		return "", errors.New("must only be used if Multiple is false")
+	}
+	res, err := s.Get()
+	if err != nil {
+		return "", err
+	}
+	out := ""
+	selCnt := 0
+	for idx, yes := range res {
+		if yes {
+			selCnt++
+			out = s.Options[idx]
+		}
+	}
+	if selCnt == 1 {
+		return out, nil
+	}
+	return "", errors.New("more than one was selected")
+}
+
 func (s Select) Get() ([]bool, error) {
 	if s.Prompt == "" {
 		return []bool{}, errors.New("prompt is required")
