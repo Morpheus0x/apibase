@@ -1,196 +1,197 @@
-package errx
+package errx_test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
+
+	"gopkg.cc/apibase/errx"
 )
 
+func TestNewFunctions(t *testing.T) {
+	typeT1 := errx.NewType("t1")
+	typeT2 := errx.NewType("t2")
+
+	tests := []struct {
+		name   string
+		fn     func() error
+		want   string
+		isType error // nil if no type comparison is expected
+	}{
+		{
+			name: "New",
+			fn:   func() error { return errx.New("simple") },
+			want: "simple",
+		},
+		{
+			name: "Newf",
+			fn:   func() error { return errx.Newf("f%d", 1) },
+			want: "f1",
+		},
+		{
+			name:   "NewWithType",
+			fn:     func() error { return errx.NewWithType(typeT1, "msg") },
+			want:   "t1: msg",
+			isType: typeT1,
+		},
+		{
+			name: "Wrap",
+			fn:   func() error { return errx.Wrap(fmt.Errorf("orig"), "wrap") },
+			want: "wrap: orig",
+		},
+		{
+			name:   "WrapWithType",
+			fn:     func() error { return errx.WrapWithType(typeT2, fmt.Errorf("orig"), "wrap") },
+			want:   "t2: wrap: orig",
+			isType: typeT2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.fn()
+			if got := err.Error(); got != tt.want {
+				t.Fatalf("Error() = %q; want %q", got, tt.want)
+			}
+			if tt.isType != nil && !errors.Is(err, tt.isType) {
+				t.Errorf("errors.Is(%v, %v) = false; want true", err, tt.isType)
+			}
+		})
+	}
+}
+
+func TestTypeComparisonFails(t *testing.T) {
+	typeT4 := errx.NewType("t4")
+	err := errx.NewWithType(typeT4, "msg")
+
+	if errors.Is(err, errx.NewType("t4")) { // different pointer → should be false
+		t.Errorf("errors.Is returned true for a different type instance")
+	}
+}
+
+func TestErrorsIsWithNested(t *testing.T) {
+	typeT3 := errx.NewType("t3")
+	base := errx.NewWithType(typeT3, "base")
+	nested := errx.Wrap(base, "wrap")
+
+	if !errors.Is(nested, typeT3) {
+		t.Errorf("expected nested to match type t3")
+	}
+}
+
 func TestBaseError(t *testing.T) {
-	tests := []struct {
-		name     string
-		errType  string
-		text     string
-		nested   error
-		expected string
-	}{
-		{"Basic", "", "Test error", nil, "Test error"},
-		{"With type", "Type1", "", nil, "Type1"},
-		{"With nested", "", "Outer error", errors.New("inner error"), "Outer error: inner error"},
-		{"Nested with same type", "", "Outer error", &BaseError{errType: "Type2", text: "Inner error"}, "Outer error: Type2: Inner error"},
+	// Test New function
+	err := errx.New("test error")
+	if err.Error() != "test error" {
+		t.Errorf("Expected 'test error', got '%s'", err.Error())
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := &BaseError{
-				errType: tt.errType,
-				text:    tt.text,
-				nested:  tt.nested,
-			}
+	// Test Newf function
+	err = errx.Newf("test error %d", 123)
+	if err.Error() != "test error 123" {
+		t.Errorf("Expected 'test error 123', got '%s'", err.Error())
+	}
 
-			if err.Error() != tt.expected {
-				t.Errorf("Error() = %q, want %q", err.Error(), tt.expected)
-			}
-		})
+	// Test NewWithType function
+	typeErr := errx.NewType("validation")
+	err = errx.NewWithType(typeErr, "field required")
+	expected := "validation: field required"
+	if err.Error() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, err.Error())
+	}
+
+	// Test NewWithTypef function
+	err = errx.NewWithTypef(typeErr, "field %s required", "username")
+	expected = "validation: field username required"
+	if err.Error() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, err.Error())
+	}
+
+	// Test Wrap function
+	baseErr := errors.New("base error")
+	err = errx.Wrap(baseErr, "wrapped error")
+	expected = "wrapped error: base error"
+	if err.Error() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, err.Error())
+	}
+
+	// Test Wrapf function
+	err = errx.Wrapf(baseErr, "wrapped error %d", 456)
+	expected = "wrapped error 456: base error"
+	if err.Error() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, err.Error())
+	}
+
+	// Test WrapWithType function
+	err = errx.WrapWithType(typeErr, baseErr, "validation failed")
+	expected = "validation: validation failed: base error"
+	if err.Error() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, err.Error())
+	}
+
+	// Test WrapWithTypef function
+	err = errx.WrapWithTypef(typeErr, baseErr, "validation failed for %s", "email")
+	expected = "validation: validation failed for email: base error"
+	if err.Error() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, err.Error())
+	}
+
+	// Test errors.Is comparison
+	err = errx.NewWithType(typeErr, "test error")
+	if !errors.Is(err, typeErr) {
+		t.Errorf("errors.Is should return true for matching error types")
+	}
+
+	// Test nested error wrapping
+	innerErr := errx.New("inner error")
+	outerErr := errx.Wrap(innerErr, "outer error")
+	if !errors.Is(outerErr, innerErr) {
+		t.Errorf("errors.Is should find nested errors")
 	}
 }
 
-func TestBaseErrorUnwrap(t *testing.T) {
-	innerError := New("Inner error")
-	tests := []struct {
-		name     string
-		err      error
-		expected error
-	}{
-		{"No nested", New("Test error"), nil},
-		{"With nested", Wrap(innerError, "Outer error"), innerError},
+func TestBaseErrorRecursion(t *testing.T) {
+	typeErr1 := errx.NewType("type1")
+	typeErr2 := errx.NewType("type2")
+
+	// Test recursive error wrapping
+	err1 := errx.NewWithType(typeErr1, "error 1")
+	err2 := errx.WrapWithType(typeErr2, err1, "error 2")
+	err3 := errx.Wrap(err2, "error 3")
+
+	expected := "error 3: type2: error 2: type1: error 1"
+	if err3.Error() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, err3.Error())
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if errors.Unwrap(tt.err) != tt.expected {
-				t.Errorf("Unwrap() = %v, want %v", errors.Unwrap(tt.err), tt.expected)
-			}
-		})
+	// Test errors.Is with recursive structure
+	if !errors.Is(err3, typeErr1) {
+		t.Errorf("errors.Is should find nested BaseErrorType")
+	}
+	if !errors.Is(err3, typeErr2) {
+		t.Errorf("errors.Is should find nested BaseErrorType")
 	}
 }
 
-func TestBaseErrorIs(t *testing.T) {
-	tests := []struct {
-		name     string
-		err      error
-		errType  *BaseError
-		expected bool
-	}{
-		{"Basic type", NewWithType(NewType("Type1"), "Test error"), NewType("Type1"), true},
-		{"Wrong type", NewWithType(NewType("Type1"), "Test error"), NewType("Type2"), false},
-		{"Outer type match", WrapWithType(NewType("Type1"), NewWithType(NewType("Type2"), "Inner"), "Outer"), NewType("Type1"), true},
-		{"Inner type not match", WrapWithType(NewType("Type1"), NewWithType(NewType("Type2"), "Inner"), "Outer"), NewType("Type2"), false},
+func TestBaseErrorEmptyFields(t *testing.T) {
+	// Test with empty text
+	err := errx.NewWithType(errx.NewType("error"), "")
+	expected := "error"
+	if err.Error() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, err.Error())
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// For Is method, we only care about the top-level error
-			if tt.err.(*BaseError).Is(tt.errType) != tt.expected {
-				t.Errorf("Error: %v, Is() = %v, want %v", tt.err.(*BaseError), !tt.expected, tt.expected)
-			}
-
-		})
-	}
-}
-
-func TestBaseErrorIsRecursiveBuiltIn(t *testing.T) {
-	tests := []struct {
-		name     string
-		err      error
-		errType  *BaseError
-		expected bool
-	}{
-		{"Basic type", NewWithType(NewType("Type1"), "Test error"), NewType("Type1"), true},
-		{"Wrong type", NewWithType(NewType("Type1"), "Test error"), NewType("Type2"), false},
-		{"Outer type match", WrapWithType(NewType("Type1"), NewWithType(NewType("Type2"), "Inner"), "Outer"), NewType("Type1"), true},
-		{"Inner type match", WrapWithType(NewType("Type1"), NewWithType(NewType("Type2"), "Inner"), "Outer"), NewType("Type2"), true},
-		{"No type match", WrapWithType(NewType("Type1"), NewWithType(NewType("Type2"), "Inner"), "Outer"), NewType("Type3"), false},
+	// Test with nil nested error
+	err = errx.Wrap(nil, "test")
+	expected = "test"
+	if err.Error() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, err.Error())
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// For Is method, we only care about the top-level error
-			if errors.Is(tt.err, tt.errType) != tt.expected {
-				t.Errorf("Error: %v, Is() = %v, want %v", tt.err.(*BaseError), !tt.expected, tt.expected)
-			}
-
-		})
-	}
-}
-
-func TestNewType(t *testing.T) {
-	err := NewType("TestType")
-	if err.errType != "TestType" {
-		t.Errorf("NewType() = %v, want %v", err, "TestType")
-	}
-	if err.text != "" || err.nested != nil {
-		t.Errorf("NewType() side effects! BaseError: %v", err)
-	}
-}
-
-func TestNew(t *testing.T) {
-	err := New("Test error").(*BaseError)
-	if err.text != "Test error" {
-		t.Errorf("New() = %v, want %v", err, "Test error")
-	}
-	if err.errType != "" || err.nested != nil {
-		t.Errorf("New() side effects! BaseError: %v", err)
-	}
-}
-
-func TestNewf(t *testing.T) {
-	err := Newf("Test %s", "error").(*BaseError)
-	if err.text != "Test error" {
-		t.Errorf("Newf() = %v, want %v", err, "Test error")
-	}
-	if err.errType != "" || err.nested != nil {
-		t.Errorf("Newf() side effects! BaseError: %v", err)
-	}
-}
-
-func TestNewWithType(t *testing.T) {
-	err := NewWithType(NewType("TestType"), "Test error").(*BaseError)
-	if err.errType != "TestType" || err.text != "Test error" {
-		t.Errorf("NewWithType() = %v, want %v", err, "TestType: Test error")
-	}
-	if err.Error() != "TestType: Test error" {
-		t.Errorf("NewWithType().Error() = %v, want %v", err.Error(), "TestType: Test error")
-	}
-	if err.errType != "TestType" || err.nested != nil {
-		t.Errorf("Newf() side effects! BaseError: %v", err)
-	}
-}
-
-func TestNewWithTypef(t *testing.T) {
-	err := NewWithTypef(NewType("TestType"), "Test %s", "error").(*BaseError)
-	if err.errType != "TestType" || err.text != "Test error" {
-		t.Errorf("NewWithTypef() = %v, want %v", err, "TestType: Test error")
-	}
-	if err.Error() != "TestType: Test error" {
-		t.Errorf("NewWithType().Error() = %v, want %v", err.Error(), "TestType: Test error")
-	}
-	if err.errType != "TestType" || err.nested != nil {
-		t.Errorf("Newf() side effects! BaseError: %v", err)
-	}
-}
-
-func TestWrap(t *testing.T) {
-	inner := New("Inner")
-	err := Wrap(inner, "Outer")
-	if err.Error() != "Outer: Inner" {
-		t.Errorf("Wrap() = %v, want %v", err, "Outer: Inner")
-	}
-	if !errors.Is(errors.Unwrap(err), inner) {
-		t.Errorf("Wrap() nested error = %s, want %s", errors.Unwrap(err).Error(), "Inner")
-	}
-}
-
-func TestWrapf(t *testing.T) {
-	inner := New("Inner")
-	err := Wrapf(inner, "Outer %s", "error")
-	if err.Error() != "Outer error: Inner" {
-		t.Errorf("Wrapf() = %v, want %v", err, "Outer error: Inner")
-	}
-	if !errors.Is(errors.Unwrap(err), inner) {
-		t.Errorf("Wrap() nested error = %s, want %s", errors.Unwrap(err).Error(), "Inner")
-	}
-}
-
-func TestWrapWithType(t *testing.T) {
-	err := WrapWithType(NewType("TestType"), errors.New("Original"), "Wrapped")
-	if err.(*BaseError).errType != "TestType" || err.(*BaseError).text != "Wrapped" {
-		t.Errorf("WrapWithType() = %v, want %v", err, "TestType:Wrapped")
-	}
-}
-
-func TestWrapWithTypef(t *testing.T) {
-	err := WrapWithTypef(NewType("TestType"), errors.New("Original"), "Wrapped %s", "error")
-	if err.(*BaseError).errType != "TestType" || err.(*BaseError).text != "Wrapped error" {
-		t.Errorf("WrapWithTypef() = %v, want %v", err, "TestType:Wrapped error")
+	// Test with nil error type
+	err = errx.NewWithType(nil, "test")
+	expected = "test"
+	if err.Error() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, err.Error())
 	}
 }

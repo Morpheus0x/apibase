@@ -10,25 +10,25 @@ import (
 // https://www.digitalocean.com/community/tutorials/creating-custom-errors-in-go
 // https://freedium.cfd/https://mdcfrancis.medium.com/tracing-errors-in-go-using-custom-error-types-9aaf3bba1a64
 
-// type BaseErrorType string
+type BaseErrorType struct {
+	text string
+}
 
-// func (t BaseErrorType) Type() error {
-// 	return &BaseError{
-// 		errType: t,
-// 	}
-// }
+func (e *BaseErrorType) Error() string {
+	return e.text
+}
 
 type BaseError struct {
-	errType string
+	errType error
 	text    string
 	nested  error
 }
 
 // Get BaseError text and append nested error(s), if any
-func (e BaseError) Error() string {
+func (e *BaseError) Error() string {
 	out := ""
-	if e.errType != "" {
-		out += string(e.errType)
+	if e.errType != nil {
+		out += e.errType.Error()
 	}
 	if e.text != "" {
 		if out != "" {
@@ -47,33 +47,40 @@ func (e BaseError) Error() string {
 }
 
 // get nested error
-func (e BaseError) Unwrap() error {
+func (e *BaseError) Unwrap() error {
 	return e.nested
 }
 
 // Compare if the error is of same type as target,
 // if both have no type, compare the error message itself
-func (e BaseError) Is(target error) bool {
+func (e *BaseError) Is(target error) bool {
+	errType, ok := target.(*BaseErrorType)
+	if ok {
+		return e.errType == errType
+	}
 	isErr, ok := target.(*BaseError)
 	if !ok {
 		return false
 	}
-	if e.errType == "" && isErr.errType == "" {
-		return e.text != "" && e.text == isErr.text
+	if e.errType == nil && isErr.errType == nil {
+		return e == target
 	}
 	return e.errType == isErr.errType
 }
 
-func NewType(descr string) *BaseError {
-	return &BaseError{
-		errType: descr,
+// func (e *BaseError) Type() error {
+// 	return e.errType
+// }
+
+func NewType(descr string) error {
+	return &BaseErrorType{
+		text: descr,
 	}
 }
 
 func New(text string) error {
 	return &BaseError{
-		errType: "",
-		text:    text,
+		text: text,
 	}
 }
 
@@ -83,16 +90,16 @@ func Newf(text string, a ...any) error {
 	}
 }
 
-func NewWithType(errType *BaseError, text string) error {
+func NewWithType(errType error, text string) error {
 	return &BaseError{
-		errType: errType.errType,
+		errType: errType,
 		text:    text,
 	}
 }
 
-func NewWithTypef(errType *BaseError, text string, a ...any) error {
+func NewWithTypef(errType error, text string, a ...any) error {
 	return &BaseError{
-		errType: errType.errType,
+		errType: errType,
 		text:    fmt.Sprintf(text, a...),
 	}
 }
@@ -114,18 +121,18 @@ func Wrapf(err error, text string, a ...any) error {
 }
 
 // create new error which wraps err
-func WrapWithType(errType *BaseError, err error, text string) error {
+func WrapWithType(errType error, err error, text string) error {
 	return &BaseError{
-		errType: errType.errType,
+		errType: errType,
 		text:    text,
 		nested:  err,
 	}
 }
 
 // create new error which wraps err
-func WrapWithTypef(errType *BaseError, err error, text string, a ...any) error {
+func WrapWithTypef(errType error, err error, text string, a ...any) error {
 	return &BaseError{
-		errType: errType.errType,
+		errType: errType,
 		text:    fmt.Sprintf(text, a...),
 		nested:  err,
 	}
