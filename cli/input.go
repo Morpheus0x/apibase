@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/chzyer/readline"
 )
 
@@ -16,6 +18,8 @@ type Input struct {
 	OnlyOnce bool
 	// Prompt Text, colon with single trailing space will be appended as separator to user input
 	Prompt string
+	// add mandatory prefix for input
+	ForcePrefix string
 }
 
 func (i Input) Get() (string, error) {
@@ -31,18 +35,14 @@ func (i Input) GetEmptyOnErr() string {
 }
 
 func (i Input) getInputInternal() (string, error) {
-	defaultValue := ""
-	if i.Default != "" {
-		defaultValue = " (" + i.Default + ")"
-	}
-	rl, err := readline.New(i.Prompt + defaultValue + ": ")
+	rl, err := readline.New(i.Prompt + ": " + i.ForcePrefix)
 	if err != nil {
 		return "", ERR_READLINE
 	}
 	defer rl.Close()
 
 	for {
-		line, err := rl.Readline()
+		line, err := rl.ReadlineWithDefault(i.Default)
 		if err != nil { // io.EOF, e.g. SIGINT
 			return "", ERR_SIGINT_RECEIVED
 		}
@@ -56,9 +56,10 @@ func (i Input) getInputInternal() (string, error) {
 				if i.OnlyOnce {
 					return "", err
 				}
+				fmt.Printf("\033[1A\r\033[2K%s\033[1B", err.Error())
 				continue
 			}
 		}
-		return input, nil
+		return i.ForcePrefix + input, nil
 	}
 }
