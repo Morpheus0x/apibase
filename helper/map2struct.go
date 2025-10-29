@@ -4,6 +4,14 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+
+	"gopkg.cc/apibase/errx"
+)
+
+var (
+	ErrM2S_Critical = errx.NewType("unable to convert")
+	ErrM2S_Mismatch = errx.NewType("map to struct mismatch")
+	ErrM2S_Warning  = errx.NewType("warning")
 )
 
 // data must be of type map[string]any,
@@ -14,7 +22,7 @@ func MapToStruct(data any, target any) []error {
 
 	realData, ok := data.(map[string]any)
 	if !ok {
-		return []error{fmt.Errorf("data must be of type map[string]any")}
+		return []error{errx.NewWithTypef(ErrM2S_Critical, "data must be of type map[string]any")}
 	}
 
 	mapErrors := []error{}
@@ -32,7 +40,7 @@ func internalMapToStruct(data map[string]any, target reflect.Value, mapErrors *[
 		// get map value according to struct field tag
 		key := fieldType.Tag.Get("mapkey")
 		if key == "" {
-			*mapErrors = append(*mapErrors, fmt.Errorf(
+			*mapErrors = append(*mapErrors, errx.NewWithTypef(ErrM2S_Critical,
 				"target struct is missing tag 'mapkey' for field '%s%s'",
 				parentStructField,
 				fieldType.Name,
@@ -41,13 +49,13 @@ func internalMapToStruct(data map[string]any, target reflect.Value, mapErrors *[
 		}
 		val, ok := data[key]
 		if !ok {
-			*mapErrors = append(*mapErrors, fmt.Errorf("key '%s%s' doesn't exist in data map", parentMapKey, key))
+			*mapErrors = append(*mapErrors, errx.NewWithTypef(ErrM2S_Mismatch, "key '%s%s' doesn't exist in data map", parentMapKey, key))
 			continue
 		}
 
 		// sanity check, that struct field can be set
 		if !target.Field(i).CanSet() {
-			*mapErrors = append(*mapErrors, fmt.Errorf(
+			*mapErrors = append(*mapErrors, errx.NewWithTypef(ErrM2S_Critical,
 				"unable to set struct field '%s%s' (mapkey: %s) with value from map",
 				parentStructField,
 				fieldType.Name,
@@ -61,7 +69,7 @@ func internalMapToStruct(data map[string]any, target reflect.Value, mapErrors *[
 			target.Field(i).Set(reflect.Zero(fieldType.Type))
 			parsedMapKeys = append(parsedMapKeys, key)
 			if fieldType.Type.Kind() != reflect.Ptr {
-				*mapErrors = append(*mapErrors, fmt.Errorf(
+				*mapErrors = append(*mapErrors, errx.NewWithTypef(ErrM2S_Mismatch,
 					"map value for key '%s%s' is nil, but struct field '%s%s' is of non ptr type '%s', was assigned zero value anyway",
 					parentMapKey,
 					key,
@@ -93,7 +101,7 @@ func internalMapToStruct(data map[string]any, target reflect.Value, mapErrors *[
 				if validateConvertTypes(valReflect.Kind(), targetType.Kind()) {
 					valReflect = valReflect.Convert(targetType)
 				} else {
-					*mapErrors = append(*mapErrors, fmt.Errorf(
+					*mapErrors = append(*mapErrors, errx.NewWithTypef(ErrM2S_Critical,
 						"map value of type '%s' for key '%s%s' is assignable to data type '%s' of struct field '%s%s' (target type %s), but no matching conversion found",
 						valReflect.Type().String(),
 						parentMapKey,
@@ -142,7 +150,7 @@ func internalMapToStruct(data map[string]any, target reflect.Value, mapErrors *[
 					valReflect.Index(k).Set(elemValReflect)
 				}
 			} else {
-				*mapErrors = append(*mapErrors, fmt.Errorf(
+				*mapErrors = append(*mapErrors, errx.NewWithTypef(ErrM2S_Critical,
 					"map value of type '%s' for key '%s%s' is not assignable to data type '%s' of struct field '%s%s', ",
 					valReflect.Type().String(),
 					parentMapKey,
@@ -171,7 +179,11 @@ func internalMapToStruct(data map[string]any, target reflect.Value, mapErrors *[
 	// Check if any map keys were missed
 	for k := range data {
 		if !slices.Contains(parsedMapKeys, k) {
-			*mapErrors = append(*mapErrors, fmt.Errorf("data map contains key '%s%s' which isn't present in target struct", parentMapKey, k))
+			*mapErrors = append(*mapErrors, errx.NewWithTypef(ErrM2S_Warning,
+				"data map contains key '%s%s' which isn't present in target struct",
+				parentMapKey,
+				k,
+			))
 		}
 	}
 }
